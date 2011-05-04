@@ -634,6 +634,7 @@ public class P2PApplet extends JApplet {
 
 
 	/**
+	 * 
 	 * to run this applet as a java application
 	 * @param args optional argument : the log file to process
 	 */
