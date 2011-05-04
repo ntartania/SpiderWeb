@@ -1,0 +1,42 @@
+This is the basic information about project SpiderWeb.
+
+= Overview.
+==============
+
+SpiderWeb is a visualization tool for P2P Simulation. Apologies to others who may have used the same project name.
+The simulation tools themselves (or pointers to them) will soon be added to this project repository.
+
+At this point the project is a simple java application / applet that can be used to view simulation results as a "video"-like animation.
+In the simulation view, the red circles represent peers, and the lines connecting them are network connections. 
+The small rectangles are documents published by these peers (e.g. music files that they share). 
+The nodes turn purple briefly when they output queries, or light pink when they respond to a query. In this case the document matching the query
+also turns pink. The edges (network connections) appear "bold" when a query is propagated across the corresponding connections.
+  
+= Dependencies
+===============
+
+The project requires the following libraries:
++ Jung v.2.0.1 (https://sourceforge.net/projects/jung/files/):
+Specifically, SpiderWeb uses the JUNG packages provided in the jar files :
+	jung-algorithms2.0.1.jar
+	jung-api2.0.1.jar 
+	jung-graph-impl2.0.1.jar
+	jung-visualization2.0.1.jar
+
++ Apache Collections Generics (http://larvalabs.com/collections/) (preferably v.4.01)
+
+= Using SpiderWeb
+==================
+
+Compile the source code with the libraries listed above, then run the main method in class P2PApplet.
+You will be asked to load a processed log file.
+
+Use the provided sample log file ProcessedLog.txt.
+
+From there the rest should be clear.
+
+= Ongoing development
+======================
+
+We are working on SpiderWeb to include more meaningful views. Possibly the graph of documents.
+We are also hoping to have a "live" version, where we could view a real-time simulation.
