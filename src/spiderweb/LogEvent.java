@@ -3,6 +3,7 @@ package spiderweb;
 /**
  * a simple class to encapsulate events to the graph as read from the
  * processed log file. 
+ * Testing
  * @author adavoust
  *
  */
