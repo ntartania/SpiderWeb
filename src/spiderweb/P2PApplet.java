@@ -49,7 +49,7 @@ import edu.uci.ics.jung.visualization.renderers.Renderer;
 /**
  * an applet that will display a graph using a spring layout, and as the graph changes the layout is updated.
  * @author alan
- *
+ * 
  */
 public class P2PApplet extends JApplet {
 	/**
@@ -80,6 +80,7 @@ public class P2PApplet extends JApplet {
 
 	protected JButton fastforward;
 	protected JButton pausebutton;
+	protected JButton reversebutton;
 
 	private LinkedList<LogEvent> myGraphEvolution;
 
@@ -89,7 +90,7 @@ public class P2PApplet extends JApplet {
 
 	protected EventPlayingThread eventthread;
 
-	Timer timer;
+	//Timer timer;
 
 	boolean done;
 
@@ -115,16 +116,16 @@ public class P2PApplet extends JApplet {
 		P2PApplet myapp;
 		
 		//constructor
-		public LittleGUI(P2PApplet app){
-			//Create the log first, because the action listeners
-			//need to refer to it.
+		public LittleGUI(P2PApplet app) {
+			// Create the log first, because the action listeners
+			// need to refer to it.
 			log = new JTextArea(8,60);
 			log.setMargin(new Insets(5,5,5,5));
 			log.setEditable(false);
 			logScrollPane = new JScrollPane(log);
 			
 			log.setLineWrap(true);
-
+			
 			
 			myapp = app;
 			//running through this main method means we're not running the applet on the web
@@ -155,7 +156,7 @@ public class P2PApplet extends JApplet {
 		 * handles the button to open a file 
 		 */
 		public void actionPerformed(ActionEvent e) {
-			
+
 
 			int returnVal = fc.showOpenDialog(this);
 
@@ -221,7 +222,7 @@ public class P2PApplet extends JApplet {
 	 * @param b true if the applet is running on the web (default). If not, it must be set from the main()
 	 */
 	public void setOnWeb(boolean b){
-	ontheweb = b;	
+		ontheweb = b;	
 	}
 
 	/**
@@ -249,7 +250,7 @@ public class P2PApplet extends JApplet {
 		//logreader = new LogReaderThread(this,DEF_LOG_FILE);
 
 		System.out.println("Reading the logs ...");
-		//TODO : make it possible to laod a different log file
+		//TODO : make it possible to load a different log file
 		SpringLayout<P2PVertex,P2PConnection> sp_layout=null;
 		try {
 			BufferedReader in;
@@ -270,9 +271,8 @@ public class P2PApplet extends JApplet {
 			myGraphEvolution = new LinkedList<LogEvent>();
 			hiddenGraph = new P2PNetworkGraph();
 
-			/*calculate the resulting layout !!*/
+			///*----------set up the spring layout!!----------*///
 			//create a spring layout for the hidden graph and give it my own parameters ----------
-			
 			
 			sp_layout = new SpringLayout<P2PVertex,P2PConnection>(hiddenGraph, new P2PNetEdgeLengthFunction()); // here is my length calculation
 			//do it with the F-R  layout
@@ -280,40 +280,52 @@ public class P2PApplet extends JApplet {
 			sp_layout.setSize(new Dimension(DEFWIDTH,DEFHEIGHT));
 			sp_layout.setForceMultiplier(0.6); //testing this value
 			//((SpringLayout<Number,Number>)layout).setRepulsionRange(50);
-			//-----------------------------------------------------------------
 			sp_layout.setInitializer(new P2PVertexPlacer(sp_layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
 			
+			//------------------------------------------------------------------------------------
 			
-			/// we're about to start working on that layout
+			
+
+			///*----------Read the file and start calculating the resulting layout !!----------*///
+						
 			sp_layout.initialize();
-			int count = 0;
+			//int count = 0;
+			List<LogEvent> colouringEvents = new LinkedList<LogEvent>();
 			while ((str = in.readLine()) != null) //reading lines log file
 			{
-				count++;
+				//count++;
 				//if(count %100 ==0) System.out.println(count+ "lines read");
+				
 				LogEvent gev = new LogEvent(str);
+				
+				if(gev.getType().equals("query") || gev.getType().equals("queryhit"))
+				{
+					colouringEvents.add(LogEvent.colouredLogEvent(gev)); //decolour the peer after 2000ms
+				}
+				for(int i=0;i<colouringEvents.size();i++) { //start at first element (time should increase with each index)
+					if(colouringEvents.get(i).getTime() < gev.getTime()) { //add only if the event takes place before the LogEvent that was read this iteration
+						myGraphEvolution.addLast(colouringEvents.get(i));
+						colouringEvents.remove(i);
+						i--;
+					}
+				}
 				myGraphEvolution.addLast(gev);
-
 				//add all the nodes to construct the new graph
 				if (gev.isConstructing()){
-					hiddenGraph.event(gev); //change graph
+					hiddenGraph.event(gev,false); //change graph
 					sp_layout.step(); //do one step in changing the layout of the graph
 					sp_layout.step(); //and another few
 					/*sp_layout.step();
 					sp_layout.step();
 					sp_layout.step();*/
 				}
-				
-				
-		
 			}//end while
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			
 		}
 
-		System.out.println("Done !!");
+		//System.out.println(myGraphEvolution);
 
 		/*for (int i=0; i<500; i++)sp_layout.step(); // give it another few hundred steps of figuring itself out
 		System.out.println("Layout finalized !!");
@@ -324,6 +336,7 @@ public class P2PApplet extends JApplet {
 */
 		
 		layout = sp_layout;
+		//layout = ci_layout;
 		//create viewer
 		vv = new VisualizationViewer<P2PVertex,P2PConnection>(layout, new Dimension(DEFWIDTH,DEFHEIGHT));
 
@@ -334,7 +347,7 @@ public class P2PApplet extends JApplet {
 		getContentPane().setBackground(java.awt.Color.lightGray);
 		getContentPane().setFont(new Font("Serif", Font.PLAIN, 12));
 		//try set the size
-		//getContentPane().setBounds(0, 0, DEFWIDTH, DEFHEIGHT);
+		getContentPane().setBounds(0, 0, DEFWIDTH, DEFHEIGHT);
 
 		// the default mouse makes the mouse usable as a picking tool (pick, drag vertices & edges) or as a transforming tool (pan, zoom)
 		DefaultModalGraphMouse<P2PVertex,P2PConnection> gm =new DefaultModalGraphMouse<P2PVertex,P2PConnection>(); 
@@ -376,7 +389,7 @@ public class P2PApplet extends JApplet {
 
 		getContentPane().add(vv);
 		
-		timer = new Timer();
+		//timer = new Timer();
 		
 		System.out.println("dododo");
 		
@@ -393,15 +406,20 @@ public class P2PApplet extends JApplet {
 		pausebutton = new JButton("Pause");
 		pausebutton.addActionListener(new PauseButtonListener()); 
 		
+		reversebutton = new JButton("Reverse");
+		reversebutton.addActionListener(new ReverseButtonListener());
+		
 		JPanel south = new JPanel();
 		JPanel p = new JPanel();
 		//add little combo box to choose between the mouse picking and the mouse transforming the layout
 		p.setBorder(BorderFactory.createTitledBorder("Mouse Mode"));
 		p.add(gm.getModeComboBox());
 		south.add(p);
+		south.add(reversebutton);
 		south.add(fastforward);
 		south.add(pausebutton);
 		pausebutton.setEnabled(false);
+		reversebutton.setEnabled(false);
 		
 		getContentPane().add(south, BorderLayout.SOUTH);
 
@@ -470,13 +488,13 @@ public class P2PApplet extends JApplet {
 
 				Thread.sleep(1000);
 				
-				//activate the pause / resume button
+				//activate the pause / resume and reverse forward buttons
 				pausebutton.setEnabled(true);
+				reversebutton.setEnabled(true);
 
 				System.out.println("starting activity now !");
 
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} //wait 5 seconds
 			//these predicates say : if the considered node /edge (which will be evaluated in the context of the hiddengraph) is found in the visible graph, then show it !
@@ -485,21 +503,44 @@ public class P2PApplet extends JApplet {
 
 			eventthread.start();
 			
-			fastforward.setText("Fast Forward");
+			fastforward.setText("Quick Speed");
 
 
-		} else if (fastforward.getText().startsWith("Fast")) {
+		} else if (fastforward.getText().startsWith("Quick")) {
 				fastforward.setText("Normal Speed");
 				eventthread.fastForward();
 				if (eventthread.getState().equals(Thread.State.TIMED_WAITING))
 					eventthread.interrupt(); //if we were waiting for the next event, we'll just wake the thread.
 				
 			} else {
-				fastforward.setText("Fast Forward");
+				fastforward.setText("Quick Speed");
 				eventthread.normalSpeed();
 			}
 					
 		}
+	}
+	/**
+	 * An ActionListener that defines the action of the reverse button for the applet
+	 * @author Matthew
+	 * @version May 2011
+	 */
+	class ReverseButtonListener implements ActionListener {
+		
+		/**
+		 * Method called when the reverse button has an action performed(clicked)
+		 * Tells eventthread to traverse the graph placement in reverse.
+		 * @param ae	The ActionEvent that triggered the listener
+		 */
+		public void actionPerformed(ActionEvent ae) {
+			if (reversebutton.getText().startsWith("Reverse")) {
+				reversebutton.setText("Forward");
+				eventthread.setReverse(true);
+			} else {
+				reversebutton.setText("Reverse");
+				eventthread.setReverse(false);
+			}
+		}
+	
 	}
 	
 	 /**
@@ -526,7 +567,7 @@ public class P2PApplet extends JApplet {
 				if (pausebutton.getText().startsWith("Pause")) {
 					pausebutton.setText("Resume");
 					eventthread.pause();
-					} else {
+				} else {
 					pausebutton.setText("Pause");
 					eventthread.myresume();
 					
@@ -544,7 +585,7 @@ public class P2PApplet extends JApplet {
 	 * @author adavoust
 	 *
 	 */
-	class RemindTask extends TimerTask {
+	/*class RemindTask extends TimerTask {
 
 		public static final int UNPICK_VERTEX = 1;
 		public static final int UNPICK_EDGE = 2;
@@ -581,7 +622,7 @@ public class P2PApplet extends JApplet {
 		 * constructor
 		 * @param kk the object that the task applies to, either a P2PVertex or a P2PConnection
 		 * @param whattodo is the task, from a predefined list
-		 */
+		 /
 		public RemindTask(Object kk, int whatTodo){ // the object will be a number or a P2PVertex
 			toChange = kk;    	
 			tasktype = whatTodo;
@@ -589,30 +630,30 @@ public class P2PApplet extends JApplet {
 
 		/**
 		 * execute this task
-		 */
+		 /
 		public void run() {
 
 			switch(tasktype){
-			case UNPICK_VERTEX:
-				vv.getRenderContext().getPickedVertexState().pick((P2PVertex)toChange, false);
-				break;
-			case UNPICK_EDGE:
-				vv.getRenderContext().getPickedEdgeState().pick((P2PConnection)toChange, false);
-				break;
-			case UNQUERY_PEER:
-			case UN_ANSWER_PEER:
-			case UN_ANSWER_DOC:
-				((P2PVertex)toChange).backToNormal();
-				break;
-				
-			case UNQUERY_EDGE:
-				((P2PConnection)toChange).backToNormal();
-				break;
-			default:
-				//do nothing
+				case UNPICK_VERTEX:
+					vv.getRenderContext().getPickedVertexState().pick((P2PVertex)toChange, false);
+					break;
+				case UNPICK_EDGE:
+					vv.getRenderContext().getPickedEdgeState().pick((P2PConnection)toChange, false);
+					break;
+				case UNQUERY_PEER:
+				case UN_ANSWER_PEER:
+				case UN_ANSWER_DOC:
+					((P2PVertex)toChange).backToNormal();
+					break;
+					
+				case UNQUERY_EDGE:
+					((P2PConnection)toChange).backToNormal();
+					break;
+				default:
+					//do nothing
 			}
 
-			eventthread.notifyTask(this); // notify the eventthread that this task has been done
+			//eventthread.notifyTask(this); // notify the eventthread that this task has been done
 			//update the layout after we just did something
 			vv.repaint();
 		
@@ -629,11 +670,12 @@ public class P2PApplet extends JApplet {
 		}
 		
 		
-	}
+	}*/
 
 
 
 	/**
+	 * 
 	 * to run this applet as a java application
 	 * @param args optional argument : the log file to process
 	 */
@@ -661,32 +703,34 @@ public class P2PApplet extends JApplet {
 		private static final long ffspeed = 50L; // 50 millisec between events while we're fast-forwarding
 
 		private boolean ffwd = false;
+		private boolean reverse = false;
 		
-		Queue<LogEvent> my_eventlist;
+		List<LogEvent> my_eventlist;
+		private int current_index = 0;
 		
-		List<RemindTask> taskspending;//maintain a list of scheduled tasks... so that we don't lose them on a pause() action
+		//List<RemindTask> taskspending;//maintain a list of scheduled tasks... so that we don't lose them on a pause() action
 
-		public EventPlayingThread(Queue<LogEvent> eventlist){
+		public EventPlayingThread(LinkedList<LogEvent> eventlist){
 			my_eventlist = eventlist;
-			taskspending = new LinkedList<RemindTask>();
+			//taskspending = new LinkedList<RemindTask>();
 		}
 
 		/** notify : this task has been done we can remove it from the to-do list
 		 * 
 		 * @param tsk the task that's been done
 		 */
-		public void notifyTask(RemindTask tsk) {
+		/*public void notifyTask(RemindTask tsk) {
 			taskspending.remove(tsk);
 			
-		}
+		}*/
 
 		//a hack for the pause / resume... the timer needs to be notified that it can also continue
 		public void myresume() {
-			timer = new Timer();
-			for(RemindTask t : taskspending){
-				timer.schedule((RemindTask)t.clone(),t.getDelay());//re-schedule all the tasks that were on hold 
+			//timer = new Timer();
+			//for(RemindTask t : taskspending){
+				//timer.schedule((RemindTask)t.clone(),t.getDelay());//re-schedule all the tasks that were on hold 
 				//System.out.println("Rescheduling task : "+t.toString());
-			}
+			//}
 			this.resume();//it's deprecated but for now it's the easiest way of doing it.
 			
 		}
@@ -699,19 +743,27 @@ public class P2PApplet extends JApplet {
 			ffwd = false;
 		}
 		
+		/**
+		 * Sets if the thread should traverse the drawing in reverse
+		 * @param reverse True if the display should be traversing opposite of time
+		 */
+		public void setReverse(boolean reverse) {
+			this.reverse = reverse;
+		}
+		
 		public void pause(){
 			//pb : I may have tasks pending... will need to reschedule them once timer restarts.
-			timer.cancel();
+			//timer.cancel();
 			this.suspend();
 			
 		}
 
 
 		//convenience method to schedule "remindtasks" and not forget to add them to the list
-		private void taskSchedule(RemindTask tsk){
+		/*private void taskSchedule(RemindTask tsk){
 			timer.schedule(tsk, tsk.getDelay());  // schedule it for execution using the timer
 			taskspending.add(tsk); // store it in case of pause
-		}
+		}*/
 		
 		/////////////////////////////////////////////////////////
 		 
@@ -726,12 +778,13 @@ public class P2PApplet extends JApplet {
 			P2PVertex tofind = P2PVertex.makePeerVertex(peer);
 			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer"
 			{
-				if (v.equals(tofind)){
+				if (v.equals(tofind)) {
 					v.query(q); //change state to "querying" and record which is the query
 					//schedule a task in one second to return the color of that vertex to normal.
-					taskSchedule(new RemindTask(v,RemindTask.UNQUERY_PEER)); 
+					//taskSchedule(new RemindTask(v,RemindTask.UNQUERY_PEER)); 
 					
-					break;}
+					break;
+				}
 			}
 			vv.repaint();// update visual
 		}
@@ -754,13 +807,12 @@ public class P2PApplet extends JApplet {
 							P2PVertex otherV= hiddenGraph.getOpposite(v, edge);
 							if (otherV.getQueryState()>P2PVertex.PEER && otherV.getmessageid()==mid){ //this is true if the peer is in one of the states query, getquery,answering, for the same qid
 								edge.query();// the edge is passing the query
-								taskSchedule(new RemindTask(edge,RemindTask.UNQUERY_EDGE)); //undo hte querying state of the edge
+								//taskSchedule(new RemindTask(edge,RemindTask.UNQUERY_EDGE)); //undo the querying state of the edge
 								//System.out.println("found originator");
 								break;
 							} //else 
 								//System.out.println(otherV.getLabel() +"   "+otherV.getQueryState());
 						}
-						taskSchedule(new RemindTask(v,RemindTask.UN_ANSWER_PEER));
 						
 					} else {
 						v.query(mid);// we let the peer query, but set the query number to the message id 
@@ -786,17 +838,25 @@ public class P2PApplet extends JApplet {
 			{
 				if (v.equals(Ptofind)){
 					v.answering(); //change state to "answering"
-					//schedule a task in one second to return the color of that vertex to normal.
-					taskSchedule(new RemindTask(v,RemindTask.UN_ANSWER_PEER));
 					foundpeer=true;
 					if(founddoc)break;
 				}
 				else if(v.equals(docToFind)){
 					v.answering(); //change state to "matching doc"
-					//schedule a task in one second to return the color of that vertex to normal.
-					taskSchedule(new RemindTask(v,RemindTask.UN_ANSWER_DOC));
 					founddoc=true;
 					if(foundpeer)break;
+				}
+			}
+			vv.repaint();// update visual
+		}
+		
+		public void decolour(int vertex)
+		{
+			P2PVertex Ptofind = P2PVertex.makePeerVertex(vertex);
+			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
+			{
+				if (v.equals(Ptofind)){
+					v.backToNormal();
 				}
 			}
 			vv.repaint();// update visual
@@ -809,29 +869,45 @@ public class P2PApplet extends JApplet {
 
 			long mytimenow = 0L;//System.currentTimeMillis();
 			long nexttime;
-
+			boolean oldDirection = reverse;
 			//READING FROM CD++ LOG FILE/////////////
 			while (!my_eventlist.isEmpty()) //reading lines from config file to get parameter list
 			{
-				LogEvent evt = my_eventlist.poll(); //get from the front of the queue
-
+				oldDirection = reverse; //used to continue loop if reversed while thread sleeping
+				LogEvent evt = my_eventlist.get(current_index); //get from the front of the queue
+				
 				nexttime = evt.getTime();
 				//System.out.println("next event at :"+nexttime);
 				try{
 					if (!ffwd) //fast forwarding ?
-						Thread.sleep(Math.max(0,nexttime-mytimenow)); //wait until that event time comes up
+						Thread.sleep(Math.max(0,Math.abs(nexttime-mytimenow))); //wait until that event time comes up
 					else 
 						Thread.sleep(ffspeed);//wait for the internal "fast-forward" speed
 				} catch (InterruptedException e){
 					System.err.println("log event thread interrupted !");
 					// but don't stop, we probably just went from real-time to fast-fwd 
 				}
-
+				if(reverse) { //increment after thread so that if reverse was pressed while sleeping it will increment properly
+					if(current_index>0) {
+						current_index--;
+					} else {
+						pausebutton.doClick(); //when beginning is reached pause the playback.
+					}
+				} else {
+					if(current_index < my_eventlist.size()-1) {
+						current_index++;
+					} else {
+						pausebutton.doClick(); //when end is reached pause the playback.
+					}
+				}
+				if(oldDirection != reverse) { // if the reverse direction was switched during the thread sleeping stop what was going to happen and go back
+					continue; 
+				}
 				mytimenow = nexttime; //advance time
 				
 				//if the event is to modify the structure of the graph
 				if (evt.isStructural()){
-					visibleGraph.event(evt);
+					visibleGraph.event(evt, reverse);
 					vv.repaint();
 				} else { //other events: queries
 					String what = evt.getType();
@@ -840,9 +916,18 @@ public class P2PApplet extends JApplet {
 
 					if(what.equals("query")){
 						doQuery(val1, val2);
+						if(reverse) {
+							decolour(val1);
+						}
+					}
+					else if (what.equals("decolour")) {
+						decolour(val1);
 					}
 					else if (what.equals("queryhit")){
 						doQueryHit(val1, val2);
+						if(reverse) {
+							decolour(val1);
+						}						
 					}
 					else if (what.equals("queryreachespeer")){
 						doQueryReachesPeer(val1,val2);

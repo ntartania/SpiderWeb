@@ -80,10 +80,10 @@ public class P2PVertex implements Comparable {
 		return mytypeandstate;
 	}
 	
-	public void query(int q) {
+	public void query(int qid) {
 		if (isPeer()){
 			mytypeandstate = QUERYING;
-			querymessageId = q;
+			querymessageId = qid;
 		}
 		
 	}

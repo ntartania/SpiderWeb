@@ -1,7 +1,6 @@
 package spiderweb;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -22,17 +21,6 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
     	P2PVertex v1 = new P2PVertex(P2PVertex.PEER, peernumber);
     	super.addVertex(v1);
     }
-    
-    /** adding a document connected to a peer*/
-    public void addDocument(int docnumber, int peer){
-    	P2PVertex vdoc = P2PVertex.PeerPublishesDoc(peer, docnumber);
-		addVertex(vdoc);
-		//create a vertex that we can compare with the ones in the graph to find the peer vertex
-		P2PVertex vpeer = P2PVertex.makePeerVertex(peer);
-		Integer label = new Integer(++edgecounter); // increment edgecounter then add edge 
-		addEdge(new P2PConnection(P2PConnection.P2DOC,label), vdoc, vpeer);
-    }
-    
     /**removing a peer : must remove all associated docs*/
     public void removePeer(int peernum){
     	P2PVertex peer = P2PVertex.makePeerVertex(peernum);
@@ -48,32 +36,78 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
     		removeVertex(n);
     	}
     	removeVertex(peer);
-    	
     }
+    
+    /** adding a document connected to a peer*/
+    public void addDocument(int docnumber, int peer){
+    	P2PVertex vdoc = P2PVertex.PeerPublishesDoc(peer, docnumber);
+		addVertex(vdoc);
+		//create a vertex that we can compare with the ones in the graph to find the peer vertex
+		P2PVertex vpeer = P2PVertex.makePeerVertex(peer);
+		Integer label = new Integer(++edgecounter); // increment edgecounter then add edge 
+		addEdge(new P2PConnection(P2PConnection.P2DOC,label), vdoc, vpeer);
+    }
+    
+    public void removeDocument(int docnumber, int peer) {
+    	P2PVertex doc = getVertexInGraph(P2PVertex.PeerPublishesDoc(peer, docnumber));
+    	P2PVertex publisher = getVertexInGraph(P2PVertex.makePeerVertex(peer));
+    	P2PConnection edge = findEdge(publisher,doc);
+    	
+    	super.removeEdge(edge);
+    	removeVertex(doc);
+    }
+    
     
     /**
      * add an edge to the graph
      * @param number
      */
     public void connectPeers(int from, int to) {
-
     	Integer edge = new Integer(++edgecounter);
-    	
+    	System.out.println(edgecounter);
     	addEdge(new P2PConnection(P2PConnection.P2P,edge), getVertexInGraph(P2PVertex.makePeerVertex(from)), getVertexInGraph(P2PVertex.makePeerVertex(to)));
-
+    }
+    /**
+     * remove an edge from the graph
+     * @param number
+     */
+    public void disconnectPeers(int from, int to) {
+    	P2PConnection edge = findEdge(getVertexInGraph(P2PVertex.makePeerVertex(from)), getVertexInGraph(P2PVertex.makePeerVertex(to)));
+    	
+    	super.removeEdge(edge);
     }
 
     /** apply a log event to transform a graph*/
-	public void event(LogEvent gev) {
-		if (gev.getType().equals("online")){
-			addPeer(gev.getParam(1));
-		} else if (gev.getType().equals("offline")){
-			removePeer(gev.getParam(1));
-		} else if(gev.getType().equals("connect")){
-			connectPeers(gev.getParam(1), gev.getParam(2));
-		} else if(gev.getType().equals("publish")){
-			addDocument(gev.getParam(2), gev.getParam(1));
-		} 
+	public void event(LogEvent gev, boolean reverse) {
+		if(!reverse) {
+			if (gev.getType().equals("online")){
+				addPeer(gev.getParam(1));
+			} else if (gev.getType().equals("offline")){
+				removePeer(gev.getParam(1));
+			} else if(gev.getType().equals("connect")){
+				connectPeers(gev.getParam(1), gev.getParam(2));
+			} else if(gev.getType().equals("disconnect")){
+				disconnectPeers(gev.getParam(1), gev.getParam(2));
+			} else if(gev.getType().equals("publish")){
+				addDocument(gev.getParam(2), gev.getParam(1));
+			} else if(gev.getType().equals("depublish")){
+				removeDocument(gev.getParam(2), gev.getParam(1));
+			}
+		} else {
+			if (gev.getType().equals("online")){
+				removePeer(gev.getParam(1));
+			} else if (gev.getType().equals("offline")){
+				addPeer(gev.getParam(1));
+			} else if(gev.getType().equals("connect")){
+				disconnectPeers(gev.getParam(1), gev.getParam(2));
+			} else if(gev.getType().equals("disconnect")){
+				connectPeers(gev.getParam(1), gev.getParam(2));
+			} else if(gev.getType().equals("publish")){
+				removeDocument(gev.getParam(2), gev.getParam(1));
+			} else if(gev.getType().equals("depublish")){
+				addDocument(gev.getParam(2), gev.getParam(1));
+			}
+		}
 	}
 	/**
 	 * this methods gets a vertex already in the graph that is equal to the input vertex

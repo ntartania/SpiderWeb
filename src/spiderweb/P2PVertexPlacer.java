@@ -6,7 +6,6 @@ import java.awt.geom.Point2D;
 import org.apache.commons.collections15.Transformer;
 
 import edu.uci.ics.jung.algorithms.layout.Layout;
-import edu.uci.ics.jung.graph.Graph;
 
 /**
  * this vertex placer is used in the spring layout to initialize the position of a new node in the graph when calculating the layout.

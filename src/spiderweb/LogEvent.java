@@ -13,6 +13,12 @@ public class LogEvent {
 	private int param1=0;
 	private int param2=0;
 	
+	/**
+	 * 
+	 * @param str
+	 * @return
+	 */
+	
 	/**constructor for an event as represented by a line in a (processed) log file*/
 	public LogEvent(String str){
 		// possible lines :
@@ -31,9 +37,36 @@ public class LogEvent {
 		param1 = Integer.parseInt(words[2]);
 		param2 = 0;
 		if(words.length>3)
-			param2= Integer.parseInt(words[3]);
+			param2 = Integer.parseInt(words[3]);
 
 	}
+	
+	/**
+	 * Constructor for the static colouredLogEvent which creates an event from another LogEvent which created it.
+	 * @param time		the time in milliseconds the event happened
+	 * @param type		the type of event occurring
+	 * @param param1 	the first parameter (peer number)
+	 * @param param2	the second parameter (peer2/doc/query number)
+	 */
+	private LogEvent(long time, String type, int param1, int param2)
+	{
+		this.time = time;
+		this.type = type;
+		this.param1 = param1;
+		this.param2 = param2;
+	}
+	
+	/**
+	 * Create a new LogEvent that depends on a LogEvent which created it.
+	 * @param creator	The LogEvent which triggered the colouringEvent
+	 * @param colouring	True if the event is to colour, false if it is a decolouring event
+	 * @return a new LogEvent with parameters to colour 
+	 */
+	public static LogEvent colouredLogEvent(LogEvent creator)
+	{
+		return new LogEvent((creator.getTime()+2000), "decolour", creator.getParam(1), 0);
+	}
+	
 	/** indicates whether this event is a "construction" event in the graph (adds an edge or a vertex)*/
 	public boolean isConstructing(){
 		return (type.equals("connect")||type.equals("publish")||type.equals("online"));
@@ -48,7 +81,7 @@ public class LogEvent {
 	
 	/**events that modify the graph*/ 
 	public boolean isStructural(){
-		return (isConstructing()||type.equals("offline"));
+		return (isConstructing()||type.equals("offline")||type.equals("disconnect"));
 	}
 	/**
 	 * get one of the parameters of the event
@@ -60,6 +93,10 @@ public class LogEvent {
 			return param1;
 		else
 			return param2;
+	}
+	
+	public String toString() {
+		return(time+":"+type+":"+param1+":"+param2+"\n");
 	}
 	
 	

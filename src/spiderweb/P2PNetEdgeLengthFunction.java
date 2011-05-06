@@ -3,9 +3,6 @@ package spiderweb;
 //import edu.uci.ics.jung.algorithms.layout.SpringLayout.LengthFunction;
 import org.apache.commons.collections15.Transformer;
 
-import edu.uci.ics.jung.graph.Graph;
-import edu.uci.ics.jung.graph.util.Pair;
-
 public class P2PNetEdgeLengthFunction implements Transformer<P2PConnection,Integer> {
 	
 	@Override
