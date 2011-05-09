@@ -62,9 +62,9 @@ public class LogEvent {
 	 * @param colouring	True if the event is to colour, false if it is a decolouring event
 	 * @return a new LogEvent with parameters to colour 
 	 */
-	public static LogEvent colouredLogEvent(LogEvent creator)
+	public static LogEvent createOpposingLogEvent(LogEvent creator)
 	{
-		return new LogEvent((creator.getTime()+2000), "decolour", creator.getParam(1), 0);
+		return new LogEvent((creator.getTime()+(creator.getType()=="queryreachespeer" ? 500 : 2000)), "un"+creator.getType(), creator.getParam(1), creator.getParam(2));
 	}
 	
 	/** indicates whether this event is a "construction" event in the graph (adds an edge or a vertex)*/

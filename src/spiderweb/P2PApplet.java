@@ -58,8 +58,8 @@ public class P2PApplet extends JApplet {
 	private static final long serialVersionUID = 2L;
 	
 	//default size for the swing graphic components
-	private static int DEFWIDTH = 1200;
-	private static int DEFHEIGHT = 800;
+	private static int DEFWIDTH = 800;
+	private static int DEFHEIGHT = 600;
 
 	private static final boolean ONWEB = true;
 	
@@ -75,9 +75,7 @@ public class P2PApplet extends JApplet {
 	private VisualizationViewer<P2PVertex,P2PConnection> vv = null;
 
 	private AbstractLayout<P2PVertex,P2PConnection> layout = null;
-
-	private int edgecounter; // just a counter so that I don't try to add twice the same edge number.
-
+	
 	protected JButton fastforward;
 	protected JButton pausebutton;
 	protected JButton reversebutton;
@@ -233,8 +231,6 @@ public class P2PApplet extends JApplet {
 		//create a graph, that will be the one updated during the visualization process
 		//Graph<P2PVertex,P2PConnection> ig = Graphs.<P2PVertex,P2PConnection>synchronizedUndirectedGraph(new UndirectedSparseGraph<P2PVertex,P2PConnection>());//  synchronizedDirectedGraph(new DirectedSparseMultigraph<Number,Number>());
 
-		edgecounter = 0;
-
 		/*ObservableGraph<P2PVertex,P2PConnection> og = new ObservableGraph<P2PVertex,P2PConnection>(ig);
 		og.addGraphEventListener(new GraphEventListener<P2PVertex,P2PConnection>() {
 
@@ -257,15 +253,14 @@ public class P2PApplet extends JApplet {
 			if (ontheweb){ // hack : when running on SCE server I can't read the log file without opening it through this URL reader ...
 				URL yahoo = new URL(DEF_LOG_URL);
 				in = new BufferedReader(new InputStreamReader(yahoo.openStream()));
-				}
-			else
+			} else {
 				if (mylogfile == null)
 					in = new BufferedReader(new FileReader(DEF_LOG_FILE));
 				else{
 					in = new BufferedReader(new FileReader(mylogfile));
 					System.out.println("reading from the file"+mylogfile.getAbsolutePath());
 				}
-			
+			}
 			String str;
 
 			myGraphEvolution = new LinkedList<LogEvent>();
@@ -298,9 +293,9 @@ public class P2PApplet extends JApplet {
 				
 				LogEvent gev = new LogEvent(str);
 				
-				if(gev.getType().equals("query") || gev.getType().equals("queryhit"))
+				if(gev.getType().equals("query") || gev.getType().equals("queryhit") || gev.getType().equals("queryreachespeer"))
 				{
-					colouringEvents.add(LogEvent.colouredLogEvent(gev)); //decolour the peer after 2000ms
+					colouringEvents.add(LogEvent.createOpposingLogEvent(gev)); //decolour the peer after 2000ms
 				}
 				for(int i=0;i<colouringEvents.size();i++) { //start at first element (time should increase with each index)
 					if(colouringEvents.get(i).getTime() < gev.getTime()) { //add only if the event takes place before the LogEvent that was read this iteration
@@ -443,7 +438,7 @@ public class P2PApplet extends JApplet {
 		//set timer so applet will change
 
 		vv.repaint();
-///----------run the spring layout algorithm with the full hidden graph for a bit -------
+		///----------run the spring layout algorithm with the full hidden graph for a bit -------
 		
 	}
 
@@ -550,7 +545,6 @@ public class P2PApplet extends JApplet {
 	 */
 		class PauseButtonListener implements ActionListener {
 	 		
-			
 /*			public PauseButtonListener (){ // the relaxer is the thread that's doing the dynamic layout.
 											  // we need to stop it then switch to a static layout,
 											  // then show the full graph layout for one sec then make it hidden
@@ -572,10 +566,8 @@ public class P2PApplet extends JApplet {
 					eventthread.myresume();
 					
 				}
-
 			}
 		}
-	
 	
 	/**
 	 * this class is a task to undo "highlighting" changes in the graph :
@@ -790,7 +782,7 @@ public class P2PApplet extends JApplet {
 		}
 		
 		/**
-		 * Visualize a query reaches peer event
+		 * Visualize a query reaches peer event (bold edges)
 		 * @param peer
 		 * @param q
 		 */
@@ -816,6 +808,39 @@ public class P2PApplet extends JApplet {
 						
 					} else {
 						v.query(mid);// we let the peer query, but set the query number to the message id 
+					}
+					break;
+				}
+			}
+			vv.repaint();// update visual
+		}
+		/**
+		 * Visualize a query reaches peer event (bold edges)
+		 * @param peer
+		 * @param q
+		 */
+		public void undoQueryReachesPeer(int peer, int mid){
+
+			P2PVertex Ptofind = P2PVertex.makePeerVertex(peer);
+			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
+			{
+				if (v.equals(Ptofind)){
+					if (v.getQueryState()!=P2PVertex.QUERYING){
+						v.backToNormal();//change state to "receiving a query"
+						//schedule a task in half a second to return the color of that vertex to normal.
+						for (P2PConnection edge : hiddenGraph.getIncidentEdges(v)){
+							P2PVertex otherV= hiddenGraph.getOpposite(v, edge);
+							if (otherV.getQueryState()>P2PVertex.PEER && otherV.getmessageid()==mid){ //this is true if the peer is in one of the states query, getquery,answering, for the same qid
+								edge.backToNormal();// the edge is passing the query
+								//taskSchedule(new RemindTask(edge,RemindTask.UNQUERY_EDGE)); //undo the querying state of the edge
+								//System.out.println("found originator");
+								break;
+							} //else 
+								//System.out.println(otherV.getLabel() +"   "+otherV.getQueryState());
+						}
+						
+					} else {
+						v.backToNormal();// we let the peer query, but set the query number to the message id 
 					}
 					break;
 				}
@@ -913,24 +938,48 @@ public class P2PApplet extends JApplet {
 					String what = evt.getType();
 					int val1 = evt.getParam(1);
 					int val2 = evt.getParam(2);
-
-					if(what.equals("query")){
-						doQuery(val1, val2);
+					
+					if(what.equals("query")) {
 						if(reverse) {
+							decolour(val1);
+						} else {
+							doQuery(val1, val2);
+						}
+					}
+					else if (what.equals("unquery")) {
+						if(reverse) {
+							doQuery(val1, val2);
+						} else {
 							decolour(val1);
 						}
 					}
-					else if (what.equals("decolour")) {
-						decolour(val1);
-					}
-					else if (what.equals("queryhit")){
-						doQueryHit(val1, val2);
+					else if (what.equals("queryhit")) {
 						if(reverse) {
 							decolour(val1);
-						}						
+						} else {
+							doQueryHit(val1, val2);
+						}
 					}
-					else if (what.equals("queryreachespeer")){
-						doQueryReachesPeer(val1,val2);
+					else if (what.equals("unqueryhit")) {
+						if(reverse) {
+							doQueryHit(val1, val2);
+						} else {
+							decolour(val1);
+						}
+					}
+					else if (what.equals("queryreachespeer")) {
+						if(reverse) {
+							undoQueryReachesPeer(val1,val2);
+						} else {
+							doQueryReachesPeer(val1,val2);
+						}
+					}
+					else if (what.equals("unqueryreachespeer")) {
+						if(reverse) {
+							doQueryReachesPeer(val1,val2);
+						} else {
+							undoQueryReachesPeer(val1,val2);
+						}
 					}
 				}
 
