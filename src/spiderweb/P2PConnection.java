@@ -65,7 +65,7 @@ public class P2PConnection implements Comparable {
 
 	@Override
 	public int hashCode(){
-	return key.hashCode();	
+		return key.hashCode();	
 	}
 	
 	@Override

@@ -45,10 +45,11 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
 		//create a vertex that we can compare with the ones in the graph to find the peer vertex
 		P2PVertex vpeer = P2PVertex.makePeerVertex(peer);
 		Integer label = new Integer(++edgecounter); // increment edgecounter then add edge 
-		addEdge(new P2PConnection(P2PConnection.P2DOC,label), vdoc, vpeer);
+		addEdge(new P2PConnection(P2PConnection.P2DOC,edgeKeyer()), vdoc, vpeer);
     }
     
     public void removeDocument(int docnumber, int peer) {
+    	//edgecounter--;
     	P2PVertex doc = getVertexInGraph(P2PVertex.PeerPublishesDoc(peer, docnumber));
     	P2PVertex publisher = getVertexInGraph(P2PVertex.makePeerVertex(peer));
     	P2PConnection edge = findEdge(publisher,doc);
@@ -57,21 +58,24 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
     	removeVertex(doc);
     }
     
-    
     /**
      * add an edge to the graph
      * @param number
      */
     public void connectPeers(int from, int to) {
     	Integer edge = new Integer(++edgecounter);
-    	System.out.println(edgecounter);
-    	addEdge(new P2PConnection(P2PConnection.P2P,edge), getVertexInGraph(P2PVertex.makePeerVertex(from)), getVertexInGraph(P2PVertex.makePeerVertex(to)));
+    	
+    	
+    	P2PConnection p = new P2PConnection(P2PConnection.P2P,edgeKeyer());
+    	addEdge(p, getVertexInGraph(P2PVertex.makePeerVertex(from)), getVertexInGraph(P2PVertex.makePeerVertex(to)));
+    	System.out.println(p);
     }
     /**
      * remove an edge from the graph
      * @param number
      */
     public void disconnectPeers(int from, int to) {
+    	//edgecounter--;
     	P2PConnection edge = findEdge(getVertexInGraph(P2PVertex.makePeerVertex(from)), getVertexInGraph(P2PVertex.makePeerVertex(to)));
     	
     	super.removeEdge(edge);
@@ -121,6 +125,29 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
 				return v;
 		}
 		return null;
+	}
+	
+	/**
+	 * Checks through the list of edges for an available key
+	 * @return the first available key found null if no key available
+	 */
+	private Integer edgeKeyer() {
+		int i=0;
+    	boolean checker = true;
+    	while(checker) {
+    		for(P2PConnection con : getEdges()) {
+    			if(con.getKey() == i) {
+        			checker = false;
+        			break;
+        		}
+        	}
+    		if(checker) {
+    			return new Integer(i);
+    		}
+    		checker=true;
+    		i++;
+    	}
+    	return null;
 	}
 
 	//override these methods so the underlying collection is not unmodifiable
