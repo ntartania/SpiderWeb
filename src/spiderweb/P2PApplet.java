@@ -3,11 +3,9 @@ package spiderweb;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -20,9 +18,6 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import javax.swing.BorderFactory;
 import javax.swing.JApplet;
@@ -293,6 +288,7 @@ public class P2PApplet extends JApplet {
 			sp_layout.initialize();
 			//int count = 0;
 			List<LogEvent> colouringEvents = new LinkedList<LogEvent>();
+			myGraphEvolution.add(new LogEvent("0:start:0:0"));
 			while ((str = in.readLine()) != null) //reading lines log file
 			{
 				//count++;
@@ -322,6 +318,7 @@ public class P2PApplet extends JApplet {
 					sp_layout.step();*/
 				}
 			}//end while
+			myGraphEvolution.add(new LogEvent((myGraphEvolution.getLast().getTime())+":end:0:0"));
 		} catch (Exception e) {
 			e.printStackTrace();
 			
@@ -346,7 +343,7 @@ public class P2PApplet extends JApplet {
 		rp.putClientProperty("defeatSystemEventQueueCheck", Boolean.TRUE);
 
 		getContentPane().setLayout(new BorderLayout());
-		getContentPane().setBackground(java.awt.Color.lightGray);
+		//getContentPane().setBackground(java.awt.Color.lightGray);
 		getContentPane().setFont(new Font("Serif", Font.PLAIN, 12));
 		//try set the size
 		getContentPane().setBounds(0, 0, DEFWIDTH, DEFHEIGHT);
@@ -389,9 +386,12 @@ public class P2PApplet extends JApplet {
 				layout.setSize(arg0.getComponent().getSize());
 			}});
 
-		getContentPane().add(vv);
+		JPanel graphsPanel = new JPanel();
 		
-		//timer = new Timer();
+		graphsPanel.add(vv);
+		
+		
+		
 		
 		System.out.println("dododo");
 		
@@ -455,8 +455,10 @@ public class P2PApplet extends JApplet {
 		westLayout.setConstraints(relaxerButton, constraints);
 		west.add(relaxerButton);
 		
+		getContentPane().add(graphsPanel,BorderLayout.CENTER);
 		getContentPane().add(south, BorderLayout.SOUTH);
 		getContentPane().add(west,BorderLayout.WEST);
+		
 	}
 	
 	/**
@@ -568,12 +570,10 @@ public class P2PApplet extends JApplet {
 	
 					Thread.sleep(1000);
 					
-					//activate the pause / resume and reverse forward buttons
-					
 					fastReverseButton.setEnabled(true);
 					reverseButton.setEnabled(true);
 					pauseButton.setEnabled(true);
-					forwardButton.setEnabled(true);
+					forwardButton.setEnabled(false);
 					fastforwardButton.setEnabled(true);
 	
 					System.out.println("starting activity now !");
@@ -586,6 +586,7 @@ public class P2PApplet extends JApplet {
 				vv.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
 	
 				eventthread.start();
+				
 				
 				//fastforwardButton.setText("Quick Speed");
 	
@@ -600,6 +601,11 @@ public class P2PApplet extends JApplet {
 	class FastReverseButtonListener implements ActionListener {
 		
 		public void actionPerformed(ActionEvent ae) {
+			fastReverseButton.setEnabled(false);
+			reverseButton.setEnabled(true);
+			pauseButton.setEnabled(true);
+			forwardButton.setEnabled(true);
+			fastforwardButton.setEnabled(true);
 			eventthread.fastReverse();
 		}
 	}
@@ -617,6 +623,11 @@ public class P2PApplet extends JApplet {
 		 * @param ae	The ActionEvent that triggered the listener
 		 */
 		public void actionPerformed(ActionEvent ae) {
+			fastReverseButton.setEnabled(true);
+			reverseButton.setEnabled(false);
+			pauseButton.setEnabled(true);
+			forwardButton.setEnabled(true);
+			fastforwardButton.setEnabled(true);
 			eventthread.reverse();
 		}
 	
@@ -624,18 +635,44 @@ public class P2PApplet extends JApplet {
 	
 	class PauseButtonListener implements ActionListener {
 		public void actionPerformed(ActionEvent ae) {
+			if(eventthread.atFront()) {
+				fastReverseButton.setEnabled(false);
+				reverseButton.setEnabled(false);
+			} else {
+				fastReverseButton.setEnabled(true);
+				reverseButton.setEnabled(true);
+			}
+			pauseButton.setEnabled(false);
+			if(eventthread.atBack()) {
+				forwardButton.setEnabled(false);
+				fastforwardButton.setEnabled(false);
+			} else {
+				forwardButton.setEnabled(true);
+				fastforwardButton.setEnabled(true);
+			}
+			
 			eventthread.pause();
 		}
 	}
 	
 	class ForwardButtonListener implements ActionListener {
 		public void actionPerformed(ActionEvent ae) {
+			fastReverseButton.setEnabled(true);
+			reverseButton.setEnabled(true);
+			pauseButton.setEnabled(true);
+			forwardButton.setEnabled(false);
+			fastforwardButton.setEnabled(true);
 			eventthread.forward();
 		}
 	}
 	
 	class FastforwardButtonListener implements ActionListener {
 		public void actionPerformed(ActionEvent ae) {
+			fastReverseButton.setEnabled(true);
+			reverseButton.setEnabled(true);
+			pauseButton.setEnabled(true);
+			forwardButton.setEnabled(true);
+			fastforwardButton.setEnabled(false);
 			eventthread.fastForward();
 		}
 	}
@@ -678,22 +715,43 @@ public class P2PApplet extends JApplet {
 		
 		public EventPlayingThread(LinkedList<LogEvent> eventlist){
 			my_eventlist = eventlist;
-			state = PlayState.FORWARD;
+			state = PlayState.PAUSE;
+			//pauseButton.doClick(); //enables proper buttons
 		}
 		
 		public boolean isForward() {
-			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FORWARD));
+			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FORWARD) || ((state) == PlayState.PAUSE));
 		}
 		public boolean isFast() {
 			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FASTREVERSE));
+		}
+		
+		public boolean atFront() {
+			if(current_index <= 0) {
+				return true;
+			}
+			return false;
+		}
+		public boolean atBack() {
+			if (current_index >= my_eventlist.size()-1) {
+				return true;
+			}
+			return false;
+		}
+		
+		public boolean atAnEnd() {
+			if(atFront() || atBack()) {
+				return true;
+			}
+			return false;
 		}
 		
 		public void fastReverse() {
 			resumeIfPaused();
 			if(state != PlayState.FASTREVERSE) {
 				state = PlayState.FASTREVERSE;
-				if (eventthread.getState().equals(Thread.State.TIMED_WAITING)) {
-					eventthread.interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+				if (getState().equals(Thread.State.TIMED_WAITING)) {
+					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
 				}
 			}
 		}
@@ -702,8 +760,8 @@ public class P2PApplet extends JApplet {
 			resumeIfPaused();
 			if(state != PlayState.REVERSE) {
 				state = PlayState.REVERSE;
-				if (eventthread.getState().equals(Thread.State.TIMED_WAITING)) {
-					eventthread.interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+				if (getState().equals(Thread.State.TIMED_WAITING)) {
+					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
 				}
 			}
 		}
@@ -712,8 +770,8 @@ public class P2PApplet extends JApplet {
 			resumeIfPaused();
 			if(state != PlayState.FASTFORWARD) {
 				state = PlayState.FASTFORWARD;
-				if (eventthread.getState().equals(Thread.State.TIMED_WAITING)) {
-					eventthread.interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+				if (getState().equals(Thread.State.TIMED_WAITING)) {
+					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
 				}
 			}
 		}
@@ -722,8 +780,8 @@ public class P2PApplet extends JApplet {
 			resumeIfPaused();
 			if(state != PlayState.FORWARD) {
 				state = PlayState.FORWARD;
-				if (eventthread.getState().equals(Thread.State.TIMED_WAITING)) {
-					eventthread.interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+				if (getState().equals(Thread.State.TIMED_WAITING)) {
+					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
 				}
 			}
 		}
@@ -859,7 +917,7 @@ public class P2PApplet extends JApplet {
 			vv.repaint();// update visual
 		}
 		
-		public void decolour(int peernumber)
+		public void decolourPeer(int peernumber)
 		{
 			P2PVertex Ptofind = P2PVertex.makePeerVertex(peernumber);
 			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
@@ -890,6 +948,7 @@ public class P2PApplet extends JApplet {
 			long mytimenow = 0L;//System.currentTimeMillis();
 			long nexttime;
 			boolean oldDirection;
+			boolean firstRun = true;
 			//READING FROM CD++ LOG FILE/////////////
 			while (!my_eventlist.isEmpty()) //reading lines from config file to get parameter list
 			{
@@ -907,18 +966,22 @@ public class P2PApplet extends JApplet {
 					System.err.println("log event thread interrupted !");
 					// but don't stop, we probably just went from real-time to fast-fwd 
 				}
+				if(evt.getType().equals("end") || evt.getType().equals("start")) {
+					if(!firstRun){
+						pauseButton.doClick();
+						/*if(atFront()){
+							current_index++;
+						} else if(atBack()) {
+							current_index--;
+						}*/
+					} else {
+						firstRun=false;
+					}
+				}
 				if(isForward()) { //increment after thread so that if reverse was pressed while sleeping it will increment properly
-					if(current_index < my_eventlist.size()-1) {
-						current_index++;
-					} else {
-						pauseButton.doClick(); //when beginning is reached pause the playback.
-					}
+					current_index++;
 				} else {
-					if(current_index > 0) {
-						current_index--;
-					} else {
-						pauseButton.doClick(); //when end is reached pause the playback.
-					}
+					current_index--;
 				}
 				if(oldDirection != isForward()) { // if the reverse direction was switched during the thread sleeping stop what was going to happen and go back
 					continue; 
@@ -938,12 +1001,12 @@ public class P2PApplet extends JApplet {
 						if(isForward()) {
 							doQuery(val1, val2);
 						} else {
-							decolour(val1);
+							decolourPeer(val1);
 						}
 					}
 					else if (what.equals("unquery")) {
 						if(isForward()) {
-							decolour(val1);
+							decolourPeer(val1);
 						} else {
 							doQuery(val1, val2);
 						}
@@ -952,13 +1015,13 @@ public class P2PApplet extends JApplet {
 						if(isForward()) {
 							doQueryHit(val1, val2);
 						} else {
-							decolour(val1);
+							decolourPeer(val1);
 							decolourDoc(val1, val2);
 						}
 					}
 					else if (what.equals("unqueryhit")) {
 						if(isForward()) {
-							decolour(val1);
+							decolourPeer(val1);
 							decolourDoc(val1, val2);
 						} else {
 							doQueryHit(val1, val2);
@@ -993,7 +1056,7 @@ public class P2PApplet extends JApplet {
 						}
 					}
 				}
-
+				
 			}//end while
 
 		}
