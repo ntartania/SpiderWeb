@@ -3,7 +3,11 @@ package spiderweb;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -76,9 +80,12 @@ public class P2PApplet extends JApplet {
 
 	private AbstractLayout<P2PVertex,P2PConnection> layout = null;
 	
-	protected JButton fastforward;
-	protected JButton pausebutton;
-	protected JButton reversebutton;
+	protected JButton relaxerButton;
+	protected JButton fastforwardButton;
+	protected JButton forwardButton;
+	protected JButton pauseButton;
+	protected JButton reverseButton;
+	protected JButton fastReverseButton;
 
 	private LinkedList<LogEvent> myGraphEvolution;
 
@@ -295,7 +302,7 @@ public class P2PApplet extends JApplet {
 				
 				if(gev.getType().equals("query") || gev.getType().equals("queryhit") || gev.getType().equals("queryreachespeer"))
 				{
-					colouringEvents.add(LogEvent.createOpposingLogEvent(gev)); //decolour the peer after 2000ms
+					colouringEvents.add(LogEvent.createOpposingLogEvent(gev)); // add an opposing event to decolour/debold
 				}
 				for(int i=0;i<colouringEvents.size();i++) { //start at first element (time should increase with each index)
 					if(colouringEvents.get(i).getTime() < gev.getTime()) { //add only if the event takes place before the LogEvent that was read this iteration
@@ -307,7 +314,7 @@ public class P2PApplet extends JApplet {
 				myGraphEvolution.addLast(gev);
 				//add all the nodes to construct the new graph
 				if (gev.isConstructing()){
-					hiddenGraph.event(gev,false); //change graph
+					graphConstructionEvent(gev,hiddenGraph);
 					sp_layout.step(); //do one step in changing the layout of the graph
 					sp_layout.step(); //and another few
 					/*sp_layout.step();
@@ -394,42 +401,118 @@ public class P2PApplet extends JApplet {
 		relaxer.relax();
 
 		//button to freeze layout, then to fast-forward
-		fastforward = new JButton("Click here when you're happy with the layout...");
-		fastforward.addActionListener(new MyButtonListener(relaxer)); 
+		relaxerButton = new JButton("Finalize Layout");
+		relaxerButton.addActionListener(new relaxerButtonListener(relaxer)); 
+				
+		fastReverseButton = new JButton("<|<|");
+		fastReverseButton.addActionListener(new FastReverseButtonListener()); 
 		
-		//
-		pausebutton = new JButton("Pause");
-		pausebutton.addActionListener(new PauseButtonListener()); 
+		reverseButton = new JButton("<|");
+		reverseButton.addActionListener(new ReverseButtonListener());		
 		
-		reversebutton = new JButton("Reverse");
-		reversebutton.addActionListener(new ReverseButtonListener());
+		pauseButton = new JButton("||");
+		pauseButton.addActionListener(new PauseButtonListener()); 
+		
+		forwardButton = new JButton("|>");
+		forwardButton.addActionListener(new ForwardButtonListener());
+		
+		fastforwardButton = new JButton("|>|>");
+		fastforwardButton.addActionListener(new FastforwardButtonListener()); 
 		
 		JPanel south = new JPanel();
+		south.setBackground(Color.GRAY);
+		
+		south.add(fastReverseButton);
+		south.add(reverseButton);
+		south.add(pauseButton);
+		south.add(forwardButton);
+		south.add(fastforwardButton);
+		
+		fastReverseButton.setEnabled(false);
+		reverseButton.setEnabled(false);
+		pauseButton.setEnabled(false);
+		forwardButton.setEnabled(false);
+		fastforwardButton.setEnabled(false);
+		
+		
+		GridBagLayout westLayout = new GridBagLayout();
+		GridBagConstraints constraints = new GridBagConstraints();
+		
+		JPanel west = new JPanel();
+		west.setBorder(BorderFactory.createTitledBorder("Options"));
+		west.setBackground(Color.GRAY);
+		west.setLayout(westLayout);
 		JPanel p = new JPanel();
 		//add little combo box to choose between the mouse picking and the mouse transforming the layout
 		p.setBorder(BorderFactory.createTitledBorder("Mouse Mode"));
+		p.setBackground(Color.GRAY);
 		p.add(gm.getModeComboBox());
-		south.add(p);
-		south.add(reversebutton);
-		south.add(fastforward);
-		south.add(pausebutton);
-		pausebutton.setEnabled(false);
-		reversebutton.setEnabled(false);
+		
+		constraints.gridwidth = GridBagConstraints.REMAINDER;//make each item take up a whole line
+		westLayout.setConstraints(p, constraints);
+		west.add(p);
+		
+		westLayout.setConstraints(relaxerButton, constraints);
+		west.add(relaxerButton);
 		
 		getContentPane().add(south, BorderLayout.SOUTH);
-
+		getContentPane().add(west,BorderLayout.WEST);
 	}
-
-	//// Methods to be called from separate thread that runs simulation or reads simulation log /////////////
-
-	/*
-	 * add a vertex to the graph
-	 * @param number
-	 * /
-    public void addVertex(int vert) {
-
-
-    }*/
+	
+	/**
+	 * Limited version of graphEvent for construction a graph for layout purposes
+	 * @param gev	The Log event which needs to be handled.
+	 * @param g		The Graph to perform the event on.
+	 */
+	private void graphConstructionEvent(LogEvent gev, P2PNetworkGraph g) {
+		if (gev.getType().equals("online")){
+			g.addPeer(gev.getParam(1));
+		} else if(gev.getType().equals("connect")){
+			g.connectPeers(gev.getParam(1), gev.getParam(2));
+		} else if(gev.getType().equals("publish")){
+			g.addDocument(gev.getParam(2), gev.getParam(1));
+		}
+	}
+	
+	/**
+	 * Handles the Log Events which affect the structure of the graph.
+	 * @param gev				The Log event which needs to be handled.
+	 * @param forward			<code>true</code> if play-back is playing forward.
+	 * @param eventGraph		The Graph to perform the event on.
+	 * @param referenceGraph	The Graph to get edge numbers from.
+	 */
+	private void graphEvent(LogEvent gev, boolean forward, P2PNetworkGraph eventGraph, P2PNetworkGraph referenceGraph) {
+		
+		if(forward) {
+			if (gev.getType().equals("online")){
+				eventGraph.addPeer(gev.getParam(1));
+			} else if (gev.getType().equals("offline")){
+				eventGraph.removePeer(gev.getParam(1));
+			} else if(gev.getType().equals("connect")){
+				eventGraph.connectPeers(gev.getParam(1), gev.getParam(2), referenceGraph.findPeerConnection(gev.getParam(1), gev.getParam(2)).getKey());
+			} else if(gev.getType().equals("disconnect")){
+				eventGraph.disconnectPeers(gev.getParam(1), gev.getParam(2));
+			} else if(gev.getType().equals("publish")){
+				eventGraph.addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
+			} else if(gev.getType().equals("depublish")){
+				eventGraph.removeDocument(gev.getParam(2), gev.getParam(1));
+			}
+		} else {
+			if (gev.getType().equals("online")){
+				eventGraph.removePeer(gev.getParam(1));
+			} else if (gev.getType().equals("offline")){
+				eventGraph.addPeer(gev.getParam(1));
+			} else if(gev.getType().equals("connect")){
+				eventGraph.disconnectPeers(gev.getParam(1), gev.getParam(2));
+			} else if(gev.getType().equals("disconnect")){
+				eventGraph.connectPeers(gev.getParam(1), gev.getParam(2), referenceGraph.findPeerConnection(gev.getParam(1), gev.getParam(2)).getKey());
+			} else if(gev.getType().equals("publish")){
+				eventGraph.removeDocument(gev.getParam(2), gev.getParam(1));
+			} else if(gev.getType().equals("depublish")){
+				eventGraph.addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
+			}
+		}
+	}
 
 	@Override
 	public void start() {
@@ -447,13 +530,13 @@ public class P2PApplet extends JApplet {
  * @author adavoust
  *
  */
-	class MyButtonListener implements ActionListener {
+	class relaxerButtonListener implements ActionListener {
  		
 		//this is the SpringLayout relaxer for the beginning
 		private Relaxer relaxer;
 		boolean started;
 		
-		public MyButtonListener (Relaxer rr){ // the relaxer is the thread that's doing the dynamic layout.
+		public relaxerButtonListener (Relaxer rr){ // the relaxer is the thread that's doing the dynamic layout.
 										  // we need to stop it then switch to a static layout,
 										  // then show the full graph layout for one sec then make it hidden
 			this.relaxer = rr;
@@ -461,59 +544,66 @@ public class P2PApplet extends JApplet {
 			
 		}
 
+		
 		/**
 		 * handles the button : first to freeze the layout, then to toggle between fast-forward and normal speed
 		 */
 		public void actionPerformed(ActionEvent ae) {
 
-		if(!started){ // this will be the first button task : freeze layout and start the simulation
-			try {
-
-				relaxer.stop();
-				fastforward.setText(" -- This will be the static layout -- simulation will now start");
-				System.out.println("freezing layout !");
-				layout = new StaticLayout<P2PVertex,P2PConnection>(hiddenGraph, layout);
-
-				//change the layout we're viewing
-				vv.getModel().setGraphLayout(layout);
-				vv.repaint();
-				//	tie the "include functions" of the viewer to the visible graph
+			if(!started){ // this will be the first button task : freeze layout and start the simulation
+				try {
+	
+					relaxer.stop();
+					//relaxerButton.setText("--This will be the static layout--\nsimulation will now start");
+					relaxerButton.setEnabled(false);
+					System.out.println("freezing layout !");
+					layout = new StaticLayout<P2PVertex,P2PConnection>(hiddenGraph, layout);
+	
+					//change the layout we're viewing
+					vv.getModel().setGraphLayout(layout);
+					vv.repaint();
+					//	tie the "include functions" of the viewer to the visible graph
+					
+					started = true;
+	
+					Thread.sleep(1000);
+					
+					//activate the pause / resume and reverse forward buttons
+					
+					fastReverseButton.setEnabled(true);
+					reverseButton.setEnabled(true);
+					pauseButton.setEnabled(true);
+					forwardButton.setEnabled(true);
+					fastforwardButton.setEnabled(true);
+	
+					System.out.println("starting activity now !");
+	
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				} //wait 5 seconds
+				//these predicates say : if the considered node /edge (which will be evaluated in the context of the hiddengraph) is found in the visible graph, then show it !
+				vv.getRenderContext().setVertexIncludePredicate(new VertexIsInTheOtherGraphPredicate(visibleGraph));
+				vv.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
+	
+				eventthread.start();
 				
-				started = true;
-
-				Thread.sleep(1000);
-				
-				//activate the pause / resume and reverse forward buttons
-				pausebutton.setEnabled(true);
-				reversebutton.setEnabled(true);
-
-				System.out.println("starting activity now !");
-
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} //wait 5 seconds
-			//these predicates say : if the considered node /edge (which will be evaluated in the context of the hiddengraph) is found in the visible graph, then show it !
-			vv.getRenderContext().setVertexIncludePredicate(new VertexIsInTheOtherGraphPredicate(visibleGraph));
-			vv.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
-
-			eventthread.start();
-			
-			fastforward.setText("Quick Speed");
-
-
-		} else if (fastforward.getText().startsWith("Quick")) {
-				fastforward.setText("Normal Speed");
-				eventthread.fastForward();
-				if (eventthread.getState().equals(Thread.State.TIMED_WAITING))
-					eventthread.interrupt(); //if we were waiting for the next event, we'll just wake the thread.
-				
-			} else {
-				fastforward.setText("Quick Speed");
-				eventthread.normalSpeed();
+				//fastforwardButton.setText("Quick Speed");
+	
+	
 			}
+			
 					
 		}
 	}
+	
+	
+	class FastReverseButtonListener implements ActionListener {
+		
+		public void actionPerformed(ActionEvent ae) {
+			eventthread.fastReverse();
+		}
+	}
+	
 	/**
 	 * An ActionListener that defines the action of the reverse button for the applet
 	 * @author Matthew
@@ -527,145 +617,28 @@ public class P2PApplet extends JApplet {
 		 * @param ae	The ActionEvent that triggered the listener
 		 */
 		public void actionPerformed(ActionEvent ae) {
-			if (reversebutton.getText().startsWith("Reverse")) {
-				reversebutton.setText("Forward");
-				eventthread.setReverse(true);
-			} else {
-				reversebutton.setText("Reverse");
-				eventthread.setReverse(false);
-			}
+			eventthread.reverse();
 		}
 	
 	}
 	
-	 /**
-	 * an actionlistener that defines the use of the button at the bottom of the applet 
-	 * @author adavoust
-	 *
-	 */
-		class PauseButtonListener implements ActionListener {
-	 		
-/*			public PauseButtonListener (){ // the relaxer is the thread that's doing the dynamic layout.
-											  // we need to stop it then switch to a static layout,
-											  // then show the full graph layout for one sec then make it hidden
-				this.relaxer = rr;
-				started = false; // says if we've passed the initial problem of freezing the layout and getting started
-				
-			}*/
-
-			/**
-			 * handles the button : pause /resume the eventthread
-			 */
-			public void actionPerformed(ActionEvent ae) {
-
-				if (pausebutton.getText().startsWith("Pause")) {
-					pausebutton.setText("Resume");
-					eventthread.pause();
-				} else {
-					pausebutton.setText("Pause");
-					eventthread.myresume();
-					
-				}
-			}
+	class PauseButtonListener implements ActionListener {
+		public void actionPerformed(ActionEvent ae) {
+			eventthread.pause();
 		}
+	}
 	
-	/**
-	 * this class is a task to undo "highlighting" changes in the graph :
-	 * - picked nodes that stay highlighted for a second after they appear on screen
-	 * - querying nodes that keep a "query" state after a few seconds
-	 * - query answering nodes that just highlight briefly to show that they got the query
-	 * @author adavoust
-	 *
-	 */
-	/*class RemindTask extends TimerTask {
-
-		public static final int UNPICK_VERTEX = 1;
-		public static final int UNPICK_EDGE = 2;
-		public static final int UNQUERY_PEER = 3;
-		public static final int UN_ANSWER_PEER = 4;
-		public static final int UN_ANSWER_DOC = 5;
-		public static final int UNQUERY_EDGE = 6;
-
-		
-		Object toChange;
-		int tasktype; //0 : unpick
-		//boolean isVertex;
-
-		public int getDelay(){
-			switch(tasktype){
-			case UNPICK_VERTEX:
-				return 1000; // 1 sec to unpick a vertex
-			case UNPICK_EDGE:
-				return 1000;
-			case UNQUERY_PEER:
-				return 1500;
-			case UN_ANSWER_PEER:
-			case UN_ANSWER_DOC:
-				return 500;
-			case UNQUERY_EDGE:
-				return 750;				
-			default:
-				return 0;
-			}
-			
+	class ForwardButtonListener implements ActionListener {
+		public void actionPerformed(ActionEvent ae) {
+			eventthread.forward();
 		}
-
-		/**
-		 * constructor
-		 * @param kk the object that the task applies to, either a P2PVertex or a P2PConnection
-		 * @param whattodo is the task, from a predefined list
-		 /
-		public RemindTask(Object kk, int whatTodo){ // the object will be a number or a P2PVertex
-			toChange = kk;    	
-			tasktype = whatTodo;
+	}
+	
+	class FastforwardButtonListener implements ActionListener {
+		public void actionPerformed(ActionEvent ae) {
+			eventthread.fastForward();
 		}
-
-		/**
-		 * execute this task
-		 /
-		public void run() {
-
-			switch(tasktype){
-				case UNPICK_VERTEX:
-					vv.getRenderContext().getPickedVertexState().pick((P2PVertex)toChange, false);
-					break;
-				case UNPICK_EDGE:
-					vv.getRenderContext().getPickedEdgeState().pick((P2PConnection)toChange, false);
-					break;
-				case UNQUERY_PEER:
-				case UN_ANSWER_PEER:
-				case UN_ANSWER_DOC:
-					((P2PVertex)toChange).backToNormal();
-					break;
-					
-				case UNQUERY_EDGE:
-					((P2PConnection)toChange).backToNormal();
-					break;
-				default:
-					//do nothing
-			}
-
-			//eventthread.notifyTask(this); // notify the eventthread that this task has been done
-			//update the layout after we just did something
-			vv.repaint();
-		
-		}
-		
-		@Override
-		public Object clone(){
-			return new RemindTask(toChange, tasktype); // not much to be cloned... "tochange" is a reference anyway
-		}
-		
-		@Override 
-		public String toString(){
-		 return "TASK:"+tasktype+" on graph component "+ toChange.toString();	
-		}
-		
-		
-	}*/
-
-
-
+	}
 	/**
 	 * 
 	 * to run this applet as a java application
@@ -683,6 +656,10 @@ public class P2PApplet extends JApplet {
 		mygui.setVisible(true);
 		//mygui.log.append("\nho ho ho");
 	}
+	
+	private enum PlayState {
+		FASTREVERSE, REVERSE, PAUSE, FORWARD, FASTFORWARD;
+	}
 
 	/**
 	 * an internal class extending thread, that can play the sequence of events from the log file in real time
@@ -693,69 +670,76 @@ public class P2PApplet extends JApplet {
 	private class EventPlayingThread extends Thread {
 
 		private static final long ffspeed = 50L; // 50 millisec between events while we're fast-forwarding
-
-		private boolean ffwd = false;
-		private boolean reverse = false;
 		
+		private PlayState state;
+
 		List<LogEvent> my_eventlist;
 		private int current_index = 0;
 		
-		//List<RemindTask> taskspending;//maintain a list of scheduled tasks... so that we don't lose them on a pause() action
-
 		public EventPlayingThread(LinkedList<LogEvent> eventlist){
 			my_eventlist = eventlist;
-			//taskspending = new LinkedList<RemindTask>();
+			state = PlayState.FORWARD;
 		}
-
-		/** notify : this task has been done we can remove it from the to-do list
-		 * 
-		 * @param tsk the task that's been done
-		 */
-		/*public void notifyTask(RemindTask tsk) {
-			taskspending.remove(tsk);
-			
-		}*/
-
-		//a hack for the pause / resume... the timer needs to be notified that it can also continue
-		public void myresume() {
-			//timer = new Timer();
-			//for(RemindTask t : taskspending){
-				//timer.schedule((RemindTask)t.clone(),t.getDelay());//re-schedule all the tasks that were on hold 
-				//System.out.println("Rescheduling task : "+t.toString());
-			//}
-			this.resume();//it's deprecated but for now it's the easiest way of doing it.
-			
+		
+		public boolean isForward() {
+			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FORWARD));
+		}
+		public boolean isFast() {
+			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FASTREVERSE));
+		}
+		
+		public void fastReverse() {
+			resumeIfPaused();
+			if(state != PlayState.FASTREVERSE) {
+				state = PlayState.FASTREVERSE;
+				if (eventthread.getState().equals(Thread.State.TIMED_WAITING)) {
+					eventthread.interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+				}
+			}
+		}
+		
+		public void reverse() {
+			resumeIfPaused();
+			if(state != PlayState.REVERSE) {
+				state = PlayState.REVERSE;
+				if (eventthread.getState().equals(Thread.State.TIMED_WAITING)) {
+					eventthread.interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+				}
+			}
 		}
 
 		public void fastForward(){
-			ffwd = true;
+			resumeIfPaused();
+			if(state != PlayState.FASTFORWARD) {
+				state = PlayState.FASTFORWARD;
+				if (eventthread.getState().equals(Thread.State.TIMED_WAITING)) {
+					eventthread.interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+				}
+			}
 		}
 
-		public void normalSpeed(){
-			ffwd = false;
+		public void forward(){
+			resumeIfPaused();
+			if(state != PlayState.FORWARD) {
+				state = PlayState.FORWARD;
+				if (eventthread.getState().equals(Thread.State.TIMED_WAITING)) {
+					eventthread.interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+				}
+			}
 		}
 		
-		/**
-		 * Sets if the thread should traverse the drawing in reverse
-		 * @param reverse True if the display should be traversing opposite of time
-		 */
-		public void setReverse(boolean reverse) {
-			this.reverse = reverse;
+		private void resumeIfPaused() {
+			if(state == PlayState.PAUSE) {
+				this.resume();//it's deprecated but for now it's the easiest way of doing it.
+			}
 		}
 		
 		public void pause(){
-			//pb : I may have tasks pending... will need to reschedule them once timer restarts.
-			//timer.cancel();
-			this.suspend();
-			
+			if(state != PlayState.PAUSE) {
+				state = PlayState.PAUSE;
+				this.suspend();
+			}
 		}
-
-
-		//convenience method to schedule "remindtasks" and not forget to add them to the list
-		/*private void taskSchedule(RemindTask tsk){
-			timer.schedule(tsk, tsk.getDelay());  // schedule it for execution using the timer
-			taskspending.add(tsk); // store it in case of pause
-		}*/
 		
 		/////////////////////////////////////////////////////////
 		 
@@ -772,13 +756,18 @@ public class P2PApplet extends JApplet {
 			{
 				if (v.equals(tofind)) {
 					v.query(q); //change state to "querying" and record which is the query
-					//schedule a task in one second to return the color of that vertex to normal.
-					//taskSchedule(new RemindTask(v,RemindTask.UNQUERY_PEER)); 
-					
 					break;
 				}
 			}
 			vv.repaint();// update visual
+		}
+		
+		public void doQueryEdge(int peerFrom, int peerTo) {
+			hiddenGraph.findPeerConnection(peerFrom, peerTo).query();
+		}
+		
+		public void undoQueryEdge(int peerFrom, int peerTo) {
+			hiddenGraph.findPeerConnection(peerFrom, peerTo).backToNormal();
 		}
 		
 		/**
@@ -794,12 +783,10 @@ public class P2PApplet extends JApplet {
 				if (v.equals(Ptofind)){
 					if (v.getQueryState()!=P2PVertex.QUERYING){
 						v.receivingQuery(mid);//change state to "receiving a query"
-						//schedule a task in half a second to return the color of that vertex to normal.
 						for (P2PConnection edge : hiddenGraph.getIncidentEdges(v)){
 							P2PVertex otherV= hiddenGraph.getOpposite(v, edge);
 							if (otherV.getQueryState()>P2PVertex.PEER && otherV.getmessageid()==mid){ //this is true if the peer is in one of the states query, getquery,answering, for the same qid
 								edge.query();// the edge is passing the query
-								//taskSchedule(new RemindTask(edge,RemindTask.UNQUERY_EDGE)); //undo the querying state of the edge
 								//System.out.println("found originator");
 								break;
 							} //else 
@@ -827,20 +814,17 @@ public class P2PApplet extends JApplet {
 				if (v.equals(Ptofind)){
 					if (v.getQueryState()!=P2PVertex.QUERYING){
 						v.backToNormal();//change state to "receiving a query"
-						//schedule a task in half a second to return the color of that vertex to normal.
 						for (P2PConnection edge : hiddenGraph.getIncidentEdges(v)){
 							P2PVertex otherV= hiddenGraph.getOpposite(v, edge);
 							if (otherV.getQueryState()>P2PVertex.PEER && otherV.getmessageid()==mid){ //this is true if the peer is in one of the states query, getquery,answering, for the same qid
-								edge.backToNormal();// the edge is passing the query
-								//taskSchedule(new RemindTask(edge,RemindTask.UNQUERY_EDGE)); //undo the querying state of the edge
-								//System.out.println("found originator");
+								edge.backToNormal();// the edge that was passing the query
+								
 								break;
-							} //else 
-								//System.out.println(otherV.getLabel() +"   "+otherV.getQueryState());
+							}
 						}
 						
 					} else {
-						v.backToNormal();// we let the peer query, but set the query number to the message id 
+						v.backToNormal();
 					}
 					break;
 				}
@@ -875,9 +859,21 @@ public class P2PApplet extends JApplet {
 			vv.repaint();// update visual
 		}
 		
-		public void decolour(int vertex)
+		public void decolour(int peernumber)
 		{
-			P2PVertex Ptofind = P2PVertex.makePeerVertex(vertex);
+			P2PVertex Ptofind = P2PVertex.makePeerVertex(peernumber);
+			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
+			{
+				if (v.equals(Ptofind)){
+					v.backToNormal();
+				}
+			}
+			vv.repaint();// update visual
+		}
+		
+		public void decolourDoc(int peernumber, int docnumber)
+		{
+			P2PVertex Ptofind = P2PVertex.PeerPublishesDoc(peernumber, docnumber);
 			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
 			{
 				if (v.equals(Ptofind)){
@@ -891,20 +887,19 @@ public class P2PApplet extends JApplet {
 		public void run() {
 			System.out.println("Starting log event sequence.");
 
-
 			long mytimenow = 0L;//System.currentTimeMillis();
 			long nexttime;
-			boolean oldDirection = reverse;
+			boolean oldDirection;
 			//READING FROM CD++ LOG FILE/////////////
 			while (!my_eventlist.isEmpty()) //reading lines from config file to get parameter list
 			{
-				oldDirection = reverse; //used to continue loop if reversed while thread sleeping
+				oldDirection = isForward(); //used to continue loop if reversed while thread sleeping
 				LogEvent evt = my_eventlist.get(current_index); //get from the front of the queue
 				
 				nexttime = evt.getTime();
 				//System.out.println("next event at :"+nexttime);
 				try{
-					if (!ffwd) //fast forwarding ?
+					if (!isFast()) //fast forwarding ?
 						Thread.sleep(Math.max(0,Math.abs(nexttime-mytimenow))); //wait until that event time comes up
 					else 
 						Thread.sleep(ffspeed);//wait for the internal "fast-forward" speed
@@ -912,27 +907,27 @@ public class P2PApplet extends JApplet {
 					System.err.println("log event thread interrupted !");
 					// but don't stop, we probably just went from real-time to fast-fwd 
 				}
-				if(reverse) { //increment after thread so that if reverse was pressed while sleeping it will increment properly
-					if(current_index>0) {
-						current_index--;
-					} else {
-						pausebutton.doClick(); //when beginning is reached pause the playback.
-					}
-				} else {
+				if(isForward()) { //increment after thread so that if reverse was pressed while sleeping it will increment properly
 					if(current_index < my_eventlist.size()-1) {
 						current_index++;
 					} else {
-						pausebutton.doClick(); //when end is reached pause the playback.
+						pauseButton.doClick(); //when beginning is reached pause the playback.
+					}
+				} else {
+					if(current_index > 0) {
+						current_index--;
+					} else {
+						pauseButton.doClick(); //when end is reached pause the playback.
 					}
 				}
-				if(oldDirection != reverse) { // if the reverse direction was switched during the thread sleeping stop what was going to happen and go back
+				if(oldDirection != isForward()) { // if the reverse direction was switched during the thread sleeping stop what was going to happen and go back
 					continue; 
 				}
 				mytimenow = nexttime; //advance time
 				
 				//if the event is to modify the structure of the graph
 				if (evt.isStructural()){
-					visibleGraph.event(evt, reverse);
+					graphEvent(evt,isForward(),visibleGraph,hiddenGraph);
 					vv.repaint();
 				} else { //other events: queries
 					String what = evt.getType();
@@ -940,45 +935,61 @@ public class P2PApplet extends JApplet {
 					int val2 = evt.getParam(2);
 					
 					if(what.equals("query")) {
-						if(reverse) {
-							decolour(val1);
-						} else {
+						if(isForward()) {
 							doQuery(val1, val2);
+						} else {
+							decolour(val1);
 						}
 					}
 					else if (what.equals("unquery")) {
-						if(reverse) {
-							doQuery(val1, val2);
-						} else {
+						if(isForward()) {
 							decolour(val1);
+						} else {
+							doQuery(val1, val2);
 						}
 					}
 					else if (what.equals("queryhit")) {
-						if(reverse) {
-							decolour(val1);
-						} else {
+						if(isForward()) {
 							doQueryHit(val1, val2);
+						} else {
+							decolour(val1);
+							decolourDoc(val1, val2);
 						}
 					}
 					else if (what.equals("unqueryhit")) {
-						if(reverse) {
-							doQueryHit(val1, val2);
-						} else {
+						if(isForward()) {
 							decolour(val1);
+							decolourDoc(val1, val2);
+						} else {
+							doQueryHit(val1, val2);
 						}
 					}
 					else if (what.equals("queryreachespeer")) {
-						if(reverse) {
+						if(isForward()) {
+							doQueryReachesPeer(val1,val2);
+						} else {
+							undoQueryReachesPeer(val1,val2);
+						}
+					}
+					else if (what.equals("unqueryreachespeer")) {
+						if(isForward()) {
 							undoQueryReachesPeer(val1,val2);
 						} else {
 							doQueryReachesPeer(val1,val2);
 						}
 					}
-					else if (what.equals("unqueryreachespeer")) {
-						if(reverse) {
-							doQueryReachesPeer(val1,val2);
+					else if (what.equals("queryedge")) {
+						if(isForward()) {
+							doQueryEdge(val1,val2);
 						} else {
-							undoQueryReachesPeer(val1,val2);
+							undoQueryEdge(val1,val2);
+						}
+					}
+					else if (what.equals("unqueryedge")) {
+						if(isForward()) {
+							undoQueryEdge(val1,val2);
+						} else {
+							doQueryEdge(val1,val2);
 						}
 					}
 				}

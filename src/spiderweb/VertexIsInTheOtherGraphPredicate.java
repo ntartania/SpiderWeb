@@ -11,7 +11,7 @@ public class VertexIsInTheOtherGraphPredicate implements
 	private Graph<P2PVertex, P2PConnection> othergraph;
 	
 	public VertexIsInTheOtherGraphPredicate(Graph<P2PVertex, P2PConnection> g){
-		othergraph= g;
+		othergraph = g;
 		
 	}
 	@Override

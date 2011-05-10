@@ -17,7 +17,7 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
 	int edgecounter= 0;
 	
 	 /** adding a peer in the network*/
-    public void addPeer( int peernumber){
+    public void addPeer(int peernumber){
     	P2PVertex v1 = new P2PVertex(P2PVertex.PEER, peernumber);
     	super.addVertex(v1);
     }
@@ -40,12 +40,15 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
     
     /** adding a document connected to a peer*/
     public void addDocument(int docnumber, int peer){
+    	addDocument(docnumber, peer, new Integer(++edgecounter));
+    }
+    
+    public void addDocument(int docnumber, int peer, Integer edgeKey) {
     	P2PVertex vdoc = P2PVertex.PeerPublishesDoc(peer, docnumber);
 		addVertex(vdoc);
 		//create a vertex that we can compare with the ones in the graph to find the peer vertex
 		P2PVertex vpeer = P2PVertex.makePeerVertex(peer);
-		Integer label = new Integer(++edgecounter); // increment edgecounter then add edge 
-		addEdge(new P2PConnection(P2PConnection.P2DOC,edgeKeyer()), vdoc, vpeer);
+		addEdge(new P2PConnection(P2PConnection.P2DOC,edgeKey), vdoc, vpeer);
     }
     
     public void removeDocument(int docnumber, int peer) {
@@ -60,15 +63,20 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
     
     /**
      * add an edge to the graph
-     * @param number
+     * @param from	peer 1 (vertex 1)
+     * @param to	peer 2 (vertex 2)
      */
     public void connectPeers(int from, int to) {
-    	Integer edge = new Integer(++edgecounter);
-    	
-    	
-    	P2PConnection p = new P2PConnection(P2PConnection.P2P,edgeKeyer());
+    	connectPeers(from,to,new Integer(++edgecounter));
+    }
+    /**
+     * add an edge to the graph
+     * @param from	peer 1 (vertex 1)
+     * @param to	peer 2 (vertex 2)
+     */
+    public void connectPeers(int from, int to, Integer key) {
+    	P2PConnection p = new P2PConnection(P2PConnection.P2P,key);
     	addEdge(p, getVertexInGraph(P2PVertex.makePeerVertex(from)), getVertexInGraph(P2PVertex.makePeerVertex(to)));
-    	System.out.println(p);
     }
     /**
      * remove an edge from the graph
@@ -76,13 +84,13 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
      */
     public void disconnectPeers(int from, int to) {
     	//edgecounter--;
-    	P2PConnection edge = findEdge(getVertexInGraph(P2PVertex.makePeerVertex(from)), getVertexInGraph(P2PVertex.makePeerVertex(to)));
+    	P2PConnection edge = findPeerConnection(from, to);
     	
     	super.removeEdge(edge);
     }
 
     /** apply a log event to transform a graph*/
-	public void event(LogEvent gev, boolean reverse) {
+	/*public void event(LogEvent gev, boolean reverse) {
 		if(!reverse) {
 			if (gev.getType().equals("online")){
 				addPeer(gev.getParam(1));
@@ -112,7 +120,7 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
 				addDocument(gev.getParam(2), gev.getParam(1));
 			}
 		}
-	}
+	}*/
 	/**
 	 * this methods gets a vertex already in the graph that is equal to the input vertex
 	 * to be used when adding edges; the edge should relate two vertices actually in the graph, not copies of these vertices.
@@ -128,26 +136,22 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
 	}
 	
 	/**
-	 * Checks through the list of edges for an available key
-	 * @return the first available key found null if no key available
+	 * Returns an edge that connects the vertex which the peer number peerFrom represents to the vertex which peer number peerTo represents.
+	 * @param peerFrom	Peer that the edge emerges from (vertex 1)
+	 * @param peerTo	Peer that the edge terminates at (vertex 2)
+	 * @return			The edge that connects the two peers.
 	 */
-	private Integer edgeKeyer() {
-		int i=0;
-    	boolean checker = true;
-    	while(checker) {
-    		for(P2PConnection con : getEdges()) {
-    			if(con.getKey() == i) {
-        			checker = false;
-        			break;
-        		}
-        	}
-    		if(checker) {
-    			return new Integer(i);
-    		}
-    		checker=true;
-    		i++;
-    	}
-    	return null;
+	public P2PConnection findPeerConnection(int peerFrom, int peerTo){
+		return findEdge(P2PVertex.makePeerVertex(peerFrom), P2PVertex.makePeerVertex(peerTo));
+	}
+	/**
+	 * Returns the edge that connects the vertex which the peer number peerFrom represents to the vertex which document number docnumber represents.
+	 * @param peerFrom	Peer that the edge emerges from (vertex 1)
+	 * @param peerTo	Peer that the edge terminates at (vertex 2)
+	 * @return			The edge that connects the two peers.
+	 */
+	public P2PConnection findDocConnection(int peer, int docnumber){
+		return findEdge(P2PVertex.makePeerVertex(peer), P2PVertex.PeerPublishesDoc(peer, docnumber));
 	}
 
 	//override these methods so the underlying collection is not unmodifiable
