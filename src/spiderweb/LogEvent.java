@@ -6,7 +6,7 @@ package spiderweb;
  * @author adavoust
  *
  */
-public class LogEvent {
+public class LogEvent implements Comparable<LogEvent>{
 
 	private long time=0;
 	private String type="default"; //publish, join, connect...
@@ -95,8 +95,26 @@ public class LogEvent {
 			return param2;
 	}
 	
+	@Override
 	public String toString() {
 		return(time+":"+type+":"+param1+":"+param2+"\n");
+	}
+	
+	@Override
+	public int compareTo(LogEvent other) {
+		if(this.time < other.time) { //sort first by time
+			return -1;
+		}
+		else if(this.time > other.time) {
+			return 1;
+		}
+		if(this.type.charAt(0) < other.type.charAt(0)) { //if the time is the same check the first letter of each
+			return -1;
+		}
+		else if(this.type.charAt(0) < other.type.charAt(0)) {
+			return 1;
+		}
+		return 0; //Otherwise they may as well be equal
 	}
 	
 	

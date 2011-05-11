@@ -16,6 +16,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -204,9 +206,7 @@ public class P2PApplet extends JApplet {
 	}
 	//[end]
 
-
-	////////////////////////////////////////////////////////////////////////////////////////
-	
+	//[start] Initialization
 	/** to use a particular log file (can be chosen from GUI)*/
 	public void setLogFile(File lf){
 		mylogfile = lf;
@@ -221,19 +221,19 @@ public class P2PApplet extends JApplet {
 		ontheweb = b;	
 	}
 
+	
 	/**
 	 * applet initialization
 	 */
 	public void init() {
-		
 		//TODO : see if synchronization (multi-thread safety) is necessary
-		visibleGraph = new P2PNetworkGraph();
-
+		
+		//[start] Open and Read Log file, create the layout of the graph
 		System.out.println("Reading the logs ...");
 		//TODO : make it possible to load a different log file
 		SpringLayout<P2PVertex,P2PConnection> sp_layout=null;
 		try {
-			//[start] Read in the log file
+			//[start] Open the log file for reading
 			BufferedReader in;
 			if (ontheweb){ // hack : when running on SCE server I can't read the log file without opening it through this URL reader ...
 				URL yahoo = new URL(DEF_LOG_URL);
@@ -247,7 +247,8 @@ public class P2PApplet extends JApplet {
 				}
 			}
 			
-			//[end]
+			//[end] Open the log file for reading
+			
 			myGraphEvolution = new LinkedList<LogEvent>();
 			hiddenGraph = new P2PNetworkGraph();
 
@@ -262,7 +263,7 @@ public class P2PApplet extends JApplet {
 			//((SpringLayout<Number,Number>)layout).setRepulsionRange(50);
 			sp_layout.setInitializer(new P2PVertexPlacer(sp_layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
 			
-			//[end]
+			//[end] set up the spring layout
 			
 			//[start]Read the file, create log events and start calculating the resulting layout
 						
@@ -273,9 +274,6 @@ public class P2PApplet extends JApplet {
 			myGraphEvolution.add(new LogEvent("0:start:0:0")); //a start event to know when to stop playback of a reversing graph
 			while ((str = in.readLine()) != null) //reading lines log file
 			{
-				//count++;
-				//if(count %100 ==0) System.out.println(count+ "lines read");
-				
 				LogEvent gev = new LogEvent(str);
 				
 				//add all the nodes to construct the new graph
@@ -294,27 +292,31 @@ public class P2PApplet extends JApplet {
 					
 				} 
 				else if(gev.getType().equals("queryreachespeer")) {
-					colouringEvents.add(LogEvent.createOpposingLogEvent(gev,1000));
+					colouringEvents.add(LogEvent.createOpposingLogEvent(gev,750));
 					P2PVertex queriedPeer = P2PVertex.makePeerVertex(gev.getParam(1));
 					for(P2PVertex querySender : queryPeers) {
 						if(hiddenGraph.findEdge(querySender, queriedPeer) != null) {
 							LogEvent ev = new LogEvent(gev.getTime()+1,"queryedge",querySender.getKey(),queriedPeer.getKey());
 							
 							colouringEvents.add(ev);
-							colouringEvents.add(LogEvent.createOpposingLogEvent(ev,1000));
-							//queryPeers.remove(querySender);
+							colouringEvents.add(LogEvent.createOpposingLogEvent(ev,750));
 							break;
 						}
 					}
+					
 					queryPeers.add(queriedPeer);
 				}
+				Collections.sort(colouringEvents);
 				
 				
-				for(int i=0;i<colouringEvents.size();i++) { //start at first element (time should increase with each index)
-					if(colouringEvents.get(i).getTime() < gev.getTime()) { //add only if the event takes place before the LogEvent that was read this iteration
-						myGraphEvolution.addLast(colouringEvents.get(i));
-						colouringEvents.remove(i);
-						i--;
+				for(Iterator<LogEvent> iter = colouringEvents.iterator(); iter.hasNext(); ) {//start at first element (time should increase with each index)
+				
+					LogEvent event = (LogEvent)iter.next();
+					if(event.getTime() < gev.getTime() ) { //add only if the event takes place before the LogEvent that was read this iteration
+						myGraphEvolution.addLast(event);
+						iter.remove();
+					} else {
+						break; //if this Event's time is greater than gev, the rest should be too, then there is no point continuing
 					}
 				}
 				myGraphEvolution.addLast(gev);
@@ -323,16 +325,18 @@ public class P2PApplet extends JApplet {
 			}//end while
 			myGraphEvolution.add(new LogEvent((myGraphEvolution.getLast().getTime())+":end:0:0")); //add an end log to know to stop the playback of the graph
 			
-			//[end]
+			//[end] Read the file, create log events and start calculating the resulting layout
 		} catch (Exception e) {
 			e.printStackTrace();
 			
 		}
-		
+		LOG(myGraphEvolution.toString());
 		layout = sp_layout;
-		
+		//[end] Open and Read Log file, create the layout of the graph
 		
 		//[start] Create Visualization Viewer
+		visibleGraph = new P2PNetworkGraph();
+		
 		vv = new VisualizationViewer<P2PVertex,P2PConnection>(layout, new Dimension(DEFWIDTH,DEFHEIGHT));
 
 		JRootPane rp = this.getRootPane();
@@ -385,14 +389,14 @@ public class P2PApplet extends JApplet {
 		JPanel graphsPanel = new JPanel();
 		
 		graphsPanel.add(vv);
-		//[end]
+		//[end] Create Visualization Viewer
 		
 		//[start] Relaxer creation
 		Relaxer relaxer = new VisRunner((IterativeContext)layout);
 		relaxer.stop();
 		relaxer.setSleepTime(80L);
 		relaxer.relax();
-		//[end]
+		//[end] Relaxer creation
 		
 		//[start] Panel Layout
 		//button to freeze layout, then to fast-forward
@@ -453,8 +457,24 @@ public class P2PApplet extends JApplet {
 		getContentPane().add(graphsPanel,BorderLayout.CENTER);
 		getContentPane().add(south, BorderLayout.SOUTH);
 		getContentPane().add(west,BorderLayout.WEST);
-		//[end]
+		//[end] Panel Layout
 	}
+	
+	@Override
+	public void start() {
+		validate();
+		//TODO : perhaps place the log reader here.
+
+		vv.repaint();
+		///----------run the spring layout algorithm with the full hidden graph for a bit -------
+		
+	}
+	
+	public void LOG(String message) {
+		System.out.println(message);
+	}
+	
+	//[end] Initialization
 	
 	//[start] Structural Graph Events
 	/**
@@ -511,17 +531,393 @@ public class P2PApplet extends JApplet {
 			}
 		}
 	}
-	//[end]
+	//[end] Structural Graph Events
 
-	@Override
-	public void start() {
-		validate();
-		//TODO : perhaps place the log reader here.
+	//[start] Main
+	/**
+	 * 
+	 * to run this applet as a java application
+	 * @param args optional argument : the log file to process
+	 */
+	public static void main(String[] args) {
 
-		vv.repaint();
-		///----------run the spring layout algorithm with the full hidden graph for a bit -------
-		
+		P2PApplet myapp = new P2PApplet();
+		LittleGUI mygui = myapp.new LittleGUI(myapp);
+
+		mygui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		//mygui.validate();
+		//mygui.setBounds(200,200,500,200);
+		mygui.pack();
+		mygui.setVisible(true);
+		//mygui.log.append("\nho ho ho");
 	}
+	//[end] Main
+	
+	//[start] Event Playing Thread
+	private enum PlayState {
+		FASTREVERSE, REVERSE, PAUSE, FORWARD, FASTFORWARD;
+	}
+
+	/**
+	 * an internal class extending thread, that can play the sequence of events from the log file in real time
+	 * or fast forward.
+	 * @author alan
+	 *
+	 */
+	private class EventPlayingThread extends Thread {
+
+		private static final long ffspeed = 50L; // 50 millisec between events while we're fast-forwarding
+		
+		private PlayState state;
+
+		List<LogEvent> my_eventlist;
+		
+		private int current_index = 0;
+		
+		public EventPlayingThread(LinkedList<LogEvent> eventlist){
+			my_eventlist = eventlist;
+			state = PlayState.PAUSE;
+			//pauseButton.doClick(); //enables proper buttons
+		}
+		
+		//[start] Playback Properties
+		/**
+		 * Returns whether or not the graph is playing forward or backwards.
+		 * @return <code>true</code> if the Play State is forward or fast forward.
+		 */
+		public boolean isForward() {
+			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FORWARD) || (state == PlayState.PAUSE));
+		}
+		/**
+		 * Returns whether or not the graph is playing fast
+		 * @return <code>true</code> if the Play State is fast in forward or reverse.
+		 */
+		public boolean isFast() {
+			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FASTREVERSE));
+		}
+		/**
+		 * 
+		 * @return
+		 */
+		public boolean atFront() {
+			if(current_index <= 0) {
+				return true;
+			}
+			return false;
+		}
+		/**
+		 * 
+		 * @return
+		 */
+		public boolean atBack() {
+			if (current_index >= my_eventlist.size()-1) {
+				return true;
+			}
+			return false;
+		}
+		/**
+		 * 
+		 * @return
+		 */
+		public boolean atAnEnd() {
+			if(atFront() || atBack()) {
+				return true;
+			}
+			return false;
+		}
+		//[end]
+		
+		//[start] State Change handlers for button clicks.
+		/**
+		 * 
+		 */
+		public void fastReverse() {
+			resumeIfPaused();
+			if(state != PlayState.FASTREVERSE) {
+				state = PlayState.FASTREVERSE;
+				if (getState().equals(Thread.State.TIMED_WAITING)) {
+					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+				}
+			}
+		}
+		
+		public void reverse() {
+			resumeIfPaused();
+			if(state != PlayState.REVERSE) {
+				state = PlayState.REVERSE;
+				if (getState().equals(Thread.State.TIMED_WAITING)) {
+					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+				}
+			}
+		}
+
+		public void fastForward(){
+			resumeIfPaused();
+			if(state != PlayState.FASTFORWARD) {
+				state = PlayState.FASTFORWARD;
+				if (getState().equals(Thread.State.TIMED_WAITING)) {
+					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+				}
+			}
+		}
+
+		public void forward(){
+			resumeIfPaused();
+			if(state != PlayState.FORWARD) {
+				state = PlayState.FORWARD;
+				if (getState().equals(Thread.State.TIMED_WAITING)) {
+					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+				}
+			}
+		}
+		
+		private void resumeIfPaused() {
+			if(state == PlayState.PAUSE) {
+				
+				this.resume();//it's deprecated but for now it's the easiest way of doing it.
+			}
+		}
+		
+		public void pause(){
+			if(state != PlayState.PAUSE) {
+				state = PlayState.PAUSE;
+				this.suspend();
+			}
+		}
+		//[end]
+				 
+		//[start] Graph Editors for highlighting and changing colours
+		/**
+		 * Visualize a query
+		 * @param peer
+		 * @param q
+		 */
+		public void doQuery(int peer, int q){
+
+			P2PVertex tofind = P2PVertex.makePeerVertex(peer);
+			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer"
+			{
+				if (v.equals(tofind)) {
+					v.query(q); //change state to "querying" and record which is the query
+					break;
+				}
+			}
+		}
+		
+		public void doQueryEdge(int peerFrom, int peerTo) {
+			hiddenGraph.findPeerConnection(peerFrom, peerTo).query();
+		}
+		
+		public void undoQueryEdge(int peerFrom, int peerTo) {
+			hiddenGraph.findPeerConnection(peerFrom, peerTo).backToNormal();
+		}
+		
+		/**
+		 * Visualize a query reaches peer event (bold edges)
+		 * @param peer
+		 * @param q
+		 */
+		public void doQueryReachesPeer(int peer, int mid){
+
+			P2PVertex Ptofind = P2PVertex.makePeerVertex(peer);
+			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
+			{
+				if (v.equals(Ptofind)){
+					if (v.getQueryState()!=P2PVertex.QUERYING){
+						v.receivingQuery(mid);//change state to "receiving a query"
+						
+					} else {
+						v.query(mid);// we let the peer query, but set the query number to the message id 
+					}
+					break;
+				}
+			}
+		}
+		/**
+		 * Visualize a query reaches peer event (bold edges)
+		 * @param peer
+		 */
+		public void undoQueryReachesPeer(int peer){
+			P2PVertex Ptofind = P2PVertex.makePeerVertex(peer);
+			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
+			{
+				if (v.equals(Ptofind)){
+					v.backToNormal();
+					break;
+				}
+			}
+		}
+
+		/**
+		 * Visualize a queryHit
+		 * @param peer
+		 * @param q
+		 */
+		public void doQueryHit(int peer, int doc){
+
+			P2PVertex Ptofind = P2PVertex.makePeerVertex(peer);
+			P2PVertex docToFind = P2PVertex.PeerPublishesDoc(peer, doc);//doc published by peer
+			boolean foundpeer= false;
+			boolean founddoc=false; 
+			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer"
+			{
+				if (v.equals(Ptofind)){
+					v.answering(); //change state to "answering"
+					foundpeer=true;
+					if(founddoc)break;
+				}
+				else if(v.equals(docToFind)){
+					v.answering(); //change state to "matching doc"
+					founddoc=true;
+					if(foundpeer)break;
+				}
+			}
+		}
+		
+		public void decolourPeer(int peernumber)
+		{
+			P2PVertex Ptofind = P2PVertex.makePeerVertex(peernumber);
+			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
+			{
+				if (v.equals(Ptofind)){
+					v.backToNormal();
+				}
+			}
+		}
+		
+		public void decolourDoc(int peernumber, int docnumber)
+		{
+			P2PVertex Ptofind = P2PVertex.PeerPublishesDoc(peernumber, docnumber);
+			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
+			{
+				if (v.equals(Ptofind)){
+					v.backToNormal();
+				}
+			}
+		}
+		//[end]
+
+
+		public void run() {
+			System.out.println("Starting log event sequence.");
+
+			long mytimenow = 0L;//System.currentTimeMillis();
+			long nexttime;
+			boolean oldDirection;
+			boolean firstRun = true;
+			//READING FROM CD++ LOG FILE/////////////
+			while (!my_eventlist.isEmpty()) //reading lines from config file to get parameter list
+			{
+				oldDirection = isForward(); //used to continue loop if reversed while thread sleeping
+				LogEvent evt = my_eventlist.get(current_index); //get from the front of the queue
+				
+				nexttime = evt.getTime();
+				//System.out.println("next event at :"+nexttime);
+				try{
+					if (!isFast()) //fast forwarding ?
+						Thread.sleep(Math.max(0,Math.abs(nexttime-mytimenow))); //wait until that event time comes up
+					else 
+						Thread.sleep(ffspeed);//wait for the internal "fast-forward" speed
+				} catch (InterruptedException e){
+					System.err.println("log event thread interrupted !");
+					// but don't stop, we probably just went from real-time to fast-fwd 
+				}
+				if(evt.getType().equals("end") || evt.getType().equals("start")) {
+					if(!firstRun){
+						pauseButton.doClick();
+						/*if(atFront()){
+							current_index++;
+						} else if(atBack()) {
+							current_index--;
+						}*/
+					} else {
+						firstRun=false;
+					}
+				}
+				if(isForward()) { //increment after thread so that if reverse was pressed while sleeping it will increment properly
+					current_index++;
+				} else {
+					current_index--;
+				}
+				if(oldDirection != isForward()) { // if the reverse direction was switched during the thread sleeping stop what was going to happen and go back
+					continue; 
+				}
+				mytimenow = nexttime; //advance time
+				
+				//if the event is to modify the structure of the graph
+				if (evt.isStructural()){
+					graphEvent(evt,isForward(),visibleGraph,hiddenGraph);
+				} else { //other events: queries
+					String what = evt.getType();
+					int val1 = evt.getParam(1);
+					int val2 = evt.getParam(2);
+					
+					if(what.equals("query")) {
+						if(isForward()) {
+							doQuery(val1, val2);
+						} else {
+							decolourPeer(val1);
+						}
+					}
+					else if (what.equals("unquery")) {
+						if(isForward()) {
+							decolourPeer(val1);
+						} else {
+							doQuery(val1, val2);
+						}
+					}
+					else if (what.equals("queryhit")) {
+						if(isForward()) {
+							doQueryHit(val1, val2);
+						} else {
+							decolourPeer(val1);
+							decolourDoc(val1, val2);
+						}
+					}
+					else if (what.equals("unqueryhit")) {
+						if(isForward()) {
+							decolourPeer(val1);
+							decolourDoc(val1, val2);
+						} else {
+							doQueryHit(val1, val2);
+						}
+					}
+					else if (what.equals("queryreachespeer")) {
+						if(isForward()) {
+							doQueryReachesPeer(val1,val2);
+						} else {
+							undoQueryReachesPeer(val1);
+						}
+					}
+					else if (what.equals("unqueryreachespeer")) {
+						if(isForward()) {
+							undoQueryReachesPeer(val1);
+						} else {
+							doQueryReachesPeer(val1,val2);
+						}
+					}
+					else if (what.equals("queryedge")) {
+						if(isForward()) {
+							doQueryEdge(val1,val2);
+						} else {
+							undoQueryEdge(val1,val2);
+						}
+					}
+					else if (what.equals("unqueryedge")) {
+						if(isForward()) {
+							undoQueryEdge(val1,val2);
+						} else {
+							doQueryEdge(val1,val2);
+						}
+					}
+				}
+				vv.repaint();// update visual
+				
+			}//end while
+
+		}
+	}
+	//[end] Event Playing Thread
 
 	//[start] Button Listeners
 	 /**
@@ -530,7 +926,7 @@ public class P2PApplet extends JApplet {
 	 *
 	 */
 	class relaxerButtonListener implements ActionListener {
- 		
+		
 		//this is the SpringLayout relaxer for the beginning
 		private Relaxer relaxer;
 		boolean started;
@@ -672,419 +1068,5 @@ public class P2PApplet extends JApplet {
 			eventthread.fastForward();
 		}
 	}
-	//[end]
-	
-	//[start] Main
-	/**
-	 * 
-	 * to run this applet as a java application
-	 * @param args optional argument : the log file to process
-	 */
-	public static void main(String[] args) {
-
-		P2PApplet myapp = new P2PApplet();
-		LittleGUI mygui = myapp.new LittleGUI(myapp);
-
-		mygui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		//mygui.validate();
-		//mygui.setBounds(200,200,500,200);
-		mygui.pack();
-		mygui.setVisible(true);
-		//mygui.log.append("\nho ho ho");
-	}
-	//[end]
-	
-	private enum PlayState {
-		FASTREVERSE, REVERSE, PAUSE, FORWARD, FASTFORWARD;
-	}
-
-	/**
-	 * an internal class extending thread, that can play the sequence of events from the log file in real time
-	 * or fast forward.
-	 * @author alan
-	 *
-	 */
-	private class EventPlayingThread extends Thread {
-
-		private static final long ffspeed = 50L; // 50 millisec between events while we're fast-forwarding
-		
-		private PlayState state;
-
-		List<LogEvent> my_eventlist;
-		
-		private int current_index = 0;
-		
-		public EventPlayingThread(LinkedList<LogEvent> eventlist){
-			my_eventlist = eventlist;
-			state = PlayState.PAUSE;
-			//pauseButton.doClick(); //enables proper buttons
-		}
-		
-		//[start] Playback Properties
-		/**
-		 * Returns whether or not the graph is playing forward or backwards.
-		 * @return <code>true</code> if the Play State is forward or fast forward.
-		 */
-		public boolean isForward() {
-			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FORWARD) || (state == PlayState.PAUSE));
-		}
-		/**
-		 * Returns whether or not the graph is playing fast
-		 * @return <code>true</code> if the Play State is fast in forward or reverse.
-		 */
-		public boolean isFast() {
-			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FASTREVERSE));
-		}
-		/**
-		 * 
-		 * @return
-		 */
-		public boolean atFront() {
-			if(current_index <= 0) {
-				return true;
-			}
-			return false;
-		}
-		/**
-		 * 
-		 * @return
-		 */
-		public boolean atBack() {
-			if (current_index >= my_eventlist.size()-1) {
-				return true;
-			}
-			return false;
-		}
-		/**
-		 * 
-		 * @return
-		 */
-		public boolean atAnEnd() {
-			if(atFront() || atBack()) {
-				return true;
-			}
-			return false;
-		}
-		//[end]
-		
-		//[start] State Change handlers for button clicks.
-		/**
-		 * 
-		 */
-		public void fastReverse() {
-			resumeIfPaused();
-			if(state != PlayState.FASTREVERSE) {
-				state = PlayState.FASTREVERSE;
-				if (getState().equals(Thread.State.TIMED_WAITING)) {
-					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
-				}
-			}
-		}
-		
-		public void reverse() {
-			resumeIfPaused();
-			if(state != PlayState.REVERSE) {
-				state = PlayState.REVERSE;
-				if (getState().equals(Thread.State.TIMED_WAITING)) {
-					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
-				}
-			}
-		}
-
-		public void fastForward(){
-			resumeIfPaused();
-			if(state != PlayState.FASTFORWARD) {
-				state = PlayState.FASTFORWARD;
-				if (getState().equals(Thread.State.TIMED_WAITING)) {
-					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
-				}
-			}
-		}
-
-		public void forward(){
-			resumeIfPaused();
-			if(state != PlayState.FORWARD) {
-				state = PlayState.FORWARD;
-				if (getState().equals(Thread.State.TIMED_WAITING)) {
-					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
-				}
-			}
-		}
-		
-		private void resumeIfPaused() {
-			if(state == PlayState.PAUSE) {
-				this.resume();//it's deprecated but for now it's the easiest way of doing it.
-			}
-		}
-		
-		public void pause(){
-			if(state != PlayState.PAUSE) {
-				state = PlayState.PAUSE;
-				this.suspend();
-			}
-		}
-		//[end]
-				 
-		//[start] Graph Editors for highlighting and changing colours
-		/**
-		 * Visualize a query
-		 * @param peer
-		 * @param q
-		 */
-		public void doQuery(int peer, int q){
-
-			P2PVertex tofind = P2PVertex.makePeerVertex(peer);
-			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer"
-			{
-				if (v.equals(tofind)) {
-					v.query(q); //change state to "querying" and record which is the query
-					break;
-				}
-			}
-			vv.repaint();// update visual
-		}
-		
-		public void doQueryEdge(int peerFrom, int peerTo) {
-			hiddenGraph.findPeerConnection(peerFrom, peerTo).query();
-		}
-		
-		public void undoQueryEdge(int peerFrom, int peerTo) {
-			hiddenGraph.findPeerConnection(peerFrom, peerTo).backToNormal();
-		}
-		
-		/**
-		 * Visualize a query reaches peer event (bold edges)
-		 * @param peer
-		 * @param q
-		 */
-		public void doQueryReachesPeer(int peer, int mid){
-
-			P2PVertex Ptofind = P2PVertex.makePeerVertex(peer);
-			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
-			{
-				if (v.equals(Ptofind)){
-					if (v.getQueryState()!=P2PVertex.QUERYING){
-						v.receivingQuery(mid);//change state to "receiving a query"
-						/*for (P2PConnection edge : hiddenGraph.getIncidentEdges(v)){
-							P2PVertex otherV= hiddenGraph.getOpposite(v, edge);
-							if (otherV.getQueryState()>P2PVertex.PEER && otherV.getmessageid()==mid){ //this is true if the peer is in one of the states query, getquery,answering, for the same qid
-								edge.query();// the edge is passing the query
-								//System.out.println("found originator");
-								break;
-							} //else 
-								//System.out.println(otherV.getLabel() +"   "+otherV.getQueryState());
-						}*/
-						
-					} else {
-						v.query(mid);// we let the peer query, but set the query number to the message id 
-					}
-					break;
-				}
-			}
-			vv.repaint();// update visual
-		}
-		/**
-		 * Visualize a query reaches peer event (bold edges)
-		 * @param peer
-		 * @param q
-		 */
-		public void undoQueryReachesPeer(int peer, int mid){
-
-			P2PVertex Ptofind = P2PVertex.makePeerVertex(peer);
-			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
-			{
-				if (v.equals(Ptofind)){
-					v.backToNormal();
-					/*if (v.getQueryState()!=P2PVertex.QUERYING){
-						v.backToNormal();//change state to "receiving a query"
-						/*for (P2PConnection edge : hiddenGraph.getIncidentEdges(v)){
-							P2PVertex otherV= hiddenGraph.getOpposite(v, edge);
-							if (otherV.getQueryState()>P2PVertex.PEER && otherV.getmessageid()==mid){ //this is true if the peer is in one of the states query, getquery,answering, for the same qid
-								edge.backToNormal();// the edge that was passing the query
-								
-								break;
-							}
-						}
-						
-					} else {
-						v.backToNormal();
-					}*/
-					break;
-				}
-			}
-			vv.repaint();// update visual
-		}
-
-		/**
-		 * Visualize a queryHit
-		 * @param peer
-		 * @param q
-		 */
-		public void doQueryHit(int peer, int doc){
-
-			P2PVertex Ptofind = P2PVertex.makePeerVertex(peer);
-			P2PVertex docToFind = P2PVertex.PeerPublishesDoc(peer, doc);//doc published by peer
-			boolean foundpeer= false;
-			boolean founddoc=false; 
-			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer"
-			{
-				if (v.equals(Ptofind)){
-					v.answering(); //change state to "answering"
-					foundpeer=true;
-					if(founddoc)break;
-				}
-				else if(v.equals(docToFind)){
-					v.answering(); //change state to "matching doc"
-					founddoc=true;
-					if(foundpeer)break;
-				}
-			}
-			vv.repaint();// update visual
-		}
-		
-		public void decolourPeer(int peernumber)
-		{
-			P2PVertex Ptofind = P2PVertex.makePeerVertex(peernumber);
-			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
-			{
-				if (v.equals(Ptofind)){
-					v.backToNormal();
-				}
-			}
-			vv.repaint();// update visual
-		}
-		
-		public void decolourDoc(int peernumber, int docnumber)
-		{
-			P2PVertex Ptofind = P2PVertex.PeerPublishesDoc(peernumber, docnumber);
-			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
-			{
-				if (v.equals(Ptofind)){
-					v.backToNormal();
-				}
-			}
-			vv.repaint();// update visual
-		}
-		//[end]
-
-
-		public void run() {
-			System.out.println("Starting log event sequence.");
-
-			long mytimenow = 0L;//System.currentTimeMillis();
-			long nexttime;
-			boolean oldDirection;
-			boolean firstRun = true;
-			//READING FROM CD++ LOG FILE/////////////
-			while (!my_eventlist.isEmpty()) //reading lines from config file to get parameter list
-			{
-				oldDirection = isForward(); //used to continue loop if reversed while thread sleeping
-				LogEvent evt = my_eventlist.get(current_index); //get from the front of the queue
-				
-				nexttime = evt.getTime();
-				//System.out.println("next event at :"+nexttime);
-				try{
-					if (!isFast()) //fast forwarding ?
-						Thread.sleep(Math.max(0,Math.abs(nexttime-mytimenow))); //wait until that event time comes up
-					else 
-						Thread.sleep(ffspeed);//wait for the internal "fast-forward" speed
-				} catch (InterruptedException e){
-					System.err.println("log event thread interrupted !");
-					// but don't stop, we probably just went from real-time to fast-fwd 
-				}
-				if(evt.getType().equals("end") || evt.getType().equals("start")) {
-					if(!firstRun){
-						pauseButton.doClick();
-						/*if(atFront()){
-							current_index++;
-						} else if(atBack()) {
-							current_index--;
-						}*/
-					} else {
-						firstRun=false;
-					}
-				}
-				if(isForward()) { //increment after thread so that if reverse was pressed while sleeping it will increment properly
-					current_index++;
-				} else {
-					current_index--;
-				}
-				if(oldDirection != isForward()) { // if the reverse direction was switched during the thread sleeping stop what was going to happen and go back
-					continue; 
-				}
-				mytimenow = nexttime; //advance time
-				
-				//if the event is to modify the structure of the graph
-				if (evt.isStructural()){
-					graphEvent(evt,isForward(),visibleGraph,hiddenGraph);
-					vv.repaint();
-				} else { //other events: queries
-					String what = evt.getType();
-					int val1 = evt.getParam(1);
-					int val2 = evt.getParam(2);
-					
-					if(what.equals("query")) {
-						if(isForward()) {
-							doQuery(val1, val2);
-						} else {
-							decolourPeer(val1);
-						}
-					}
-					else if (what.equals("unquery")) {
-						if(isForward()) {
-							decolourPeer(val1);
-						} else {
-							doQuery(val1, val2);
-						}
-					}
-					else if (what.equals("queryhit")) {
-						if(isForward()) {
-							doQueryHit(val1, val2);
-						} else {
-							decolourPeer(val1);
-							decolourDoc(val1, val2);
-						}
-					}
-					else if (what.equals("unqueryhit")) {
-						if(isForward()) {
-							decolourPeer(val1);
-							decolourDoc(val1, val2);
-						} else {
-							doQueryHit(val1, val2);
-						}
-					}
-					else if (what.equals("queryreachespeer")) {
-						if(isForward()) {
-							doQueryReachesPeer(val1,val2);
-						} else {
-							undoQueryReachesPeer(val1,val2);
-						}
-					}
-					else if (what.equals("unqueryreachespeer")) {
-						if(isForward()) {
-							undoQueryReachesPeer(val1,val2);
-						} else {
-							doQueryReachesPeer(val1,val2);
-						}
-					}
-					else if (what.equals("queryedge")) {
-						if(isForward()) {
-							doQueryEdge(val1,val2);
-						} else {
-							undoQueryEdge(val1,val2);
-						}
-					}
-					else if (what.equals("unqueryedge")) {
-						if(isForward()) {
-							undoQueryEdge(val1,val2);
-						} else {
-							doQueryEdge(val1,val2);
-						}
-					}
-				}
-				
-			}//end while
-
-		}
-	}
+	//[end] Button Listeners
 }
