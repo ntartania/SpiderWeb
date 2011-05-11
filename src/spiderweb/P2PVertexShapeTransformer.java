@@ -27,7 +27,8 @@ public class P2PVertexShapeTransformer extends AbstractVertexShapeTransformer<P2
 	public static final int DOC_SIZE = 8;
 	public static final int PEER_SIZE = 25;
 	
-	    public P2PVertexShapeTransformer() 
+	    @SuppressWarnings({ "rawtypes", "unchecked" })
+		public P2PVertexShapeTransformer() 
 	    {
 	    	super ( new P2PVertexSizeFunction(DOC_SIZE,PEER_SIZE), new ConstantTransformer(1.0f));
 	    }

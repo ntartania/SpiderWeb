@@ -8,7 +8,7 @@ package spiderweb;
  * @author Alan
  *
  */
-public class P2PVertex implements Comparable {
+public class P2PVertex implements Comparable<P2PVertex> {
 
 	public static final int PEER = 0;
 	public static final int DOC = 10;
@@ -112,7 +112,7 @@ public class P2PVertex implements Comparable {
 	}
 	
 	@Override
-	public int compareTo(Object other) {
+	public int compareTo(P2PVertex other) {
 		if(other instanceof P2PVertex)
 			return (key.compareTo(((P2PVertex)other).getKey()));
 		else 

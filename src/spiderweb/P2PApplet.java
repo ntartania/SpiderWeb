@@ -56,6 +56,7 @@ public class P2PApplet extends JApplet {
 	
 	//[start] Static Final Attributes
 	// for the length of the edges in the graph layout
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static final Transformer<P2PConnection,Integer> UNITLENGTHFUNCTION = new ConstantTransformer(100);
 
 	//the log file (default value)
@@ -572,12 +573,12 @@ public class P2PApplet extends JApplet {
 
 		List<LogEvent> my_eventlist;
 		
-		private int current_index = 0;
+		private int current_index;
 		
 		public EventPlayingThread(LinkedList<LogEvent> eventlist){
 			my_eventlist = eventlist;
-			state = PlayState.PAUSE;
-			//pauseButton.doClick(); //enables proper buttons
+			current_index = 0; 
+			state = PlayState.FORWARD;
 		}
 		
 		//[start] Playback Properties
@@ -620,7 +621,7 @@ public class P2PApplet extends JApplet {
 		 * @return
 		 */
 		public boolean atAnEnd() {
-			if(atFront() || atBack()) {
+			if(my_eventlist.get(current_index).getType().equals("end") || my_eventlist.get(current_index).getType().equals("start")) {
 				return true;
 			}
 			return false;
@@ -632,56 +633,45 @@ public class P2PApplet extends JApplet {
 		 * 
 		 */
 		public void fastReverse() {
-			resumeIfPaused();
 			if(state != PlayState.FASTREVERSE) {
 				state = PlayState.FASTREVERSE;
-				if (getState().equals(Thread.State.TIMED_WAITING)) {
+				if (getState().equals(Thread.State.WAITING)) {
 					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
 				}
 			}
 		}
 		
 		public void reverse() {
-			resumeIfPaused();
 			if(state != PlayState.REVERSE) {
 				state = PlayState.REVERSE;
-				if (getState().equals(Thread.State.TIMED_WAITING)) {
+				if (getState().equals(Thread.State.WAITING)) {
 					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
 				}
 			}
 		}
 
 		public void fastForward(){
-			resumeIfPaused();
 			if(state != PlayState.FASTFORWARD) {
 				state = PlayState.FASTFORWARD;
-				if (getState().equals(Thread.State.TIMED_WAITING)) {
+				if (getState().equals(Thread.State.WAITING)) {
 					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
 				}
 			}
 		}
 
 		public void forward(){
-			resumeIfPaused();
 			if(state != PlayState.FORWARD) {
 				state = PlayState.FORWARD;
-				if (getState().equals(Thread.State.TIMED_WAITING)) {
+				if (getState().equals(Thread.State.WAITING)) {
 					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
 				}
 			}
 		}
 		
-		private void resumeIfPaused() {
-			if(state == PlayState.PAUSE) {
-				
-				this.resume();//it's deprecated but for now it's the easiest way of doing it.
-			}
-		}
-		
-		public void pause(){
+		public synchronized void pause(){
 			if(state != PlayState.PAUSE) {
 				state = PlayState.PAUSE;
-				this.suspend();
+				notify();
 			}
 		}
 		//[end]
@@ -812,28 +802,33 @@ public class P2PApplet extends JApplet {
 				LogEvent evt = my_eventlist.get(current_index); //get from the front of the queue
 				
 				nexttime = evt.getTime();
-				//System.out.println("next event at :"+nexttime);
+				
+				if(atAnEnd()) {
+					if(!firstRun){
+						pauseButton.doClick();
+					} else {
+						firstRun=false;
+					}
+				}
+				
 				try{
 					if (!isFast()) //fast forwarding ?
 						Thread.sleep(Math.max(0,Math.abs(nexttime-mytimenow))); //wait until that event time comes up
 					else 
 						Thread.sleep(ffspeed);//wait for the internal "fast-forward" speed
+					if(state == PlayState.PAUSE)
+					{
+						synchronized(this) {
+							while(state == PlayState.PAUSE) {
+								wait();
+							}
+						}
+					}
 				} catch (InterruptedException e){
 					System.err.println("log event thread interrupted !");
 					// but don't stop, we probably just went from real-time to fast-fwd 
 				}
-				if(evt.getType().equals("end") || evt.getType().equals("start")) {
-					if(!firstRun){
-						pauseButton.doClick();
-						/*if(atFront()){
-							current_index++;
-						} else if(atBack()) {
-							current_index--;
-						}*/
-					} else {
-						firstRun=false;
-					}
-				}
+				
 				if(isForward()) { //increment after thread so that if reverse was pressed while sleeping it will increment properly
 					current_index++;
 				} else {
@@ -844,6 +839,7 @@ public class P2PApplet extends JApplet {
 				}
 				mytimenow = nexttime; //advance time
 				
+				//[start] Graph Event Handling
 				//if the event is to modify the structure of the graph
 				if (evt.isStructural()){
 					graphEvent(evt,isForward(),visibleGraph,hiddenGraph);
@@ -911,6 +907,7 @@ public class P2PApplet extends JApplet {
 						}
 					}
 				}
+				//[end] Graph Event Handling
 				vv.repaint();// update visual
 				
 			}//end while

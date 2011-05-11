@@ -1,6 +1,6 @@
 package spiderweb;
 
-public class P2PConnection implements Comparable {
+public class P2PConnection implements Comparable<P2PConnection> {
 
 	public static final int P2P = 0;
 	public static final int P2DOC = 10;
@@ -69,7 +69,7 @@ public class P2PConnection implements Comparable {
 	}
 	
 	@Override
-	public int compareTo(Object other) {
+	public int compareTo(P2PConnection other) {
 		if(other instanceof P2PConnection)
 			return (key.compareTo(((P2PConnection)other).getKey()));
 		else 
