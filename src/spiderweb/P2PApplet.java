@@ -51,9 +51,17 @@ import edu.uci.ics.jung.visualization.renderers.Renderer;
  * 
  */
 public class P2PApplet extends JApplet {
-	/**
-	 * 
-	 */
+	
+	//[start] Static Final Attributes
+	// for the length of the edges in the graph layout
+	public static final Transformer<P2PConnection,Integer> UNITLENGTHFUNCTION = new ConstantTransformer(100);
+
+	//the log file (default value)
+	private static final String DEF_LOG_FILE = "ProcessedLog.txt";
+	private static final String DEF_LOG_URL = "http://www.sce.carleton.ca/~adavoust/simuldemo/ProcessedLog.txt";
+	//[end]
+	
+	//[start] Private Variables
 	private static final long serialVersionUID = 2L;
 	
 	//default size for the swing graphic components
@@ -75,6 +83,14 @@ public class P2PApplet extends JApplet {
 
 	private AbstractLayout<P2PVertex,P2PConnection> layout = null;
 	
+	private LinkedList<LogEvent> myGraphEvolution;
+
+	//a hidden graph that contains all the nodes that will ever be added... 
+	//in order to calculate the positions of all the nodes
+	private P2PNetworkGraph hiddenGraph; 
+	//[end]
+	
+	//[start] Protected Variables
 	protected JButton relaxerButton;
 	protected JButton fastforwardButton;
 	protected JButton forwardButton;
@@ -82,28 +98,12 @@ public class P2PApplet extends JApplet {
 	protected JButton reverseButton;
 	protected JButton fastReverseButton;
 
-	private LinkedList<LogEvent> myGraphEvolution;
-
-	//a hidden graph that contains all the nodes that will ever be added... 
-	//in order to calculate the positions of all the nodes
-	private P2PNetworkGraph hiddenGraph; 
-
 	protected EventPlayingThread eventthread;
-
-	//Timer timer;
-
-	boolean done;
-
-	// for the length of the edges in the graph layout
-	public static final Transformer<P2PConnection,Integer> UNITLENGTHFUNCTION = new ConstantTransformer(100);
-
-	//the log file (default value)
-	private static final String DEF_LOG_FILE = "ProcessedLog.txt";
-	private static final String DEF_LOG_URL = "http://www.sce.carleton.ca/~adavoust/simuldemo/ProcessedLog.txt";
+	//[end]
 	
+	//[start] LittleGUI class
 	/////////additional swing components for the file chooser, etc./////////////////////////
 	// only used in non-web mode
-	
 	class LittleGUI extends JFrame implements ActionListener{
 		
 		private static final long serialVersionUID = 1L;
@@ -202,14 +202,10 @@ public class P2PApplet extends JApplet {
 			
 		}
 	}
+	//[end]
 
 
 	////////////////////////////////////////////////////////////////////////////////////////
-
-	/*  to run on a particular file name* /
-	public void setLogFileName(String fname){
-		logfilename = fname;
-	}*/
 	
 	/** to use a particular log file (can be chosen from GUI)*/
 	public void setLogFile(File lf){
@@ -229,28 +225,15 @@ public class P2PApplet extends JApplet {
 	 * applet initialization
 	 */
 	public void init() {
-
-		//create a graph, that will be the one updated during the visualization process
-		//Graph<P2PVertex,P2PConnection> ig = Graphs.<P2PVertex,P2PConnection>synchronizedUndirectedGraph(new UndirectedSparseGraph<P2PVertex,P2PConnection>());//  synchronizedDirectedGraph(new DirectedSparseMultigraph<Number,Number>());
-
-		/*ObservableGraph<P2PVertex,P2PConnection> og = new ObservableGraph<P2PVertex,P2PConnection>(ig);
-		og.addGraphEventListener(new GraphEventListener<P2PVertex,P2PConnection>() {
-
-			public void handleGraphEvent(GraphEvent<P2PVertex,P2PConnection> evt) {
-				System.err.println("got "+evt);
-
-			}});*/
-		//this.visibleGraph = og;
+		
 		//TODO : see if synchronization (multi-thread safety) is necessary
 		visibleGraph = new P2PNetworkGraph();
-
-		/// load the whole list of graph events
-		//logreader = new LogReaderThread(this,DEF_LOG_FILE);
 
 		System.out.println("Reading the logs ...");
 		//TODO : make it possible to load a different log file
 		SpringLayout<P2PVertex,P2PConnection> sp_layout=null;
 		try {
+			//[start] Read in the log file
 			BufferedReader in;
 			if (ontheweb){ // hack : when running on SCE server I can't read the log file without opening it through this URL reader ...
 				URL yahoo = new URL(DEF_LOG_URL);
@@ -263,12 +246,12 @@ public class P2PApplet extends JApplet {
 					System.out.println("reading from the file"+mylogfile.getAbsolutePath());
 				}
 			}
-			String str;
-
+			
+			//[end]
 			myGraphEvolution = new LinkedList<LogEvent>();
 			hiddenGraph = new P2PNetworkGraph();
 
-			///*----------set up the spring layout!!----------*///
+			//[start] set up the spring layout
 			//create a spring layout for the hidden graph and give it my own parameters ----------
 			
 			sp_layout = new SpringLayout<P2PVertex,P2PConnection>(hiddenGraph, new P2PNetEdgeLengthFunction()); // here is my length calculation
@@ -279,16 +262,15 @@ public class P2PApplet extends JApplet {
 			//((SpringLayout<Number,Number>)layout).setRepulsionRange(50);
 			sp_layout.setInitializer(new P2PVertexPlacer(sp_layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
 			
-			//------------------------------------------------------------------------------------
+			//[end]
 			
-			
-
-			///*----------Read the file and start calculating the resulting layout !!----------*///
+			//[start]Read the file, create log events and start calculating the resulting layout
 						
 			sp_layout.initialize();
-			//int count = 0;
+			String str;
 			List<LogEvent> colouringEvents = new LinkedList<LogEvent>();
-			myGraphEvolution.add(new LogEvent("0:start:0:0"));
+			List<P2PVertex> queryPeers = new LinkedList<P2PVertex>();
+			myGraphEvolution.add(new LogEvent("0:start:0:0")); //a start event to know when to stop playback of a reversing graph
 			while ((str = in.readLine()) != null) //reading lines log file
 			{
 				//count++;
@@ -296,10 +278,38 @@ public class P2PApplet extends JApplet {
 				
 				LogEvent gev = new LogEvent(str);
 				
-				if(gev.getType().equals("query") || gev.getType().equals("queryhit") || gev.getType().equals("queryreachespeer"))
-				{
-					colouringEvents.add(LogEvent.createOpposingLogEvent(gev)); // add an opposing event to decolour/debold
+				//add all the nodes to construct the new graph
+				if (gev.isConstructing()){
+					graphConstructionEvent(gev,hiddenGraph);
+					sp_layout.step(); //do one step in changing the layout of the graph
+					sp_layout.step(); //and another
 				}
+				
+				if(gev.getType().equals("query") || gev.getType().equals("queryhit"))
+				{
+					colouringEvents.add(LogEvent.createOpposingLogEvent(gev,2000)); // add an opposing event to decolour/debold
+					if(gev.getType().equals("query")) {
+						queryPeers.add(P2PVertex.makePeerVertex(gev.getParam(1)));
+					}
+					
+				} 
+				else if(gev.getType().equals("queryreachespeer")) {
+					colouringEvents.add(LogEvent.createOpposingLogEvent(gev,1000));
+					P2PVertex queriedPeer = P2PVertex.makePeerVertex(gev.getParam(1));
+					for(P2PVertex querySender : queryPeers) {
+						if(hiddenGraph.findEdge(querySender, queriedPeer) != null) {
+							LogEvent ev = new LogEvent(gev.getTime()+1,"queryedge",querySender.getKey(),queriedPeer.getKey());
+							
+							colouringEvents.add(ev);
+							colouringEvents.add(LogEvent.createOpposingLogEvent(ev,1000));
+							//queryPeers.remove(querySender);
+							break;
+						}
+					}
+					queryPeers.add(queriedPeer);
+				}
+				
+				
 				for(int i=0;i<colouringEvents.size();i++) { //start at first element (time should increase with each index)
 					if(colouringEvents.get(i).getTime() < gev.getTime()) { //add only if the event takes place before the LogEvent that was read this iteration
 						myGraphEvolution.addLast(colouringEvents.get(i));
@@ -308,35 +318,21 @@ public class P2PApplet extends JApplet {
 					}
 				}
 				myGraphEvolution.addLast(gev);
-				//add all the nodes to construct the new graph
-				if (gev.isConstructing()){
-					graphConstructionEvent(gev,hiddenGraph);
-					sp_layout.step(); //do one step in changing the layout of the graph
-					sp_layout.step(); //and another few
-					/*sp_layout.step();
-					sp_layout.step();
-					sp_layout.step();*/
-				}
+				
+				
 			}//end while
-			myGraphEvolution.add(new LogEvent((myGraphEvolution.getLast().getTime())+":end:0:0"));
+			myGraphEvolution.add(new LogEvent((myGraphEvolution.getLast().getTime())+":end:0:0")); //add an end log to know to stop the playback of the graph
+			
+			//[end]
 		} catch (Exception e) {
 			e.printStackTrace();
 			
 		}
-
-		//System.out.println(myGraphEvolution);
-
-		/*for (int i=0; i<500; i++)sp_layout.step(); // give it another few hundred steps of figuring itself out
-		System.out.println("Layout finalized !!");
-		
-		
-		//freeze  the layout
-		layout = new StaticLayout<P2PVertex,Number>(hiddenGraph, sp_layout);		
-*/
 		
 		layout = sp_layout;
-		//layout = ci_layout;
-		//create viewer
+		
+		
+		//[start] Create Visualization Viewer
 		vv = new VisualizationViewer<P2PVertex,P2PConnection>(layout, new Dimension(DEFWIDTH,DEFHEIGHT));
 
 		JRootPane rp = this.getRootPane();
@@ -375,7 +371,7 @@ public class P2PApplet extends JApplet {
 		eventthread = new EventPlayingThread(myGraphEvolution);
 		
 		vv.addComponentListener(new ComponentAdapter() {
-
+			
 			/**
 			 * @see java.awt.event.ComponentAdapter#componentResized(java.awt.event.ComponentEvent)
 			 */
@@ -385,21 +381,20 @@ public class P2PApplet extends JApplet {
 				System.err.println("resized");
 				layout.setSize(arg0.getComponent().getSize());
 			}});
-
+		
 		JPanel graphsPanel = new JPanel();
 		
 		graphsPanel.add(vv);
+		//[end]
 		
-		
-		
-		
-		System.out.println("dododo");
-		
+		//[start] Relaxer creation
 		Relaxer relaxer = new VisRunner((IterativeContext)layout);
 		relaxer.stop();
 		relaxer.setSleepTime(80L);
 		relaxer.relax();
-
+		//[end]
+		
+		//[start] Panel Layout
 		//button to freeze layout, then to fast-forward
 		relaxerButton = new JButton("Finalize Layout");
 		relaxerButton.addActionListener(new relaxerButtonListener(relaxer)); 
@@ -458,9 +453,10 @@ public class P2PApplet extends JApplet {
 		getContentPane().add(graphsPanel,BorderLayout.CENTER);
 		getContentPane().add(south, BorderLayout.SOUTH);
 		getContentPane().add(west,BorderLayout.WEST);
-		
+		//[end]
 	}
 	
+	//[start] Structural Graph Events
 	/**
 	 * Limited version of graphEvent for construction a graph for layout purposes
 	 * @param gev	The Log event which needs to be handled.
@@ -515,23 +511,24 @@ public class P2PApplet extends JApplet {
 			}
 		}
 	}
+	//[end]
 
 	@Override
 	public void start() {
 		validate();
 		//TODO : perhaps place the log reader here.
-		//set timer so applet will change
 
 		vv.repaint();
 		///----------run the spring layout algorithm with the full hidden graph for a bit -------
 		
 	}
 
- /**
- * an actionlistener that defines the use of the button at the bottom of the applet 
- * @author adavoust
- *
- */
+	//[start] Button Listeners
+	 /**
+	 * an actionlistener that defines the use of the button at the bottom of the applet 
+	 * @author adavoust
+	 *
+	 */
 	class relaxerButtonListener implements ActionListener {
  		
 		//this is the SpringLayout relaxer for the beginning
@@ -596,7 +593,6 @@ public class P2PApplet extends JApplet {
 					
 		}
 	}
-	
 	
 	class FastReverseButtonListener implements ActionListener {
 		
@@ -676,6 +672,9 @@ public class P2PApplet extends JApplet {
 			eventthread.fastForward();
 		}
 	}
+	//[end]
+	
+	//[start] Main
 	/**
 	 * 
 	 * to run this applet as a java application
@@ -693,6 +692,7 @@ public class P2PApplet extends JApplet {
 		mygui.setVisible(true);
 		//mygui.log.append("\nho ho ho");
 	}
+	//[end]
 	
 	private enum PlayState {
 		FASTREVERSE, REVERSE, PAUSE, FORWARD, FASTFORWARD;
@@ -711,6 +711,7 @@ public class P2PApplet extends JApplet {
 		private PlayState state;
 
 		List<LogEvent> my_eventlist;
+		
 		private int current_index = 0;
 		
 		public EventPlayingThread(LinkedList<LogEvent> eventlist){
@@ -719,33 +720,57 @@ public class P2PApplet extends JApplet {
 			//pauseButton.doClick(); //enables proper buttons
 		}
 		
+		//[start] Playback Properties
+		/**
+		 * Returns whether or not the graph is playing forward or backwards.
+		 * @return <code>true</code> if the Play State is forward or fast forward.
+		 */
 		public boolean isForward() {
-			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FORWARD) || ((state) == PlayState.PAUSE));
+			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FORWARD) || (state == PlayState.PAUSE));
 		}
+		/**
+		 * Returns whether or not the graph is playing fast
+		 * @return <code>true</code> if the Play State is fast in forward or reverse.
+		 */
 		public boolean isFast() {
 			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FASTREVERSE));
 		}
-		
+		/**
+		 * 
+		 * @return
+		 */
 		public boolean atFront() {
 			if(current_index <= 0) {
 				return true;
 			}
 			return false;
 		}
+		/**
+		 * 
+		 * @return
+		 */
 		public boolean atBack() {
 			if (current_index >= my_eventlist.size()-1) {
 				return true;
 			}
 			return false;
 		}
-		
+		/**
+		 * 
+		 * @return
+		 */
 		public boolean atAnEnd() {
 			if(atFront() || atBack()) {
 				return true;
 			}
 			return false;
 		}
+		//[end]
 		
+		//[start] State Change handlers for button clicks.
+		/**
+		 * 
+		 */
 		public void fastReverse() {
 			resumeIfPaused();
 			if(state != PlayState.FASTREVERSE) {
@@ -798,10 +823,9 @@ public class P2PApplet extends JApplet {
 				this.suspend();
 			}
 		}
-		
-		/////////////////////////////////////////////////////////
-		 
-
+		//[end]
+				 
+		//[start] Graph Editors for highlighting and changing colours
 		/**
 		 * Visualize a query
 		 * @param peer
@@ -841,7 +865,7 @@ public class P2PApplet extends JApplet {
 				if (v.equals(Ptofind)){
 					if (v.getQueryState()!=P2PVertex.QUERYING){
 						v.receivingQuery(mid);//change state to "receiving a query"
-						for (P2PConnection edge : hiddenGraph.getIncidentEdges(v)){
+						/*for (P2PConnection edge : hiddenGraph.getIncidentEdges(v)){
 							P2PVertex otherV= hiddenGraph.getOpposite(v, edge);
 							if (otherV.getQueryState()>P2PVertex.PEER && otherV.getmessageid()==mid){ //this is true if the peer is in one of the states query, getquery,answering, for the same qid
 								edge.query();// the edge is passing the query
@@ -849,7 +873,7 @@ public class P2PApplet extends JApplet {
 								break;
 							} //else 
 								//System.out.println(otherV.getLabel() +"   "+otherV.getQueryState());
-						}
+						}*/
 						
 					} else {
 						v.query(mid);// we let the peer query, but set the query number to the message id 
@@ -870,9 +894,10 @@ public class P2PApplet extends JApplet {
 			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
 			{
 				if (v.equals(Ptofind)){
-					if (v.getQueryState()!=P2PVertex.QUERYING){
+					v.backToNormal();
+					/*if (v.getQueryState()!=P2PVertex.QUERYING){
 						v.backToNormal();//change state to "receiving a query"
-						for (P2PConnection edge : hiddenGraph.getIncidentEdges(v)){
+						/*for (P2PConnection edge : hiddenGraph.getIncidentEdges(v)){
 							P2PVertex otherV= hiddenGraph.getOpposite(v, edge);
 							if (otherV.getQueryState()>P2PVertex.PEER && otherV.getmessageid()==mid){ //this is true if the peer is in one of the states query, getquery,answering, for the same qid
 								edge.backToNormal();// the edge that was passing the query
@@ -883,7 +908,7 @@ public class P2PApplet extends JApplet {
 						
 					} else {
 						v.backToNormal();
-					}
+					}*/
 					break;
 				}
 			}
@@ -940,6 +965,7 @@ public class P2PApplet extends JApplet {
 			}
 			vv.repaint();// update visual
 		}
+		//[end]
 
 
 		public void run() {

@@ -48,7 +48,7 @@ public class LogEvent {
 	 * @param param1 	the first parameter (peer number)
 	 * @param param2	the second parameter (peer2/doc/query number)
 	 */
-	private LogEvent(long time, String type, int param1, int param2)
+	public LogEvent(long time, String type, int param1, int param2)
 	{
 		this.time = time;
 		this.type = type;
@@ -62,9 +62,9 @@ public class LogEvent {
 	 * @param colouring	True if the event is to colour, false if it is a decolouring event
 	 * @return a new LogEvent with parameters to colour 
 	 */
-	public static LogEvent createOpposingLogEvent(LogEvent creator)
+	public static LogEvent createOpposingLogEvent(LogEvent creator,int delay)
 	{
-		return new LogEvent((creator.getTime()+(creator.getType()=="queryreachespeer" ? 500 : 2000)), "un"+creator.getType(), creator.getParam(1), creator.getParam(2));
+		return new LogEvent((creator.getTime()+delay), "un"+creator.getType(), creator.getParam(1), creator.getParam(2));
 	}
 	
 	/** indicates whether this event is a "construction" event in the graph (adds an edge or a vertex)*/
