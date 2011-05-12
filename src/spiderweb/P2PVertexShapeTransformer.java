@@ -39,7 +39,7 @@ public class P2PVertexShapeTransformer extends AbstractVertexShapeTransformer<P2
 	    
 	    public Shape transform(P2PVertex v)
 	    {
-	    		if (((P2PVertex) v).isPeer())
+	    		if (v instanceof PeerVertex)
 	    			return factory.getEllipse(v);
 	    		else
 	    			return factory.getRectangle(v);

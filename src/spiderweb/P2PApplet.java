@@ -288,13 +288,13 @@ public class P2PApplet extends JApplet {
 				{
 					colouringEvents.add(LogEvent.createOpposingLogEvent(gev,2000)); // add an opposing event to decolour/debold
 					if(gev.getType().equals("query")) {
-						queryPeers.add(P2PVertex.makePeerVertex(gev.getParam(1)));
+						queryPeers.add(new PeerVertex(gev.getParam(1)));
 					}
 					
 				} 
 				else if(gev.getType().equals("queryreachespeer")) {
 					colouringEvents.add(LogEvent.createOpposingLogEvent(gev,750));
-					P2PVertex queriedPeer = P2PVertex.makePeerVertex(gev.getParam(1));
+					P2PVertex queriedPeer = new PeerVertex(gev.getParam(1));
 					for(P2PVertex querySender : queryPeers) {
 						if(hiddenGraph.findEdge(querySender, queriedPeer) != null) {
 							LogEvent ev = new LogEvent(gev.getTime()+1,"queryedge",querySender.getKey(),queriedPeer.getKey());
@@ -331,7 +331,6 @@ public class P2PApplet extends JApplet {
 			e.printStackTrace();
 			
 		}
-		LOG(myGraphEvolution.toString());
 		layout = sp_layout;
 		//[end] Open and Read Log file, create the layout of the graph
 		
@@ -383,7 +382,7 @@ public class P2PApplet extends JApplet {
 			@Override
 			public void componentResized(ComponentEvent arg0) {
 				super.componentResized(arg0);
-				System.err.println("resized");
+				//System.err.println("resized");
 				layout.setSize(arg0.getComponent().getSize());
 			}});
 		
@@ -634,37 +633,42 @@ public class P2PApplet extends JApplet {
 		 */
 		public void fastReverse() {
 			if(state != PlayState.FASTREVERSE) {
+				PlayState prevState = state;
 				state = PlayState.FASTREVERSE;
-				if (getState().equals(Thread.State.WAITING)) {
-					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
-				}
+				wakeup(prevState);
 			}
 		}
 		
 		public void reverse() {
 			if(state != PlayState.REVERSE) {
+				PlayState prevState = state;
 				state = PlayState.REVERSE;
-				if (getState().equals(Thread.State.WAITING)) {
-					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
-				}
+				wakeup(prevState);
 			}
 		}
 
 		public void fastForward(){
 			if(state != PlayState.FASTFORWARD) {
+				PlayState prevState = state;
 				state = PlayState.FASTFORWARD;
-				if (getState().equals(Thread.State.WAITING)) {
-					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
-				}
+				wakeup(prevState);
 			}
 		}
 
 		public void forward(){
 			if(state != PlayState.FORWARD) {
+				PlayState prevState = state;
 				state = PlayState.FORWARD;
-				if (getState().equals(Thread.State.WAITING)) {
-					interrupt(); //if we were waiting for the next event, we'll just wake the thread.
-				}
+				wakeup(prevState);
+			}
+		}
+		
+		private synchronized void wakeup(PlayState previousState) {
+			if (this.getState().equals(Thread.State.TIMED_WAITING)) {
+				interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+			}
+			if(previousState == PlayState.PAUSE) {
+				notify();
 			}
 		}
 		
@@ -682,17 +686,19 @@ public class P2PApplet extends JApplet {
 		 * @param peer
 		 * @param q
 		 */
-		public void doQuery(int peer, int q){
-
-			P2PVertex tofind = P2PVertex.makePeerVertex(peer);
-			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer"
-			{
-				if (v.equals(tofind)) {
-					v.query(q); //change state to "querying" and record which is the query
-					break;
-				}
-			}
+		public void doQuery(int peer, int queryMessageID){
+			hiddenGraph.getPeer(peer).query(queryMessageID);
 		}
+		
+		/**
+		 * Visualize a query
+		 * @param peer
+		 * @param q
+		 */
+		public void undoQuery(int peer, int queryMessageID){
+			hiddenGraph.getPeer(peer).endQuery(queryMessageID);
+		}
+		
 		
 		public void doQueryEdge(int peerFrom, int peerTo) {
 			hiddenGraph.findPeerConnection(peerFrom, peerTo).query();
@@ -707,35 +713,15 @@ public class P2PApplet extends JApplet {
 		 * @param peer
 		 * @param q
 		 */
-		public void doQueryReachesPeer(int peer, int mid){
-
-			P2PVertex Ptofind = P2PVertex.makePeerVertex(peer);
-			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
-			{
-				if (v.equals(Ptofind)){
-					if (v.getQueryState()!=P2PVertex.QUERYING){
-						v.receivingQuery(mid);//change state to "receiving a query"
-						
-					} else {
-						v.query(mid);// we let the peer query, but set the query number to the message id 
-					}
-					break;
-				}
-			}
+		public void doQueryReachesPeer(int peer, int queryMessageID){
+			hiddenGraph.getPeer(peer).receiveQuery(queryMessageID);
 		}
 		/**
 		 * Visualize a query reaches peer event (bold edges)
 		 * @param peer
 		 */
-		public void undoQueryReachesPeer(int peer){
-			P2PVertex Ptofind = P2PVertex.makePeerVertex(peer);
-			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
-			{
-				if (v.equals(Ptofind)){
-					v.backToNormal();
-					break;
-				}
-			}
+		public void undoQueryReachesPeer(int peer, int queryMessageID){
+			hiddenGraph.getPeer(peer).endReceivedQuery(queryMessageID);
 		}
 
 		/**
@@ -743,47 +729,17 @@ public class P2PApplet extends JApplet {
 		 * @param peer
 		 * @param q
 		 */
-		public void doQueryHit(int peer, int doc){
-
-			P2PVertex Ptofind = P2PVertex.makePeerVertex(peer);
-			P2PVertex docToFind = P2PVertex.PeerPublishesDoc(peer, doc);//doc published by peer
-			boolean foundpeer= false;
-			boolean founddoc=false; 
-			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer"
-			{
-				if (v.equals(Ptofind)){
-					v.answering(); //change state to "answering"
-					foundpeer=true;
-					if(founddoc)break;
-				}
-				else if(v.equals(docToFind)){
-					v.answering(); //change state to "matching doc"
-					founddoc=true;
-					if(foundpeer)break;
-				}
-			}
+		public void doQueryHit(int peerNumber, int documentNumber) {
+			hiddenGraph.getDocument(peerNumber, documentNumber).setQueryHit(true);
 		}
 		
-		public void decolourPeer(int peernumber)
-		{
-			P2PVertex Ptofind = P2PVertex.makePeerVertex(peernumber);
-			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
-			{
-				if (v.equals(Ptofind)){
-					v.backToNormal();
-				}
-			}
-		}
-		
-		public void decolourDoc(int peernumber, int docnumber)
-		{
-			P2PVertex Ptofind = P2PVertex.PeerPublishesDoc(peernumber, docnumber);
-			for (P2PVertex v : hiddenGraph.getVertices())// find the vertex "peer" in the right graph
-			{
-				if (v.equals(Ptofind)){
-					v.backToNormal();
-				}
-			}
+		/**
+		 * Visualize a queryHit
+		 * @param peer
+		 * @param q
+		 */
+		public void undoQueryHit(int peerNumber, int documentNumber) {
+			hiddenGraph.getDocument(peerNumber, documentNumber).setQueryHit(false);
 		}
 		//[end]
 
@@ -825,7 +781,7 @@ public class P2PApplet extends JApplet {
 						}
 					}
 				} catch (InterruptedException e){
-					System.err.println("log event thread interrupted !");
+					//System.err.println("log event thread interrupted !");
 					// but don't stop, we probably just went from real-time to fast-fwd 
 				}
 				
@@ -847,17 +803,16 @@ public class P2PApplet extends JApplet {
 					String what = evt.getType();
 					int val1 = evt.getParam(1);
 					int val2 = evt.getParam(2);
-					
 					if(what.equals("query")) {
 						if(isForward()) {
 							doQuery(val1, val2);
 						} else {
-							decolourPeer(val1);
+							undoQuery(val1,val2);
 						}
 					}
 					else if (what.equals("unquery")) {
 						if(isForward()) {
-							decolourPeer(val1);
+							undoQuery(val1,val2);
 						} else {
 							doQuery(val1, val2);
 						}
@@ -866,14 +821,12 @@ public class P2PApplet extends JApplet {
 						if(isForward()) {
 							doQueryHit(val1, val2);
 						} else {
-							decolourPeer(val1);
-							decolourDoc(val1, val2);
+							undoQueryHit(val1, val2);
 						}
 					}
 					else if (what.equals("unqueryhit")) {
 						if(isForward()) {
-							decolourPeer(val1);
-							decolourDoc(val1, val2);
+							undoQueryHit(val1, val2);
 						} else {
 							doQueryHit(val1, val2);
 						}
@@ -882,12 +835,12 @@ public class P2PApplet extends JApplet {
 						if(isForward()) {
 							doQueryReachesPeer(val1,val2);
 						} else {
-							undoQueryReachesPeer(val1);
+							undoQueryReachesPeer(val1,val2);
 						}
 					}
 					else if (what.equals("unqueryreachespeer")) {
 						if(isForward()) {
-							undoQueryReachesPeer(val1);
+							undoQueryReachesPeer(val1,val2);
 						} else {
 							doQueryReachesPeer(val1,val2);
 						}
@@ -935,8 +888,6 @@ public class P2PApplet extends JApplet {
 			started = false; // says if we've passed the initial problem of freezing the layout and getting started
 			
 		}
-
-		
 		/**
 		 * handles the button : first to freeze the layout, then to toggle between fast-forward and normal speed
 		 */
@@ -944,11 +895,10 @@ public class P2PApplet extends JApplet {
 
 			if(!started){ // this will be the first button task : freeze layout and start the simulation
 				try {
-	
 					relaxer.stop();
-					//relaxerButton.setText("--This will be the static layout--\nsimulation will now start");
+					relaxerButton.setText("Layout Complete");
 					relaxerButton.setEnabled(false);
-					System.out.println("freezing layout !");
+					//System.out.println("freezing layout !");
 					layout = new StaticLayout<P2PVertex,P2PConnection>(hiddenGraph, layout);
 	
 					//change the layout we're viewing
@@ -966,7 +916,7 @@ public class P2PApplet extends JApplet {
 					forwardButton.setEnabled(false);
 					fastforwardButton.setEnabled(true);
 	
-					System.out.println("starting activity now !");
+					//System.out.println("starting activity now !");
 	
 				} catch (InterruptedException e) {
 					e.printStackTrace();
@@ -976,14 +926,7 @@ public class P2PApplet extends JApplet {
 				vv.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
 	
 				eventthread.start();
-				
-				
-				//fastforwardButton.setText("Quick Speed");
-	
-	
-			}
-			
-					
+			}		
 		}
 	}
 	
@@ -1062,6 +1005,7 @@ public class P2PApplet extends JApplet {
 			pauseButton.setEnabled(true);
 			forwardButton.setEnabled(true);
 			fastforwardButton.setEnabled(false);
+			
 			eventthread.fastForward();
 		}
 	}

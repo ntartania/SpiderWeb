@@ -29,12 +29,12 @@ public class P2PVertexSizeFunction implements Transformer<P2PVertex,Integer>{
 	}
 	
 	@Override
-	public Integer transform(P2PVertex vertexId) {
+	public Integer transform(P2PVertex vertexID) {
 		
-			if (((P2PVertex)vertexId).isPeer())
-    			return new Integer(my_peer_size);
-    		else
-    			return new Integer(my_doc_size);
+		if (vertexID instanceof PeerVertex)
+			return new Integer(my_peer_size);
+		else 
+			return new Integer(my_doc_size);
 		 
 	}
 	    

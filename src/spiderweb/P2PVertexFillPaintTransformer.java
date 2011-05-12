@@ -36,22 +36,27 @@ import edu.uci.ics.jung.visualization.picking.PickedInfo;
 		    
 		    public Paint transform(P2PVertex v)
 		    {
-		    	
-		    		if (v.isPeer())
-		    			if (pi.isPicked(v)) //differentiate picked peers with unpicked peers.
-		    				return PICKED_PEER_COLOR;
-		    			else
-		    				if(v.getQueryState()==P2PVertex.QUERYING)
-		    					return PEER_QUERY_COLOR;
-		    				else if (v.getQueryState()==P2PVertex.ANSWERING)
-		    					return PEER_ANSWERING_COLOR;
-		    				else
-		    					return PEER_COLOR;
-		    		else // it's a document then !
-		    			if (v.getQueryState()==P2PVertex.MATCHING_DOC)
-		    				return DOC_QUERYHIT_COLOR;
-		    			else
-		    				return DOC_COLOR;
+		    	//is it a peer
+	    		if (v instanceof PeerVertex) {
+	    			if (pi.isPicked(v)) { //differentiate picked peers with unpicked peers.
+	    				return PICKED_PEER_COLOR;
+	    			}
+	    			else {
+	    				if( ((PeerVertex)v).hasOutgoingQueries() ) {
+	    					return PEER_QUERY_COLOR;
+	    				}
+	    				return PEER_COLOR;
+	    			}
+	    		}
+	    		else if (v instanceof DocumentVertex) {
+	    			if ( ((DocumentVertex)v).isQueryHit() ) {
+	    				return DOC_QUERYHIT_COLOR;
+	    			}
+	    			else {
+	    				return DOC_COLOR;
+	    			}
+	    		}
+		    	return Color.GREEN; // default to black if somehow it is not a document or a peer
 
 		    }
 		
