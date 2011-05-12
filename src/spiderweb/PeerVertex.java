@@ -34,7 +34,6 @@ public class PeerVertex extends P2PVertex {
 	 */
 	public PeerVertex(Integer key) {
 		super(key);
-		this.label = key;
 		outgoingQueries = new LinkedList<Integer>();
 		incomingQueries = new LinkedList<Integer>();
 	}
