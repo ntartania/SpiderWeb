@@ -1,5 +1,6 @@
 package spiderweb;
 
+//[start] Imports
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -30,14 +31,17 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRootPane;
 import javax.swing.JScrollPane;
+import javax.swing.JSlider;
 import javax.swing.JTextArea;
+import javax.swing.Timer;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import org.apache.commons.collections15.Transformer;
 import org.apache.commons.collections15.functors.ConstantTransformer;
 
 import edu.uci.ics.jung.algorithms.layout.AbstractLayout;
 import edu.uci.ics.jung.algorithms.layout.SpringLayout;
-//import edu.uci.ics.jung.algorithms.layout.SpringLayout.LengthFunction;
 import edu.uci.ics.jung.algorithms.layout.StaticLayout;
 import edu.uci.ics.jung.algorithms.layout.util.Relaxer;
 import edu.uci.ics.jung.algorithms.layout.util.VisRunner;
@@ -46,6 +50,7 @@ import edu.uci.ics.jung.visualization.VisualizationViewer;
 import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
 import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
 import edu.uci.ics.jung.visualization.renderers.Renderer;
+//[end] Imports
 
 /**
  * an applet that will display a graph using a spring layout, and as the graph changes the layout is updated.
@@ -91,7 +96,8 @@ public class P2PApplet extends JApplet {
 	//a hidden graph that contains all the nodes that will ever be added... 
 	//in order to calculate the positions of all the nodes
 	private P2PNetworkGraph hiddenGraph; 
-	//[end]
+	
+	//[end] Private Variables
 	
 	//[start] Protected Variables
 	protected JButton relaxerButton;
@@ -100,6 +106,9 @@ public class P2PApplet extends JApplet {
 	protected JButton pauseButton;
 	protected JButton reverseButton;
 	protected JButton fastReverseButton;
+	protected JButton stopButton;
+	
+	protected JSlider playbackSlider;
 
 	protected EventPlayingThread eventthread;
 	//[end]
@@ -272,9 +281,14 @@ public class P2PApplet extends JApplet {
 			String str;
 			List<LogEvent> colouringEvents = new LinkedList<LogEvent>();
 			List<P2PVertex> queryPeers = new LinkedList<P2PVertex>();
+			
+			int totalLines = Integer.parseInt(in.readLine());
+			int lineCount = 0;
+			
 			myGraphEvolution.add(new LogEvent("0:start:0:0")); //a start event to know when to stop playback of a reversing graph
 			while ((str = in.readLine()) != null) //reading lines log file
 			{
+				lineCount++;
 				LogEvent gev = new LogEvent(str);
 				
 				//add all the nodes to construct the new graph
@@ -402,6 +416,9 @@ public class P2PApplet extends JApplet {
 		//button to freeze layout, then to fast-forward
 		relaxerButton = new JButton("Finalize Layout");
 		relaxerButton.addActionListener(new relaxerButtonListener(relaxer)); 
+		
+		stopButton = new JButton("Stop Playback");
+		stopButton.addActionListener(new StopButtonListener());
 				
 		fastReverseButton = new JButton("<|<|");
 		fastReverseButton.addActionListener(new FastReverseButtonListener()); 
@@ -416,26 +433,48 @@ public class P2PApplet extends JApplet {
 		forwardButton.addActionListener(new ForwardButtonListener());
 		
 		fastforwardButton = new JButton("|>|>");
-		fastforwardButton.addActionListener(new FastforwardButtonListener()); 
+		fastforwardButton.addActionListener(new FastforwardButtonListener());
+		
+		playbackSlider = new JSlider(JSlider.HORIZONTAL,0,(int)myGraphEvolution.getLast().getTime(),0);
+		playbackSlider.addChangeListener(new SliderListener());
+		playbackSlider.setMajorTickSpacing(playbackSlider.getExtent()/4);
+		playbackSlider.setMajorTickSpacing(playbackSlider.getExtent()/8);
+		playbackSlider.setPaintTicks(true);
+		playbackSlider.setPaintLabels(false);
+		playbackSlider.setBackground(Color.GRAY);
+		playbackSlider.setForeground(Color.BLUE);
+		//TODO More Slider stuff
+		
+		GridBagLayout southLayout = new GridBagLayout();
+		GridBagConstraints southConstraints = new GridBagConstraints();
 		
 		JPanel south = new JPanel();
 		south.setBackground(Color.GRAY);
+		south.setLayout(southLayout);
 		
 		south.add(fastReverseButton);
 		south.add(reverseButton);
 		south.add(pauseButton);
 		south.add(forwardButton);
+		southConstraints.gridwidth = GridBagConstraints.REMAINDER;//make each item take up a whole line
+		southLayout.setConstraints(fastforwardButton, southConstraints);
 		south.add(fastforwardButton);
+		southConstraints.fill = GridBagConstraints.HORIZONTAL;
+		southLayout.setConstraints(playbackSlider, southConstraints);
+		south.add(playbackSlider);
 		
+		
+		stopButton.setEnabled(false);
 		fastReverseButton.setEnabled(false);
 		reverseButton.setEnabled(false);
 		pauseButton.setEnabled(false);
 		forwardButton.setEnabled(false);
 		fastforwardButton.setEnabled(false);
+		playbackSlider.setEnabled(false);
 		
 		
 		GridBagLayout westLayout = new GridBagLayout();
-		GridBagConstraints constraints = new GridBagConstraints();
+		GridBagConstraints westConstraints = new GridBagConstraints();
 		
 		JPanel west = new JPanel();
 		west.setBorder(BorderFactory.createTitledBorder("Options"));
@@ -447,12 +486,15 @@ public class P2PApplet extends JApplet {
 		p.setBackground(Color.GRAY);
 		p.add(gm.getModeComboBox());
 		
-		constraints.gridwidth = GridBagConstraints.REMAINDER;//make each item take up a whole line
-		westLayout.setConstraints(p, constraints);
+		westConstraints.gridwidth = GridBagConstraints.REMAINDER;//make each item take up a whole line
+		westLayout.setConstraints(p, westConstraints);
 		west.add(p);
 		
-		westLayout.setConstraints(relaxerButton, constraints);
+		westLayout.setConstraints(relaxerButton, westConstraints);
 		west.add(relaxerButton);
+		
+		westLayout.setConstraints(stopButton, westConstraints);
+		west.add(stopButton);
 		
 		getContentPane().add(graphsPanel,BorderLayout.CENTER);
 		getContentPane().add(south, BorderLayout.SOUTH);
@@ -554,10 +596,150 @@ public class P2PApplet extends JApplet {
 	//[end] Main
 	
 	//[start] Event Playing Thread
+	
+	//[start] PlayState Enumeration
+	/**
+	 * 
+	 */
 	private enum PlayState {
-		FASTREVERSE, REVERSE, PAUSE, FORWARD, FASTFORWARD;
+		FASTREVERSE("Fast Reverse"), 
+		REVERSE("Reverse"), 
+		PAUSE("Pause"), 
+		FORWARD("Forward"), 
+		FASTFORWARD("Fast Forward");
+		
+		/**
+		 * 
+		 * @param str
+		 */
+		private PlayState(String str) {
+			this.str = str;
+		}
+		private final String str; // The String representation of the enumerated state.
+		
+		/**
+		 * Returns the string value of the given state.
+		 * @return A <code>String</code> representation of the enumerated state.
+		 */
+		public String toString() {
+			return str;
+		}
 	}
+	
+	//[end] PlayState Enumeration
 
+	//[start] Time Counter for Scheduling
+	private class TimeCounter implements ActionListener {
+		
+		private long lowerBound;
+		private long upperBound; 
+		
+		private long time;
+		private long increment;
+		
+		/** 
+		 *<p>Default Constructor</p>
+		 *<ul>
+		 *<li>Sets initial time as <code>0</code></li>
+		 *<li>Sets increment as <code>1</code></li>
+		 *<li>Sets lower bound as <code>0</code></li>
+		 *<li>Sets upper bound as <code>100</code></li>
+		 *</ul>
+		 */
+		public TimeCounter() {
+			this(1);
+		}
+		
+		/** 
+		 *<ul>
+		 *<li>Sets initial time as <code>0</code></li>
+		 *<li>Sets increment as passed increment value</li>
+		 **<li>Sets lower bound as <code>0</code></li>
+		 *<li>Sets upper bound as <code>100</code></li>
+		 *</ul>
+		 *@param increment The value to increment the time as for each call of run.
+		 */
+		public TimeCounter(long increment) {
+			this(increment, 0);
+		}
+		
+		/**
+		 *<ul>
+		 *<li>Sets initial time as passed start time</li>
+		 *<li>Sets increment as passed increment value</li>
+		 **<li>Sets lower bound as <code>0</code></li>
+		 *<li>Sets upper bound as <code>100</code></li>
+		 *</ul>
+		 * @param increment The value to increment the time as for each call of run.
+		 * @param startTime The initial value of the counter.
+		 */
+		public TimeCounter(long increment, long startTime) {
+			this(increment,startTime,0,100);
+		}
+		
+		/**
+		 *<ul>
+		 *<li>Sets initial time as passed start time</li>
+		 *<li>Sets increment as passed increment value</li>
+		 **<li>Sets lower bound as passed lower bound</li>
+		 *<li>Sets upper bound as passed upper bound</li>
+		 *</ul>
+		 * @param increment The value to increment the time as for each call of run.
+		 * @param startTime The initial value of the counter.
+		 * @param lowerBound The lower bound on the Counter.
+		 * @param upperBound The upper bound on the Counter.
+		 */
+		public TimeCounter(long increment, long startTime, long lowerBound, long upperBound) {
+			this.increment = increment;
+			this.time = startTime;
+			this.lowerBound = lowerBound;
+			this.upperBound = upperBound;
+		}
+		
+		public long getTime() {
+			return time;
+		}
+		
+		public void setTime(long time) {
+			this.time = time;
+		}
+		
+		public long getIncrement() {
+			return increment;
+		}
+		
+		public long getLowerBound() {
+			return lowerBound;
+		}
+		
+		public long getUpperBound() {
+			return upperBound;
+		}
+		
+		public void setIncrement(long increment) {
+			this.increment = increment;
+		}
+		
+		public void setLowerBound(long bound) {
+			lowerBound = bound;
+		}
+		public void setUpperBound(long bound) {
+			upperBound = bound;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent ae) {
+			time += increment;
+			if(time < lowerBound) {
+				time = lowerBound;
+			}
+			else if(time > upperBound) {
+				time = upperBound;
+			}
+		}
+	}
+	//[end] Time Counter for Scheduling
+	
 	/**
 	 * an internal class extending thread, that can play the sequence of events from the log file in real time
 	 * or fast forward.
@@ -565,19 +747,27 @@ public class P2PApplet extends JApplet {
 	 *
 	 */
 	private class EventPlayingThread extends Thread {
-
-		private static final long ffspeed = 50L; // 50 millisec between events while we're fast-forwarding
+		
+		private Timer schedule;
+		private TimeCounter timeCounter;
+		
+		private static final int speed = 33; // 33 millisec between events while playing regularly
+		private static final int ffMultiplier = 10;
 		
 		private PlayState state;
+		private boolean playing;
 
-		List<LogEvent> my_eventlist;
+		private List<LogEvent> my_eventlist;
 		
 		private int current_index;
 		
 		public EventPlayingThread(LinkedList<LogEvent> eventlist){
+			playing = true;
 			my_eventlist = eventlist;
 			current_index = 0; 
 			state = PlayState.FORWARD;
+			//currentTime = 0;
+			timeCounter = new TimeCounter(speed,0,eventlist.getFirst().getTime(),eventlist.getLast().getTime());
 		}
 		
 		//[start] Playback Properties
@@ -586,7 +776,7 @@ public class P2PApplet extends JApplet {
 		 * @return <code>true</code> if the Play State is forward or fast forward.
 		 */
 		public boolean isForward() {
-			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FORWARD) || (state == PlayState.PAUSE));
+			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FORWARD));
 		}
 		/**
 		 * Returns whether or not the graph is playing fast
@@ -600,7 +790,7 @@ public class P2PApplet extends JApplet {
 		 * @return
 		 */
 		public boolean atFront() {
-			if(current_index <= 0) {
+			if(timeCounter.getTime() == timeCounter.getLowerBound()) {
 				return true;
 			}
 			return false;
@@ -610,7 +800,7 @@ public class P2PApplet extends JApplet {
 		 * @return
 		 */
 		public boolean atBack() {
-			if (current_index >= my_eventlist.size()-1) {
+			if (timeCounter.getTime() == timeCounter.getUpperBound()) {
 				return true;
 			}
 			return false;
@@ -620,7 +810,7 @@ public class P2PApplet extends JApplet {
 		 * @return
 		 */
 		public boolean atAnEnd() {
-			if(my_eventlist.get(current_index).getType().equals("end") || my_eventlist.get(current_index).getType().equals("start")) {
+			if(atFront() || atBack()) {
 				return true;
 			}
 			return false;
@@ -636,6 +826,7 @@ public class P2PApplet extends JApplet {
 				PlayState prevState = state;
 				state = PlayState.FASTREVERSE;
 				wakeup(prevState);
+				timeCounter.setIncrement(-speed*ffMultiplier);
 			}
 		}
 		
@@ -644,6 +835,7 @@ public class P2PApplet extends JApplet {
 				PlayState prevState = state;
 				state = PlayState.REVERSE;
 				wakeup(prevState);
+				timeCounter.setIncrement(-speed);
 			}
 		}
 
@@ -652,6 +844,7 @@ public class P2PApplet extends JApplet {
 				PlayState prevState = state;
 				state = PlayState.FASTFORWARD;
 				wakeup(prevState);
+				timeCounter.setIncrement(speed*ffMultiplier);
 			}
 		}
 
@@ -660,6 +853,7 @@ public class P2PApplet extends JApplet {
 				PlayState prevState = state;
 				state = PlayState.FORWARD;
 				wakeup(prevState);
+				timeCounter.setIncrement(speed);
 			}
 		}
 		
@@ -668,6 +862,7 @@ public class P2PApplet extends JApplet {
 				interrupt(); //if we were waiting for the next event, we'll just wake the thread.
 			}
 			if(previousState == PlayState.PAUSE) {
+				schedule.start();
 				notify();
 			}
 		}
@@ -676,7 +871,27 @@ public class P2PApplet extends JApplet {
 			if(state != PlayState.PAUSE) {
 				state = PlayState.PAUSE;
 				notify();
+				schedule.stop();
+				vv.repaint();
 			}
+		}
+		
+		public void goToTime(int value) {
+			state = PlayState.FORWARD;
+			if(value < timeCounter.getTime()) {
+				state = PlayState.REVERSE;
+			}
+			
+			//zoomingToTime = true;
+			timeCounter.setTime(value);
+			wakeup(state);
+			//LOG("waken up and ZOOMING");
+		}
+		
+		public void stopPlayback() {
+			playing = false;
+			
+			wakeup(state);
 		}
 		//[end]
 				 
@@ -745,131 +960,181 @@ public class P2PApplet extends JApplet {
 
 
 		public void run() {
-			System.out.println("Starting log event sequence.");
+			//System.out.println("Starting log event sequence.");
 
-			long mytimenow = 0L;//System.currentTimeMillis();
-			long nexttime;
+			long myTimeNow = 0L;//System.currentTimeMillis();
+			long nextTime;
 			boolean oldDirection;
-			boolean firstRun = true;
 			//READING FROM CD++ LOG FILE/////////////
-			while (!my_eventlist.isEmpty()) //reading lines from config file to get parameter list
+			
+			schedule = new Timer(speed,timeCounter);
+			schedule.start();
+			
+			while (playing) //reading lines from config file to get parameter list
 			{
-				oldDirection = isForward(); //used to continue loop if reversed while thread sleeping
-				LogEvent evt = my_eventlist.get(current_index); //get from the front of the queue
-				
-				nexttime = evt.getTime();
-				
-				if(atAnEnd()) {
-					if(!firstRun){
-						pauseButton.doClick();
-					} else {
-						firstRun=false;
+				if(timeCounter.getTime() == myTimeNow) {
+					try {
+						Thread.sleep(20);
+						continue;
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						//e.printStackTrace();
 					}
 				}
+				nextTime = timeCounter.getTime();
+				//LOG(Integer.toString((int)nextTime));
+				oldDirection = isForward();
 				
-				try{
-					if (!isFast()) //fast forwarding ?
-						Thread.sleep(Math.max(0,Math.abs(nexttime-mytimenow))); //wait until that event time comes up
-					else 
-						Thread.sleep(ffspeed);//wait for the internal "fast-forward" speed
-					if(state == PlayState.PAUSE)
-					{
+				if(atAnEnd()) {
+					pauseButton.doClick();
+				}
+				
+				if(state != PlayState.PAUSE) {
+					for( LogEvent evt : getLogEventsUntil(nextTime) ) {
+						if(oldDirection==isForward()) { 
+							handleLogEvent(evt);
+						} else {//if the playback direction changed while getting the events
+							break;
+						}
+					}
+					myTimeNow = nextTime; //advance time
+					playbackSlider.setValueIsAdjusting(true);
+					playbackSlider.setValue((int)myTimeNow);
+					vv.repaint();// update visual
+				}				
+				else {
+					try {
 						synchronized(this) {
-							while(state == PlayState.PAUSE) {
+							while (state == PlayState.PAUSE) {
 								wait();
 							}
 						}
-					}
-				} catch (InterruptedException e){
-					//System.err.println("log event thread interrupted !");
-					// but don't stop, we probably just went from real-time to fast-fwd 
-				}
-				
-				if(isForward()) { //increment after thread so that if reverse was pressed while sleeping it will increment properly
-					current_index++;
-				} else {
-					current_index--;
-				}
-				if(oldDirection != isForward()) { // if the reverse direction was switched during the thread sleeping stop what was going to happen and go back
-					continue; 
-				}
-				mytimenow = nexttime; //advance time
-				
-				//[start] Graph Event Handling
-				//if the event is to modify the structure of the graph
-				if (evt.isStructural()){
-					graphEvent(evt,isForward(),visibleGraph,hiddenGraph);
-				} else { //other events: queries
-					String what = evt.getType();
-					int val1 = evt.getParam(1);
-					int val2 = evt.getParam(2);
-					if(what.equals("query")) {
-						if(isForward()) {
-							doQuery(val1, val2);
-						} else {
-							undoQuery(val1,val2);
-						}
-					}
-					else if (what.equals("unquery")) {
-						if(isForward()) {
-							undoQuery(val1,val2);
-						} else {
-							doQuery(val1, val2);
-						}
-					}
-					else if (what.equals("queryhit")) {
-						if(isForward()) {
-							doQueryHit(val1, val2);
-						} else {
-							undoQueryHit(val1, val2);
-						}
-					}
-					else if (what.equals("unqueryhit")) {
-						if(isForward()) {
-							undoQueryHit(val1, val2);
-						} else {
-							doQueryHit(val1, val2);
-						}
-					}
-					else if (what.equals("queryreachespeer")) {
-						if(isForward()) {
-							doQueryReachesPeer(val1,val2);
-						} else {
-							undoQueryReachesPeer(val1,val2);
-						}
-					}
-					else if (what.equals("unqueryreachespeer")) {
-						if(isForward()) {
-							undoQueryReachesPeer(val1,val2);
-						} else {
-							doQueryReachesPeer(val1,val2);
-						}
-					}
-					else if (what.equals("queryedge")) {
-						if(isForward()) {
-							doQueryEdge(val1,val2);
-						} else {
-							undoQueryEdge(val1,val2);
-						}
-					}
-					else if (what.equals("unqueryedge")) {
-						if(isForward()) {
-							undoQueryEdge(val1,val2);
-						} else {
-							doQueryEdge(val1,val2);
-						}
+					} catch (InterruptedException e) {
+						//probably just playback changing direction
 					}
 				}
-				//[end] Graph Event Handling
-				vv.repaint();// update visual
 				
 			}//end while
 
 		}
+		
+		/**
+		 * current_index is always the next event with time greater than the simulation time.
+		 * 
+		 * if current index is 3 simulation time will be 
+		 * [0]-[1]-[2]-[3]-[4]-[5]-[6]
+		 *            |
+		 * less than the index.
+		 * @param timeGoingTo The simulation time (in milliseconds) to play events up to.
+		 * @return	The list of log events which need to be taken care of for this time span.
+		 */
+		private List<LogEvent> getLogEventsUntil(long timeGoingTo) {
+			List<LogEvent> events = new LinkedList<LogEvent>();
+			System.out.println(current_index+", "+timeGoingTo);
+			LogEvent evt;
+			if(isForward()) {
+				evt = my_eventlist.get(current_index);
+				while(evt.getTime() < timeGoingTo) {
+					current_index++;
+					if(current_index >= my_eventlist.size()) {
+						current_index = my_eventlist.size()-1;
+						break;
+					}
+					events.add(evt);
+					evt = my_eventlist.get(current_index);
+										
+				}
+			}
+			else {
+				evt = my_eventlist.get(current_index-1);
+				while(evt.getTime() > timeGoingTo) {
+					current_index--;
+					if(current_index < 1) {
+						break;
+					}
+					
+					events.add(evt);
+					evt = my_eventlist.get(current_index-1);
+					
+				}
+			}
+			if(events.size()>0) {
+				//LOG(events.toString());
+			}
+			return events;
+		}
+		
+		//[start] Graph Event Handling
+		private void handleLogEvent(LogEvent evt) {
+			if (evt.isStructural()){ //if the event is to modify the structure of the graph
+				graphEvent(evt,isForward(),visibleGraph,hiddenGraph);
+			} else { //other events: queries
+				String what = evt.getType();
+				int val1 = evt.getParam(1);
+				int val2 = evt.getParam(2);
+				if(what.equals("query")) {
+					if(isForward()) {
+						doQuery(val1, val2);
+					} else {
+						undoQuery(val1,val2);
+					}
+				}
+				else if (what.equals("unquery")) {
+					if(isForward()) {
+						undoQuery(val1,val2);
+					} else {
+						doQuery(val1, val2);
+					}
+				}
+				else if (what.equals("queryhit")) {
+					if(isForward()) {
+						doQueryHit(val1, val2);
+					} else {
+						undoQueryHit(val1, val2);
+					}
+				}
+				else if (what.equals("unqueryhit")) {
+					if(isForward()) {
+						undoQueryHit(val1, val2);
+					} else {
+						doQueryHit(val1, val2);
+					}
+				}
+				else if (what.equals("queryreachespeer")) {
+					if(isForward()) {
+						doQueryReachesPeer(val1,val2);
+					} else {
+						undoQueryReachesPeer(val1,val2);
+					}
+				}
+				else if (what.equals("unqueryreachespeer")) {
+					if(isForward()) {
+						undoQueryReachesPeer(val1,val2);
+					} else {
+						doQueryReachesPeer(val1,val2);
+					}
+				}
+				else if (what.equals("queryedge")) {
+					if(isForward()) {
+						doQueryEdge(val1,val2);
+					} else {
+						undoQueryEdge(val1,val2);
+					}
+				}
+				else if (what.equals("unqueryedge")) {
+					if(isForward()) {
+						undoQueryEdge(val1,val2);
+					} else {
+						doQueryEdge(val1,val2);
+					}
+				}
+			}
+		}
+		//[end] Graph Event Handling
 	}
 	//[end] Event Playing Thread
 
-	//[start] Button Listeners
+	//[start] Swing Event Listeners
 	 /**
 	 * an actionlistener that defines the use of the button at the bottom of the applet 
 	 * @author adavoust
@@ -910,11 +1175,13 @@ public class P2PApplet extends JApplet {
 	
 					Thread.sleep(1000);
 					
+					stopButton.setEnabled(true);
 					fastReverseButton.setEnabled(true);
 					reverseButton.setEnabled(true);
 					pauseButton.setEnabled(true);
 					forwardButton.setEnabled(false);
 					fastforwardButton.setEnabled(true);
+					playbackSlider.setEnabled(true);
 	
 					//System.out.println("starting activity now !");
 	
@@ -927,6 +1194,13 @@ public class P2PApplet extends JApplet {
 	
 				eventthread.start();
 			}		
+		}
+	}
+	
+	class StopButtonListener implements ActionListener {
+		
+		public void actionPerformed(ActionEvent ae) {
+			eventthread.stopPlayback();
 		}
 	}
 	
@@ -1009,5 +1283,19 @@ public class P2PApplet extends JApplet {
 			eventthread.fastForward();
 		}
 	}
-	//[end] Button Listeners
+	
+	class SliderListener implements ChangeListener {
+
+		@Override
+		public void stateChanged(ChangeEvent ce) {
+			JSlider source = (JSlider)ce.getSource();
+			if(!source.getValueIsAdjusting()) {
+				LOG("slider state changed");
+				eventthread.goToTime(source.getValue());
+			}
+			
+		}
+		
+	}
+	//[end] Swing Event Listeners
 }
