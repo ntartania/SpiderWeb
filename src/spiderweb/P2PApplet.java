@@ -13,6 +13,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -37,6 +39,7 @@ import javax.swing.JTextArea;
 import javax.swing.Timer;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.MouseInputListener;
 
 import org.apache.commons.collections15.Transformer;
 import org.apache.commons.collections15.functors.ConstantTransformer;
@@ -437,7 +440,9 @@ public class P2PApplet extends JApplet {
 		fastforwardButton.addActionListener(new FastforwardButtonListener());
 		
 		playbackSlider = new JSlider(JSlider.HORIZONTAL,0,(int)myGraphEvolution.getLast().getTime(),0);
-		playbackSlider.addChangeListener(new SliderListener());
+		SliderListener s = new SliderListener();
+		playbackSlider.addChangeListener(s);
+		playbackSlider.addMouseListener(s);
 		playbackSlider.setMajorTickSpacing(playbackSlider.getExtent()/4);
 		playbackSlider.setMajorTickSpacing(playbackSlider.getExtent()/8);
 		playbackSlider.setPaintTicks(true);
@@ -1298,14 +1303,67 @@ public class P2PApplet extends JApplet {
 		}
 	}
 	
-	class SliderListener implements ChangeListener {
+	class SliderListener implements ChangeListener, MouseListener {
 
+		PlayState prevState = PlayState.PAUSE;
 		@Override
 		public void stateChanged(ChangeEvent ce) {
 			
 			JSlider source = (JSlider)ce.getSource();
-			eventthread.schedule.stop();
+			//eventthread.schedule.stop();
 			eventthread.goToTime(source.getValue());
+		}
+
+		@Override
+		public void mouseClicked(MouseEvent arg0) {
+			//LOG("Clicked");
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void mouseEntered(MouseEvent arg0) {
+			//LOG("Entered");
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void mouseExited(MouseEvent arg0) {
+			//LOG("Exited");
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void mousePressed(MouseEvent arg0) {
+			prevState = eventthread.state;
+			pauseButton.doClick();
+			//LOG("Pressed");
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void mouseReleased(MouseEvent arg0) {
+			if(prevState == PlayState.FASTREVERSE) {
+				fastReverseButton.doClick();
+			}
+			else if (prevState == PlayState.REVERSE) {
+				reverseButton.doClick();
+			}
+			else if (prevState == PlayState.FORWARD) {
+				forwardButton.doClick();
+			}
+			else if (prevState == PlayState.FASTFORWARD) {
+				fastforwardButton.doClick();
+			}
+			/*else if (prevState == PlayState.PAUSE) {
+				pauseButton.doClick();
+			}*/
+			//LOG("Released"); 
+			// TODO Auto-generated method stub
+			
 		}
 	}
 	//[end] Swing Event Listeners
