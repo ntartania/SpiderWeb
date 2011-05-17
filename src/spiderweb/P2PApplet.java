@@ -736,9 +736,8 @@ public class P2PApplet extends JApplet {
 		public void setUpperBound(long bound) {
 			upperBound = bound;
 		}
-
-		@Override
-		public void actionPerformed(ActionEvent ae) {
+		
+		public void doIncrement() {
 			setTime(time + increment);
 			if(time < lowerBound) {
 				time = lowerBound;
@@ -746,6 +745,11 @@ public class P2PApplet extends JApplet {
 			else if(time > upperBound) {
 				time = upperBound;
 			}
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent ae) {
+			doIncrement();
 		}
 	}
 	//[end] Time Counter for Scheduling
@@ -841,8 +845,8 @@ public class P2PApplet extends JApplet {
 				
 				PlayState prevState = state;
 				state = PlayState.FASTREVERSE;
-				wakeup(prevState);
 				timeCounter.setIncrement(-speed*ffMultiplier);
+				wakeup(prevState);
 			}
 		}
 		
@@ -856,8 +860,8 @@ public class P2PApplet extends JApplet {
 				
 				PlayState prevState = state;
 				state = PlayState.REVERSE;
-				wakeup(prevState);
 				timeCounter.setIncrement(-speed);
+				wakeup(prevState);
 			}
 		}
 
@@ -872,8 +876,8 @@ public class P2PApplet extends JApplet {
 				
 				PlayState prevState = state;
 				state = PlayState.FASTFORWARD;
-				wakeup(prevState);
 				timeCounter.setIncrement(speed*ffMultiplier);
+				wakeup(prevState);
 			}
 		}
 
@@ -887,19 +891,23 @@ public class P2PApplet extends JApplet {
 				
 				PlayState prevState = state;
 				state = PlayState.FORWARD;
-				wakeup(prevState);
 				timeCounter.setIncrement(speed);
+				wakeup(prevState);
 			}
 		}
 		
 		private synchronized void wakeup(PlayState previousState) {
-			if (this.getState().equals(Thread.State.TIMED_WAITING)) {
-				interrupt(); //if we were waiting for the next event, we'll just wake the thread.
-			}
 			if(previousState == PlayState.PAUSE) {
+				if(atAnEnd()) {
+					timeCounter.doIncrement();
+				}
 				schedule.start();
 				notify();
 			}
+			if (this.getState().equals(Thread.State.TIMED_WAITING)) {
+				interrupt(); //if we were waiting for the next event, we'll just wake the thread.
+			}
+			
 		}
 		
 		public synchronized void pause(){
@@ -1035,7 +1043,7 @@ public class P2PApplet extends JApplet {
 					nextTime = timeCounter.getTime();
 					oldDirection = isForward();
 					if(atAnEnd()) {
-						pauseButton.doClick();
+						pause();
 					}
 					
 					for( LogEvent evt : getLogEventsUntil(nextTime) ) {
