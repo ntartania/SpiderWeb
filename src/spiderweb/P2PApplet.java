@@ -7,6 +7,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -450,17 +451,21 @@ public class P2PApplet extends JApplet {
 		
 		JPanel south = new JPanel();
 		south.setBackground(Color.GRAY);
-		south.setLayout(southLayout);
+		south.setLayout(new GridLayout(2,1));
+		JPanel buttonPanel = new JPanel();
+		buttonPanel.setBackground(Color.GRAY);
+		buttonPanel.setLayout(southLayout);
 		
-		south.add(fastReverseButton);
-		south.add(reverseButton);
-		south.add(pauseButton);
-		south.add(forwardButton);
+		buttonPanel.add(fastReverseButton);
+		buttonPanel.add(reverseButton);
+		buttonPanel.add(pauseButton);
+		buttonPanel.add(forwardButton);
 		southConstraints.gridwidth = GridBagConstraints.REMAINDER;//make each item take up a whole line
 		southLayout.setConstraints(fastforwardButton, southConstraints);
-		south.add(fastforwardButton);
-		southConstraints.fill = GridBagConstraints.HORIZONTAL;
-		southLayout.setConstraints(playbackSlider, southConstraints);
+		buttonPanel.add(fastforwardButton);
+		
+		//southLayout.setConstraints(playbackSlider, southConstraints);
+		south.add(buttonPanel);
 		south.add(playbackSlider);
 		
 		
@@ -700,7 +705,7 @@ public class P2PApplet extends JApplet {
 			return time;
 		}
 		
-		public void setTime(long time) {
+		public synchronized void setTime(long time) {
 			this.time = time;
 		}
 		
@@ -729,7 +734,7 @@ public class P2PApplet extends JApplet {
 
 		@Override
 		public void actionPerformed(ActionEvent ae) {
-			time += increment;
+			setTime(time + increment);
 			if(time < lowerBound) {
 				time = lowerBound;
 			}
@@ -823,6 +828,12 @@ public class P2PApplet extends JApplet {
 		 */
 		public void fastReverse() {
 			if(state != PlayState.FASTREVERSE) {
+				fastReverseButton.setEnabled(false);
+				reverseButton.setEnabled(true);
+				pauseButton.setEnabled(true);
+				forwardButton.setEnabled(true);
+				fastforwardButton.setEnabled(true);
+				
 				PlayState prevState = state;
 				state = PlayState.FASTREVERSE;
 				wakeup(prevState);
@@ -832,6 +843,12 @@ public class P2PApplet extends JApplet {
 		
 		public void reverse() {
 			if(state != PlayState.REVERSE) {
+				fastReverseButton.setEnabled(true);
+				reverseButton.setEnabled(false);
+				pauseButton.setEnabled(true);
+				forwardButton.setEnabled(true);
+				fastforwardButton.setEnabled(true);
+				
 				PlayState prevState = state;
 				state = PlayState.REVERSE;
 				wakeup(prevState);
@@ -841,6 +858,13 @@ public class P2PApplet extends JApplet {
 
 		public void fastForward(){
 			if(state != PlayState.FASTFORWARD) {
+				
+				fastReverseButton.setEnabled(true);
+				reverseButton.setEnabled(true);
+				pauseButton.setEnabled(true);
+				forwardButton.setEnabled(true);
+				fastforwardButton.setEnabled(false);
+				
 				PlayState prevState = state;
 				state = PlayState.FASTFORWARD;
 				wakeup(prevState);
@@ -850,6 +874,12 @@ public class P2PApplet extends JApplet {
 
 		public void forward(){
 			if(state != PlayState.FORWARD) {
+				fastReverseButton.setEnabled(true);
+				reverseButton.setEnabled(true);
+				pauseButton.setEnabled(true);
+				forwardButton.setEnabled(false);
+				fastforwardButton.setEnabled(true);
+				
 				PlayState prevState = state;
 				state = PlayState.FORWARD;
 				wakeup(prevState);
@@ -869,6 +899,22 @@ public class P2PApplet extends JApplet {
 		
 		public synchronized void pause(){
 			if(state != PlayState.PAUSE) {
+				if(eventthread.atFront()) {
+					fastReverseButton.setEnabled(false);
+					reverseButton.setEnabled(false);
+				} else {
+					fastReverseButton.setEnabled(true);
+					reverseButton.setEnabled(true);
+				}
+				pauseButton.setEnabled(false);
+				if(eventthread.atBack()) {
+					forwardButton.setEnabled(false);
+					fastforwardButton.setEnabled(false);
+				} else {
+					forwardButton.setEnabled(true);
+					fastforwardButton.setEnabled(true);
+				}
+				
 				state = PlayState.PAUSE;
 				notify();
 				schedule.stop();
@@ -877,20 +923,28 @@ public class P2PApplet extends JApplet {
 		}
 		
 		public void goToTime(int value) {
-			state = PlayState.FORWARD;
+			PlayState prevState = state;
+			
 			if(value < timeCounter.getTime()) {
 				state = PlayState.REVERSE;
 			}
+			else {
+				state = PlayState.FORWARD;
+			}
 			
-			//zoomingToTime = true;
+			for( LogEvent evt : getLogEventsUntil(value) ) {
+				handleLogEvent(evt);
+			}
+			vv.repaint();
+			
 			timeCounter.setTime(value);
-			wakeup(state);
-			//LOG("waken up and ZOOMING");
+			wakeup(prevState);
+			state = prevState;
+			schedule.start();
 		}
 		
 		public void stopPlayback() {
 			playing = false;
-			
 			wakeup(state);
 		}
 		//[end]
@@ -905,11 +959,6 @@ public class P2PApplet extends JApplet {
 			hiddenGraph.getPeer(peer).query(queryMessageID);
 		}
 		
-		/**
-		 * Visualize a query
-		 * @param peer
-		 * @param q
-		 */
 		public void undoQuery(int peer, int queryMessageID){
 			hiddenGraph.getPeer(peer).endQuery(queryMessageID);
 		}
@@ -976,20 +1025,16 @@ public class P2PApplet extends JApplet {
 					try {
 						Thread.sleep(20);
 						continue;
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						//e.printStackTrace();
+					} catch (InterruptedException e) { }
+				}
+				
+				if(state != PlayState.PAUSE && !playbackSlider.getValueIsAdjusting()) {
+					nextTime = timeCounter.getTime();
+					oldDirection = isForward();
+					if(atAnEnd()) {
+						pauseButton.doClick();
 					}
-				}
-				nextTime = timeCounter.getTime();
-				//LOG(Integer.toString((int)nextTime));
-				oldDirection = isForward();
-				
-				if(atAnEnd()) {
-					pauseButton.doClick();
-				}
-				
-				if(state != PlayState.PAUSE) {
+					
 					for( LogEvent evt : getLogEventsUntil(nextTime) ) {
 						if(oldDirection==isForward()) { 
 							handleLogEvent(evt);
@@ -998,8 +1043,9 @@ public class P2PApplet extends JApplet {
 						}
 					}
 					myTimeNow = nextTime; //advance time
-					playbackSlider.setValueIsAdjusting(true);
+					//playbackSlider.setValueIsAdjusting(true);
 					playbackSlider.setValue((int)myTimeNow);
+					//playbackSlider.setValueIsAdjusting(false);
 					vv.repaint();// update visual
 				}				
 				else {
@@ -1009,28 +1055,27 @@ public class P2PApplet extends JApplet {
 								wait();
 							}
 						}
-					} catch (InterruptedException e) {
-						//probably just playback changing direction
-					}
+					} catch (InterruptedException e) { }
 				}
 				
 			}//end while
 
 		}
 		
+		//[start] Graph Event Getting & Handling
 		/**
 		 * current_index is always the next event with time greater than the simulation time.
 		 * 
-		 * if current index is 3 simulation time will be 
+		 * if current index is 3, simulation time (represented by '|') will be less than the index.
 		 * [0]-[1]-[2]-[3]-[4]-[5]-[6]
 		 *            |
-		 * less than the index.
+		 * 
 		 * @param timeGoingTo The simulation time (in milliseconds) to play events up to.
 		 * @return	The list of log events which need to be taken care of for this time span.
 		 */
 		private List<LogEvent> getLogEventsUntil(long timeGoingTo) {
 			List<LogEvent> events = new LinkedList<LogEvent>();
-			System.out.println(current_index+", "+timeGoingTo);
+			//System.out.println(current_index+", "+timeGoingTo);
 			LogEvent evt;
 			if(isForward()) {
 				evt = my_eventlist.get(current_index);
@@ -1058,13 +1103,13 @@ public class P2PApplet extends JApplet {
 					
 				}
 			}
-			if(events.size()>0) {
-				//LOG(events.toString());
-			}
 			return events;
 		}
 		
-		//[start] Graph Event Handling
+		/**
+		 * Handles the passed LogEvent be it structural or visual.
+		 * @param evt The Log event to handle.
+		 */
 		private void handleLogEvent(LogEvent evt) {
 			if (evt.isStructural()){ //if the event is to modify the structure of the graph
 				graphEvent(evt,isForward(),visibleGraph,hiddenGraph);
@@ -1200,6 +1245,12 @@ public class P2PApplet extends JApplet {
 	class StopButtonListener implements ActionListener {
 		
 		public void actionPerformed(ActionEvent ae) {
+			fastReverseButton.setEnabled(false);
+			reverseButton.setEnabled(false);
+			pauseButton.setEnabled(false);
+			forwardButton.setEnabled(false);
+			fastforwardButton.setEnabled(false);
+			playbackSlider.setEnabled(false);
 			eventthread.stopPlayback();
 		}
 	}
@@ -1207,11 +1258,6 @@ public class P2PApplet extends JApplet {
 	class FastReverseButtonListener implements ActionListener {
 		
 		public void actionPerformed(ActionEvent ae) {
-			fastReverseButton.setEnabled(false);
-			reverseButton.setEnabled(true);
-			pauseButton.setEnabled(true);
-			forwardButton.setEnabled(true);
-			fastforwardButton.setEnabled(true);
 			eventthread.fastReverse();
 		}
 	}
@@ -1229,11 +1275,6 @@ public class P2PApplet extends JApplet {
 		 * @param ae	The ActionEvent that triggered the listener
 		 */
 		public void actionPerformed(ActionEvent ae) {
-			fastReverseButton.setEnabled(true);
-			reverseButton.setEnabled(false);
-			pauseButton.setEnabled(true);
-			forwardButton.setEnabled(true);
-			fastforwardButton.setEnabled(true);
 			eventthread.reverse();
 		}
 	
@@ -1241,45 +1282,18 @@ public class P2PApplet extends JApplet {
 	
 	class PauseButtonListener implements ActionListener {
 		public void actionPerformed(ActionEvent ae) {
-			if(eventthread.atFront()) {
-				fastReverseButton.setEnabled(false);
-				reverseButton.setEnabled(false);
-			} else {
-				fastReverseButton.setEnabled(true);
-				reverseButton.setEnabled(true);
-			}
-			pauseButton.setEnabled(false);
-			if(eventthread.atBack()) {
-				forwardButton.setEnabled(false);
-				fastforwardButton.setEnabled(false);
-			} else {
-				forwardButton.setEnabled(true);
-				fastforwardButton.setEnabled(true);
-			}
-			
 			eventthread.pause();
 		}
 	}
 	
 	class ForwardButtonListener implements ActionListener {
 		public void actionPerformed(ActionEvent ae) {
-			fastReverseButton.setEnabled(true);
-			reverseButton.setEnabled(true);
-			pauseButton.setEnabled(true);
-			forwardButton.setEnabled(false);
-			fastforwardButton.setEnabled(true);
 			eventthread.forward();
 		}
 	}
 	
 	class FastforwardButtonListener implements ActionListener {
-		public void actionPerformed(ActionEvent ae) {
-			fastReverseButton.setEnabled(true);
-			reverseButton.setEnabled(true);
-			pauseButton.setEnabled(true);
-			forwardButton.setEnabled(true);
-			fastforwardButton.setEnabled(false);
-			
+		public void actionPerformed(ActionEvent ae) {			
 			eventthread.fastForward();
 		}
 	}
@@ -1288,14 +1302,11 @@ public class P2PApplet extends JApplet {
 
 		@Override
 		public void stateChanged(ChangeEvent ce) {
-			JSlider source = (JSlider)ce.getSource();
-			if(!source.getValueIsAdjusting()) {
-				LOG("slider state changed");
-				eventthread.goToTime(source.getValue());
-			}
 			
+			JSlider source = (JSlider)ce.getSource();
+			eventthread.schedule.stop();
+			eventthread.goToTime(source.getValue());
 		}
-		
 	}
 	//[end] Swing Event Listeners
 }
