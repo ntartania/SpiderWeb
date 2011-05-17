@@ -903,22 +903,22 @@ public class P2PApplet extends JApplet {
 		}
 		
 		public synchronized void pause(){
+			if(eventthread.atFront()) {
+				fastReverseButton.setEnabled(false);
+				reverseButton.setEnabled(false);
+			} else {
+				fastReverseButton.setEnabled(true);
+				reverseButton.setEnabled(true);
+			}
+			pauseButton.setEnabled(false);
+			if(eventthread.atBack()) {
+				forwardButton.setEnabled(false);
+				fastforwardButton.setEnabled(false);
+			} else {
+				forwardButton.setEnabled(true);
+				fastforwardButton.setEnabled(true);
+			}
 			if(state != PlayState.PAUSE) {
-				if(eventthread.atFront()) {
-					fastReverseButton.setEnabled(false);
-					reverseButton.setEnabled(false);
-				} else {
-					fastReverseButton.setEnabled(true);
-					reverseButton.setEnabled(true);
-				}
-				pauseButton.setEnabled(false);
-				if(eventthread.atBack()) {
-					forwardButton.setEnabled(false);
-					fastforwardButton.setEnabled(false);
-				} else {
-					forwardButton.setEnabled(true);
-					fastforwardButton.setEnabled(true);
-				}
 				
 				state = PlayState.PAUSE;
 				notify();
@@ -943,9 +943,7 @@ public class P2PApplet extends JApplet {
 			vv.repaint();
 			
 			timeCounter.setTime(value);
-			wakeup(prevState);
 			state = prevState;
-			schedule.start();
 		}
 		
 		public void stopPlayback() {
@@ -1316,53 +1314,40 @@ public class P2PApplet extends JApplet {
 
 		@Override
 		public void mouseClicked(MouseEvent arg0) {
-			//LOG("Clicked");
-			// TODO Auto-generated method stub
-			
 		}
 
 		@Override
 		public void mouseEntered(MouseEvent arg0) {
-			//LOG("Entered");
-			// TODO Auto-generated method stub
-			
 		}
 
 		@Override
 		public void mouseExited(MouseEvent arg0) {
-			//LOG("Exited");
-			// TODO Auto-generated method stub
-			
 		}
 
 		@Override
 		public void mousePressed(MouseEvent arg0) {
 			prevState = eventthread.state;
-			pauseButton.doClick();
-			//LOG("Pressed");
-			// TODO Auto-generated method stub
+			eventthread.pause();
 			
 		}
 
 		@Override
 		public void mouseReleased(MouseEvent arg0) {
 			if(prevState == PlayState.FASTREVERSE) {
-				fastReverseButton.doClick();
+				eventthread.fastReverse();
 			}
 			else if (prevState == PlayState.REVERSE) {
-				reverseButton.doClick();
+				eventthread.reverse();
 			}
 			else if (prevState == PlayState.FORWARD) {
-				forwardButton.doClick();
+				eventthread.forward();
 			}
 			else if (prevState == PlayState.FASTFORWARD) {
-				fastforwardButton.doClick();
+				eventthread.fastForward();
 			}
-			/*else if (prevState == PlayState.PAUSE) {
-				pauseButton.doClick();
-			}*/
-			//LOG("Released"); 
-			// TODO Auto-generated method stub
+			else if (prevState == PlayState.PAUSE) {
+				eventthread.pause();
+			}
 			
 		}
 	}
