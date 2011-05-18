@@ -57,7 +57,7 @@ import edu.uci.ics.jung.visualization.renderers.Renderer;
  * @author Alan
  * @author Matt
  */
-public class P2PApplet extends JApplet {
+public class P2PApplet extends JApplet implements EventPlayerListener {
 	//[start] Attributes
 	
 	//[start] Static Final Attributes
@@ -113,7 +113,7 @@ public class P2PApplet extends JApplet {
 	
 	protected JSlider playbackSlider;
 
-	protected EventPlayingThread eventthread;
+	protected EventPlayer eventThread;
 	//[end] Protected Variables
 	
 	//[end] Attributes
@@ -541,6 +541,7 @@ public class P2PApplet extends JApplet {
 	
 	//[end] Create Components
 	
+	//[start] init method
 	/**
 	 * applet initialization
 	 */
@@ -559,9 +560,6 @@ public class P2PApplet extends JApplet {
 		
 		layout = springLayoutInit(myGraphEvolution);
 		
-		/// create the event player
-		eventthread = new EventPlayingThread(myGraphEvolution);
-		
 		vv = visualizationViewerInit(layout,DEFWIDTH,DEFHEIGHT);
 		
 		JPanel graphsPanel = new JPanel();
@@ -572,11 +570,17 @@ public class P2PApplet extends JApplet {
 		getContentPane().add(initializeSouthPanel(), BorderLayout.SOUTH);
 		getContentPane().add(initializeWestPanel(),BorderLayout.WEST);
 		
+		/// create the event player
+		eventThread = new EventPlayer(myGraphEvolution,hiddenGraph,visibleGraph, playbackSlider);
+		eventThread.addEventPlayerListener(this);
+		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingComplete();
 		}
 	}
-	
+	//[end] init method
+
+	//[start] overridden start method
 	@Override
 	public void start() {
 		validate();
@@ -584,6 +588,8 @@ public class P2PApplet extends JApplet {
 		vv.repaint();
 		///----------run the spring layout algorithm with the full hidden graph for a bit -------
 	}
+	//[end] overridden start method
+	
 	//[end] Initialization
 	
 	//[start] Main
@@ -598,443 +604,70 @@ public class P2PApplet extends JApplet {
 		P2PApplet myapp = new P2PApplet(false); 
 	}
 	//[end] Main
+
+	//[start] EventPlayer Handlers
 	
-	//[start] Event Playing Thread
-	/**
-	 * an internal class extending thread, that can play the sequence of events from the log file in real time
-	 * or fast forward.
-	 * @author alan
-	 *
-	 */
-	public class EventPlayingThread extends Thread {
-		
-		private Timer schedule;
-		private TimeCounter timeCounter;
-		
-		private static final int speed = 33; // 33 millisec between events while playing regularly
-		private static final int ffMultiplier = 10;
-		
-		private PlayState state;
-		private boolean playing;
-
-		private List<LogEvent> my_eventlist;
-		
-		private int current_index;
-		
-		public EventPlayingThread(LinkedList<LogEvent> eventlist){
-			playing = true;
-			my_eventlist = eventlist;
-			current_index = 0; 
-			state = PlayState.FORWARD;
-			//currentTime = 0;
-			timeCounter = new TimeCounter(speed,0,eventlist.getFirst().getTime(),eventlist.getLast().getTime());
-		}
-		
-		//[start] Playback Properties
-		/**
-		 * Returns whether or not the graph is playing forward or backwards.
-		 * @return <code>true</code> if the Play State is forward or fast forward.
-		 */
-		public boolean isForward() {
-			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FORWARD));
-		}
-		/**
-		 * Returns whether or not the graph is playing fast
-		 * @return <code>true</code> if the Play State is fast in forward or reverse.
-		 */
-		public boolean isFast() {
-			return ((state == PlayState.FASTFORWARD) || (state == PlayState.FASTREVERSE));
-		}
-		/**
-		 * 
-		 * @return
-		 */
-		public boolean atFront() {
-			if(timeCounter.getTime() == timeCounter.getLowerBound()) {
-				return true;
-			}
-			return false;
-		}
-		/**
-		 * 
-		 * @return
-		 */
-		public boolean atBack() {
-			if (timeCounter.getTime() == timeCounter.getUpperBound()) {
-				return true;
-			}
-			return false;
-		}
-		/**
-		 * 
-		 * @return
-		 */
-		public boolean atAnEnd() {
-			if(atFront() || atBack()) {
-				return true;
-			}
-			return false;
-		}
-		//[end]
-		
-		//[start] State Change handlers for button clicks.
-		/**
-		 * 
-		 */
-		public void fastReverse() {
-			if(state != PlayState.FASTREVERSE) {
-				fastReverseButton.setEnabled(false);
-				reverseButton.setEnabled(true);
-				pauseButton.setEnabled(true);
-				forwardButton.setEnabled(true);
-				fastForwardButton.setEnabled(true);
-				
-				PlayState prevState = state;
-				state = PlayState.FASTREVERSE;
-				timeCounter.setIncrement(-speed*ffMultiplier);
-				wakeup(prevState);
-			}
-		}
-		
-		public void reverse() {
-			if(state != PlayState.REVERSE) {
-				fastReverseButton.setEnabled(true);
-				reverseButton.setEnabled(false);
-				pauseButton.setEnabled(true);
-				forwardButton.setEnabled(true);
-				fastForwardButton.setEnabled(true);
-				
-				PlayState prevState = state;
-				state = PlayState.REVERSE;
-				timeCounter.setIncrement(-speed);
-				wakeup(prevState);
-			}
-		}
-
-		public void fastForward(){
-			if(state != PlayState.FASTFORWARD) {
-				
-				fastReverseButton.setEnabled(true);
-				reverseButton.setEnabled(true);
-				pauseButton.setEnabled(true);
-				forwardButton.setEnabled(true);
-				fastForwardButton.setEnabled(false);
-				
-				PlayState prevState = state;
-				state = PlayState.FASTFORWARD;
-				timeCounter.setIncrement(speed*ffMultiplier);
-				wakeup(prevState);
-			}
-		}
-
-		public void forward(){
-			if(state != PlayState.FORWARD) {
-				fastReverseButton.setEnabled(true);
-				reverseButton.setEnabled(true);
-				pauseButton.setEnabled(true);
-				forwardButton.setEnabled(false);
-				fastForwardButton.setEnabled(true);
-				
-				PlayState prevState = state;
-				state = PlayState.FORWARD;
-				timeCounter.setIncrement(speed);
-				wakeup(prevState);
-			}
-		}
-		
-		private synchronized void wakeup(PlayState previousState) {
-			if(previousState == PlayState.PAUSE) {
-				if(atAnEnd()) {
-					timeCounter.doIncrement();
-				}
-				schedule.start();
-				notify();
-			}
-			if (this.getState().equals(Thread.State.TIMED_WAITING)) {
-				interrupt(); //if we were waiting for the next event, we'll just wake the thread.
-			}
-			
-		}
-		
-		public synchronized void pause(){
-			if(eventthread.atFront()) {
-				fastReverseButton.setEnabled(false);
-				reverseButton.setEnabled(false);
-			} else {
-				fastReverseButton.setEnabled(true);
-				reverseButton.setEnabled(true);
-			}
-			pauseButton.setEnabled(false);
-			if(eventthread.atBack()) {
-				forwardButton.setEnabled(false);
-				fastForwardButton.setEnabled(false);
-			} else {
-				forwardButton.setEnabled(true);
-				fastForwardButton.setEnabled(true);
-			}
-			if(state != PlayState.PAUSE) {
-				
-				state = PlayState.PAUSE;
-				notify();
-				schedule.stop();
-				vv.repaint();
-			}
-		}
-		
-		public void goToTime(int value) {
-			PlayState prevState = state;
-			
-			if(value < timeCounter.getTime()) {
-				state = PlayState.REVERSE;
-			}
-			else {
-				state = PlayState.FORWARD;
-			}
-			
-			for( LogEvent evt : getLogEventsUntil(value) ) {
-				handleLogEvent(evt);
-			}
-			vv.repaint();
-			
-			timeCounter.setTime(value);
-			state = prevState;
-		}
-		
-		public void stopPlayback() {
-			playing = false;
-			wakeup(state);
-		}
-		//[end]
-				 
-		//[start] Graph Editors for highlighting and changing colours
-		/**
-		 * Visualize a query
-		 * @param peer
-		 * @param q
-		 */
-		public void doQuery(int peer, int queryMessageID){
-			hiddenGraph.getPeer(peer).query(queryMessageID);
-		}
-		
-		public void undoQuery(int peer, int queryMessageID){
-			hiddenGraph.getPeer(peer).endQuery(queryMessageID);
-		}
-		
-		
-		public void doQueryEdge(int peerFrom, int peerTo) {
-			hiddenGraph.findPeerConnection(peerFrom, peerTo).query();
-		}
-		
-		public void undoQueryEdge(int peerFrom, int peerTo) {
-			hiddenGraph.findPeerConnection(peerFrom, peerTo).backToNormal();
-		}
-		
-		/**
-		 * Visualize a query reaches peer event (bold edges)
-		 * @param peer
-		 * @param q
-		 */
-		public void doQueryReachesPeer(int peer, int queryMessageID){
-			hiddenGraph.getPeer(peer).receiveQuery(queryMessageID);
-		}
-		/**
-		 * Visualize a query reaches peer event (bold edges)
-		 * @param peer
-		 */
-		public void undoQueryReachesPeer(int peer, int queryMessageID){
-			hiddenGraph.getPeer(peer).endReceivedQuery(queryMessageID);
-		}
-
-		/**
-		 * Visualize a queryHit
-		 * @param peer
-		 * @param q
-		 */
-		public void doQueryHit(int peerNumber, int documentNumber) {
-			hiddenGraph.getDocument(peerNumber, documentNumber).setQueryHit(true);
-		}
-		
-		/**
-		 * Visualize a queryHit
-		 * @param peer
-		 * @param q
-		 */
-		public void undoQueryHit(int peerNumber, int documentNumber) {
-			hiddenGraph.getDocument(peerNumber, documentNumber).setQueryHit(false);
-		}
-		//[end]
-
-
-		public void run() {
-			//System.out.println("Starting log event sequence.");
-
-			long myTimeNow = 0L;//System.currentTimeMillis();
-			long nextTime;
-			boolean oldDirection;
-			//READING FROM CD++ LOG FILE/////////////
-			
-			schedule = new Timer(speed,timeCounter);
-			schedule.start();
-			
-			while (playing) //reading lines from config file to get parameter list
-			{
-				if(timeCounter.getTime() == myTimeNow) {
-					try {
-						Thread.sleep(20);
-						continue;
-					} catch (InterruptedException e) { }
-				}
-				
-				if(state != PlayState.PAUSE && !playbackSlider.getValueIsAdjusting()) {
-					nextTime = timeCounter.getTime();
-					oldDirection = isForward();
-					if(atAnEnd()) {
-						pause();
-					}
-					
-					for( LogEvent evt : getLogEventsUntil(nextTime) ) {
-						if(oldDirection==isForward()) { 
-							handleLogEvent(evt);
-						} else {//if the playback direction changed while getting the events
-							break;
-						}
-					}
-					myTimeNow = nextTime; //advance time
-					//playbackSlider.setValueIsAdjusting(true);
-					playbackSlider.setValue((int)myTimeNow);
-					//playbackSlider.setValueIsAdjusting(false);
-					vv.repaint();// update visual
-				}				
-				else {
-					try {
-						synchronized(this) {
-							while (state == PlayState.PAUSE) {
-								wait();
-							}
-						}
-					} catch (InterruptedException e) { }
-				}
-				
-			}//end while
-
-		}
-		
-		//[start] Graph Event Getting & Handling
-		/**
-		 * current_index is always the next event with time greater than the simulation time.
-		 * 
-		 * if current index is 3, simulation time (represented by '|') will be less than the index.
-		 * [0]-[1]-[2]-[3]-[4]-[5]-[6]
-		 *            |
-		 * 
-		 * @param timeGoingTo The simulation time (in milliseconds) to play events up to.
-		 * @return	The list of log events which need to be taken care of for this time span.
-		 */
-		private List<LogEvent> getLogEventsUntil(long timeGoingTo) {
-			List<LogEvent> events = new LinkedList<LogEvent>();
-			//System.out.println(current_index+", "+timeGoingTo);
-			LogEvent evt;
-			if(isForward()) {
-				evt = my_eventlist.get(current_index);
-				while(evt.getTime() < timeGoingTo) {
-					current_index++;
-					if(current_index >= my_eventlist.size()) {
-						current_index = my_eventlist.size()-1;
-						break;
-					}
-					events.add(evt);
-					evt = my_eventlist.get(current_index);
-										
-				}
-			}
-			else {
-				evt = my_eventlist.get(current_index-1);
-				while(evt.getTime() > timeGoingTo) {
-					current_index--;
-					if(current_index < 1) {
-						break;
-					}
-					
-					events.add(evt);
-					evt = my_eventlist.get(current_index-1);
-					
-				}
-			}
-			return events;
-		}
-		
-		/**
-		 * Handles the passed LogEvent be it structural or visual.
-		 * @param evt The Log event to handle.
-		 */
-		private void handleLogEvent(LogEvent evt) {
-			if (evt.isStructural()){ //if the event is to modify the structure of the graph
-				P2PNetworkGraph.graphEvent(evt,isForward(),visibleGraph,hiddenGraph);
-			} else { //other events: queries
-				String what = evt.getType();
-				int val1 = evt.getParam(1);
-				int val2 = evt.getParam(2);
-				if(what.equals("query")) {
-					if(isForward()) {
-						doQuery(val1, val2);
-					} else {
-						undoQuery(val1,val2);
-					}
-				}
-				else if (what.equals("unquery")) {
-					if(isForward()) {
-						undoQuery(val1,val2);
-					} else {
-						doQuery(val1, val2);
-					}
-				}
-				else if (what.equals("queryhit")) {
-					if(isForward()) {
-						doQueryHit(val1, val2);
-					} else {
-						undoQueryHit(val1, val2);
-					}
-				}
-				else if (what.equals("unqueryhit")) {
-					if(isForward()) {
-						undoQueryHit(val1, val2);
-					} else {
-						doQueryHit(val1, val2);
-					}
-				}
-				else if (what.equals("queryreachespeer")) {
-					if(isForward()) {
-						doQueryReachesPeer(val1,val2);
-					} else {
-						undoQueryReachesPeer(val1,val2);
-					}
-				}
-				else if (what.equals("unqueryreachespeer")) {
-					if(isForward()) {
-						undoQueryReachesPeer(val1,val2);
-					} else {
-						doQueryReachesPeer(val1,val2);
-					}
-				}
-				else if (what.equals("queryedge")) {
-					if(isForward()) {
-						doQueryEdge(val1,val2);
-					} else {
-						undoQueryEdge(val1,val2);
-					}
-				}
-				else if (what.equals("unqueryedge")) {
-					if(isForward()) {
-						undoQueryEdge(val1,val2);
-					} else {
-						doQueryEdge(val1,val2);
-					}
-				}
-			}
-		}
-		//[end] Graph Event Handling
+	@Override
+	public void playbackFastReverse() {
+		fastReverseButton.setEnabled(false);
+		reverseButton.setEnabled(true);
+		pauseButton.setEnabled(true);
+		forwardButton.setEnabled(true);
+		fastForwardButton.setEnabled(true);
 	}
-	//[end] Event Playing Thread
+
+	@Override
+	public void playbackReverse() {
+		fastReverseButton.setEnabled(true);
+		reverseButton.setEnabled(false);
+		pauseButton.setEnabled(true);
+		forwardButton.setEnabled(true);
+		fastForwardButton.setEnabled(true);
+	}
+
+	@Override
+	public void playbackPause() {
+		if(eventThread.atFront()) {
+			fastReverseButton.setEnabled(false);
+			reverseButton.setEnabled(false);
+		} else {
+			fastReverseButton.setEnabled(true);
+			reverseButton.setEnabled(true);
+		}
+		pauseButton.setEnabled(false);
+		if(eventThread.atBack()) {
+			forwardButton.setEnabled(false);
+			fastForwardButton.setEnabled(false);
+		} else {
+			forwardButton.setEnabled(true);
+			fastForwardButton.setEnabled(true);
+		}
+	}
+
+	@Override
+	public void playbackForward() {
+		fastReverseButton.setEnabled(true);
+		reverseButton.setEnabled(true);
+		pauseButton.setEnabled(true);
+		forwardButton.setEnabled(false);
+		fastForwardButton.setEnabled(true);
+	}
+
+	@Override
+	public void playbackFastForward() {
+		fastReverseButton.setEnabled(true);
+		reverseButton.setEnabled(true);
+		pauseButton.setEnabled(true);
+		forwardButton.setEnabled(true);
+		fastForwardButton.setEnabled(false);
+	}
+	
+	@Override
+	public void doRepaint() {
+		vv.repaint();
+	}
+	
+	//[end] EventPlayer Handlers
 
 	//[start] Swing Event Listeners
 	
@@ -1096,7 +729,7 @@ public class P2PApplet extends JApplet {
 				vv.getRenderContext().setVertexIncludePredicate(new VertexIsInTheOtherGraphPredicate(visibleGraph));
 				vv.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
 	
-				eventthread.start();
+				eventThread.start();
 			}		
 		}
 	}
@@ -1112,7 +745,7 @@ public class P2PApplet extends JApplet {
 			forwardButton.setEnabled(false);
 			fastForwardButton.setEnabled(false);
 			playbackSlider.setEnabled(false);
-			eventthread.stopPlayback();
+			eventThread.stopPlayback();
 		}
 	}
 	//[end] Stop Button
@@ -1121,7 +754,7 @@ public class P2PApplet extends JApplet {
 	class FastReverseButtonListener implements ActionListener {
 		
 		public void actionPerformed(ActionEvent ae) {
-			eventthread.fastReverse();
+			eventThread.fastReverse();
 		}
 	}
 	//[end] Fast Reverse Button
@@ -1136,11 +769,11 @@ public class P2PApplet extends JApplet {
 		
 		/**
 		 * Method called when the reverse button has an action performed(clicked)
-		 * Tells eventthread to traverse the graph placement in reverse.
+		 * Tells eventThread to traverse the graph placement in reverse.
 		 * @param ae	The ActionEvent that triggered the listener
 		 */
 		public void actionPerformed(ActionEvent ae) {
-			eventthread.reverse();
+			eventThread.reverse();
 		}
 	
 	}
@@ -1149,7 +782,7 @@ public class P2PApplet extends JApplet {
 	//[start] Pause Button
 	class PauseButtonListener implements ActionListener {
 		public void actionPerformed(ActionEvent ae) {
-			eventthread.pause();
+			eventThread.pause();
 		}
 	}
 	//[end] Pause Button
@@ -1157,7 +790,7 @@ public class P2PApplet extends JApplet {
 	//[start] Forward Button
 	class ForwardButtonListener implements ActionListener {
 		public void actionPerformed(ActionEvent ae) {
-			eventthread.forward();
+			eventThread.forward();
 		}
 	}
 	//[end] Forward Button
@@ -1165,7 +798,7 @@ public class P2PApplet extends JApplet {
 	//[start] Fast Forward Button
 	class FastForwardButtonListener implements ActionListener {
 		public void actionPerformed(ActionEvent ae) {			
-			eventthread.fastForward();
+			eventThread.fastForward();
 		}
 	}
 	//[end] Fast Forward Button
@@ -1179,8 +812,8 @@ public class P2PApplet extends JApplet {
 		public void stateChanged(ChangeEvent ce) {
 			
 			JSlider source = (JSlider)ce.getSource();
-			//eventthread.schedule.stop();
-			eventthread.goToTime(source.getValue());
+			//eventThread.schedule.stop();
+			eventThread.goToTime(source.getValue());
 		}
 
 		@Override
@@ -1197,32 +830,32 @@ public class P2PApplet extends JApplet {
 
 		@Override
 		public void mousePressed(MouseEvent arg0) {
-			prevState = eventthread.state;
-			eventthread.pause();
+			prevState = eventThread.getPlayState();
+			eventThread.pause();
 			
 		}
 
 		@Override
 		public void mouseReleased(MouseEvent arg0) {
 			if(prevState == PlayState.FASTREVERSE) {
-				eventthread.fastReverse();
+				eventThread.fastReverse();
 			}
 			else if (prevState == PlayState.REVERSE) {
-				eventthread.reverse();
+				eventThread.reverse();
 			}
 			else if (prevState == PlayState.FORWARD) {
-				eventthread.forward();
+				eventThread.forward();
 			}
 			else if (prevState == PlayState.FASTFORWARD) {
-				eventthread.fastForward();
+				eventThread.fastForward();
 			}
 			else if (prevState == PlayState.PAUSE) {
-				eventthread.pause();
+				eventThread.pause();
 			}
 			
 		}
 	}
 	//[end] Playback Slider
-	
+
 	//[end] Swing Event Listeners
 }
