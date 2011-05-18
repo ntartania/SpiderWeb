@@ -58,6 +58,7 @@ import edu.uci.ics.jung.visualization.renderers.Renderer;
  * @author Matt
  */
 public class P2PApplet extends JApplet {
+	//[start] Attributes
 	
 	//[start] Static Final Attributes
 	// for the length of the edges in the graph layout
@@ -67,7 +68,7 @@ public class P2PApplet extends JApplet {
 	//the log file (default value)
 	private static final String DEF_LOG_FILE = "ProcessedLog.txt";
 	private static final String DEF_LOG_URL = "http://www.sce.carleton.ca/~adavoust/simuldemo/ProcessedLog.txt";
-	//[end]
+	//[end] Static Final Attributes
 	
 	//[start] Private Variables
 	private static final long serialVersionUID = 2L;
@@ -103,7 +104,7 @@ public class P2PApplet extends JApplet {
 	
 	//[start] Protected Variables
 	protected JButton relaxerButton;
-	protected JButton fastforwardButton;
+	protected JButton fastForwardButton;
 	protected JButton forwardButton;
 	protected JButton pauseButton;
 	protected JButton reverseButton;
@@ -113,7 +114,9 @@ public class P2PApplet extends JApplet {
 	protected JSlider playbackSlider;
 
 	protected EventPlayingThread eventthread;
-	//[end]
+	//[end] Protected Variables
+	
+	//[end] Attributes
 	
 	//[start] Constructor
 	public P2PApplet(boolean onWeb) {
@@ -238,7 +241,7 @@ public class P2PApplet extends JApplet {
 				LogEvent gev = new LogEvent(str);
 				
 				if (gev.isConstructing()){
-					graphConstructionEvent(gev,hiddenGraph);
+					P2PNetworkGraph.graphConstructionEvent(gev,hiddenGraph);
 				}
 				
 				if(gev.getType().equals("query") || gev.getType().equals("queryhit"))
@@ -396,9 +399,9 @@ public class P2PApplet extends JApplet {
 			l.loadingProgress(5);
 		}
 		
-		fastforwardButton = new JButton("|>|>");
-		fastforwardButton.addActionListener(new FastforwardButtonListener());
-		fastforwardButton.setEnabled(false);
+		fastForwardButton = new JButton("|>|>");
+		fastForwardButton.addActionListener(new FastForwardButtonListener());
+		fastForwardButton.setEnabled(false);
 		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(6);
@@ -438,8 +441,8 @@ public class P2PApplet extends JApplet {
 		buttonPanel.add(pauseButton);
 		buttonPanel.add(forwardButton);
 		southConstraints.gridwidth = GridBagConstraints.REMAINDER;//make each item take up a whole line
-		southLayout.setConstraints(fastforwardButton, southConstraints);
-		buttonPanel.add(fastforwardButton);
+		southLayout.setConstraints(fastForwardButton, southConstraints);
+		buttonPanel.add(fastForwardButton);
 		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(9);
@@ -583,63 +586,6 @@ public class P2PApplet extends JApplet {
 	}
 	//[end] Initialization
 	
-	//[start] Structural Graph Events
-	/**
-	 * Limited version of graphEvent for construction a graph for layout purposes
-	 * @param gev	The Log event which needs to be handled.
-	 * @param g		The Graph to perform the event on.
-	 */
-	private void graphConstructionEvent(LogEvent gev, P2PNetworkGraph g) {
-		if (gev.getType().equals("online")){
-			g.addPeer(gev.getParam(1));
-		} else if(gev.getType().equals("connect")){
-			g.connectPeers(gev.getParam(1), gev.getParam(2));
-		} else if(gev.getType().equals("publish")){
-			g.addDocument(gev.getParam(2), gev.getParam(1));
-		}
-	}
-	
-	/**
-	 * Handles the Log Events which affect the structure of the graph.
-	 * @param gev				The Log event which needs to be handled.
-	 * @param forward			<code>true</code> if play-back is playing forward.
-	 * @param eventGraph		The Graph to perform the event on.
-	 * @param referenceGraph	The Graph to get edge numbers from.
-	 */
-	private void graphEvent(LogEvent gev, boolean forward, P2PNetworkGraph eventGraph, P2PNetworkGraph referenceGraph) {
-		
-		if(forward) {
-			if (gev.getType().equals("online")){
-				eventGraph.addPeer(gev.getParam(1));
-			} else if (gev.getType().equals("offline")){
-				eventGraph.removePeer(gev.getParam(1));
-			} else if(gev.getType().equals("connect")){
-				eventGraph.connectPeers(gev.getParam(1), gev.getParam(2), referenceGraph.findPeerConnection(gev.getParam(1), gev.getParam(2)).getKey());
-			} else if(gev.getType().equals("disconnect")){
-				eventGraph.disconnectPeers(gev.getParam(1), gev.getParam(2));
-			} else if(gev.getType().equals("publish")){
-				eventGraph.addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
-			} else if(gev.getType().equals("depublish")){
-				eventGraph.removeDocument(gev.getParam(2), gev.getParam(1));
-			}
-		} else {
-			if (gev.getType().equals("online")){
-				eventGraph.removePeer(gev.getParam(1));
-			} else if (gev.getType().equals("offline")){
-				eventGraph.addPeer(gev.getParam(1));
-			} else if(gev.getType().equals("connect")){
-				eventGraph.disconnectPeers(gev.getParam(1), gev.getParam(2));
-			} else if(gev.getType().equals("disconnect")){
-				eventGraph.connectPeers(gev.getParam(1), gev.getParam(2), referenceGraph.findPeerConnection(gev.getParam(1), gev.getParam(2)).getKey());
-			} else if(gev.getType().equals("publish")){
-				eventGraph.removeDocument(gev.getParam(2), gev.getParam(1));
-			} else if(gev.getType().equals("depublish")){
-				eventGraph.addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
-			}
-		}
-	}
-	//[end] Structural Graph Events
-
 	//[start] Main
 	/**
 	 * 
@@ -741,7 +687,7 @@ public class P2PApplet extends JApplet {
 				reverseButton.setEnabled(true);
 				pauseButton.setEnabled(true);
 				forwardButton.setEnabled(true);
-				fastforwardButton.setEnabled(true);
+				fastForwardButton.setEnabled(true);
 				
 				PlayState prevState = state;
 				state = PlayState.FASTREVERSE;
@@ -756,7 +702,7 @@ public class P2PApplet extends JApplet {
 				reverseButton.setEnabled(false);
 				pauseButton.setEnabled(true);
 				forwardButton.setEnabled(true);
-				fastforwardButton.setEnabled(true);
+				fastForwardButton.setEnabled(true);
 				
 				PlayState prevState = state;
 				state = PlayState.REVERSE;
@@ -772,7 +718,7 @@ public class P2PApplet extends JApplet {
 				reverseButton.setEnabled(true);
 				pauseButton.setEnabled(true);
 				forwardButton.setEnabled(true);
-				fastforwardButton.setEnabled(false);
+				fastForwardButton.setEnabled(false);
 				
 				PlayState prevState = state;
 				state = PlayState.FASTFORWARD;
@@ -787,7 +733,7 @@ public class P2PApplet extends JApplet {
 				reverseButton.setEnabled(true);
 				pauseButton.setEnabled(true);
 				forwardButton.setEnabled(false);
-				fastforwardButton.setEnabled(true);
+				fastForwardButton.setEnabled(true);
 				
 				PlayState prevState = state;
 				state = PlayState.FORWARD;
@@ -821,10 +767,10 @@ public class P2PApplet extends JApplet {
 			pauseButton.setEnabled(false);
 			if(eventthread.atBack()) {
 				forwardButton.setEnabled(false);
-				fastforwardButton.setEnabled(false);
+				fastForwardButton.setEnabled(false);
 			} else {
 				forwardButton.setEnabled(true);
-				fastforwardButton.setEnabled(true);
+				fastForwardButton.setEnabled(true);
 			}
 			if(state != PlayState.PAUSE) {
 				
@@ -1023,7 +969,7 @@ public class P2PApplet extends JApplet {
 		 */
 		private void handleLogEvent(LogEvent evt) {
 			if (evt.isStructural()){ //if the event is to modify the structure of the graph
-				graphEvent(evt,isForward(),visibleGraph,hiddenGraph);
+				P2PNetworkGraph.graphEvent(evt,isForward(),visibleGraph,hiddenGraph);
 			} else { //other events: queries
 				String what = evt.getType();
 				int val1 = evt.getParam(1);
@@ -1091,8 +1037,10 @@ public class P2PApplet extends JApplet {
 	//[end] Event Playing Thread
 
 	//[start] Swing Event Listeners
+	
+	//[start] Relaxer Button
 	 /**
-	 * an actionlistener that defines the use of the button at the bottom of the applet 
+	 * an actionlistener that defines the use of a button to stop the spring-layout processing
 	 * @author adavoust
 	 *
 	 */
@@ -1136,7 +1084,7 @@ public class P2PApplet extends JApplet {
 					reverseButton.setEnabled(true);
 					pauseButton.setEnabled(true);
 					forwardButton.setEnabled(false);
-					fastforwardButton.setEnabled(true);
+					fastForwardButton.setEnabled(true);
 					playbackSlider.setEnabled(true);
 	
 					//System.out.println("starting activity now !");
@@ -1152,7 +1100,9 @@ public class P2PApplet extends JApplet {
 			}		
 		}
 	}
-	
+	//[end] Relaxer Button
+
+	//[start] Stop Button
 	class StopButtonListener implements ActionListener {
 		
 		public void actionPerformed(ActionEvent ae) {
@@ -1160,19 +1110,23 @@ public class P2PApplet extends JApplet {
 			reverseButton.setEnabled(false);
 			pauseButton.setEnabled(false);
 			forwardButton.setEnabled(false);
-			fastforwardButton.setEnabled(false);
+			fastForwardButton.setEnabled(false);
 			playbackSlider.setEnabled(false);
 			eventthread.stopPlayback();
 		}
 	}
+	//[end] Stop Button
 	
+	//[start] Fast Reverse Button
 	class FastReverseButtonListener implements ActionListener {
 		
 		public void actionPerformed(ActionEvent ae) {
 			eventthread.fastReverse();
 		}
 	}
+	//[end] Fast Reverse Button
 	
+	//[start] Reverse Button
 	/**
 	 * An ActionListener that defines the action of the reverse button for the applet
 	 * @author Matthew
@@ -1190,25 +1144,33 @@ public class P2PApplet extends JApplet {
 		}
 	
 	}
+	//[end] Reverse Button
 	
+	//[start] Pause Button
 	class PauseButtonListener implements ActionListener {
 		public void actionPerformed(ActionEvent ae) {
 			eventthread.pause();
 		}
 	}
+	//[end] Pause Button
 	
+	//[start] Forward Button
 	class ForwardButtonListener implements ActionListener {
 		public void actionPerformed(ActionEvent ae) {
 			eventthread.forward();
 		}
 	}
+	//[end] Forward Button
 	
-	class FastforwardButtonListener implements ActionListener {
+	//[start] Fast Forward Button
+	class FastForwardButtonListener implements ActionListener {
 		public void actionPerformed(ActionEvent ae) {			
 			eventthread.fastForward();
 		}
 	}
+	//[end] Fast Forward Button
 	
+	//[start] Playback Slider
 	class SliderListener implements ChangeListener, MouseListener {
 
 		PlayState prevState = PlayState.PAUSE;
@@ -1260,5 +1222,7 @@ public class P2PApplet extends JApplet {
 			
 		}
 	}
+	//[end] Playback Slider
+	
 	//[end] Swing Event Listeners
 }
