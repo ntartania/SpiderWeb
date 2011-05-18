@@ -8,7 +8,6 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
-import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
@@ -18,6 +17,7 @@ import java.awt.event.MouseListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.Collections;
@@ -28,23 +28,19 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JApplet;
 import javax.swing.JButton;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRootPane;
-import javax.swing.JScrollPane;
 import javax.swing.JSlider;
-import javax.swing.JTextArea;
 import javax.swing.Timer;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.event.MouseInputListener;
 
 import org.apache.commons.collections15.Transformer;
 import org.apache.commons.collections15.functors.ConstantTransformer;
 
 import edu.uci.ics.jung.algorithms.layout.AbstractLayout;
+import edu.uci.ics.jung.algorithms.layout.Layout;
 import edu.uci.ics.jung.algorithms.layout.SpringLayout;
 import edu.uci.ics.jung.algorithms.layout.StaticLayout;
 import edu.uci.ics.jung.algorithms.layout.util.Relaxer;
@@ -58,8 +54,8 @@ import edu.uci.ics.jung.visualization.renderers.Renderer;
 
 /**
  * an applet that will display a graph using a spring layout, and as the graph changes the layout is updated.
- * @author alan
- * 
+ * @author Alan
+ * @author Matt
  */
 public class P2PApplet extends JApplet {
 	
@@ -77,8 +73,8 @@ public class P2PApplet extends JApplet {
 	private static final long serialVersionUID = 2L;
 	
 	//default size for the swing graphic components
-	private static int DEFWIDTH = 800;
-	private static int DEFHEIGHT = 600;
+	public static final int DEFWIDTH = 800;
+	public static final int DEFHEIGHT = 600;
 
 	private static final boolean ONWEB = true;
 	
@@ -101,6 +97,8 @@ public class P2PApplet extends JApplet {
 	//in order to calculate the positions of all the nodes
 	private P2PNetworkGraph hiddenGraph; 
 	
+	private List<LoadingListener> loadingListeners;
+	
 	//[end] Private Variables
 	
 	//[start] Protected Variables
@@ -117,110 +115,26 @@ public class P2PApplet extends JApplet {
 	protected EventPlayingThread eventthread;
 	//[end]
 	
-	//[start] LittleGUI class
-	/////////additional swing components for the file chooser, etc./////////////////////////
-	// only used in non-web mode
-	class LittleGUI extends JFrame implements ActionListener{
-		
-		private static final long serialVersionUID = 1L;
-		
-		JTextArea log;
-		
-		JScrollPane logScrollPane;
-		JButton openButton;
-		JFileChooser fc;
-		P2PApplet myapp;
-		
-		//constructor
-		public LittleGUI(P2PApplet app) {
-			// Create the log first, because the action listeners
-			// need to refer to it.
-			log = new JTextArea(8,60);
-			log.setMargin(new Insets(5,5,5,5));
-			log.setEditable(false);
-			logScrollPane = new JScrollPane(log);
-			
-			log.setLineWrap(true);
-			
-			
-			myapp = app;
-			//running through this main method means we're not running the applet on the web
-			myapp.setOnWeb(false);
-
-			//Create a file chooser
-			fc = new JFileChooser();
-
-			
-			//Create the open button.  We use the image from the JLF
-			//Graphics Repository (but we extracted it from the jar).
-			openButton = new JButton("Open a File...");
-			openButton.addActionListener(this);
-
-			//For layout purposes, put the buttons in a separate panel
-			JPanel buttonPanel = new JPanel(); //use FlowLayout
-			buttonPanel.add(openButton);
-			add(new JLabel("P2P Network Simulation Viewer"), BorderLayout.PAGE_START);
-			//Add the buttons and the log to this panel.
-			add(buttonPanel, BorderLayout.PAGE_END);
-			log.append("Open a processed log file to get started...");
-			add(logScrollPane, BorderLayout.CENTER);
-
-			
-		}
-
-		/**
-		 * handles the button to open a file 
-		 */
-		public void actionPerformed(ActionEvent e) {
-
-
-			int returnVal = fc.showOpenDialog(this);
-
-			if (returnVal == JFileChooser.APPROVE_OPTION) {
-				File file = fc.getSelectedFile();
-
-				//use this log file
-				myapp.setLogFile(file);
-				log.append("\nOpening: " + file.getAbsolutePath() + ".");
-
-				log.append("\nPlease be patient while the processed log file is read.");
-				log.append("\nThis may take around 30 seconds for a 200kB file, as the graph layout is also processed at the same time.");
-				log.append("\nOnce the data is loaded, a new screen will pop up. The layout of the P2P " +
-						"graph will be visible, you may modify it by zooming, panning, and moving nodes around.\n" +
-						"once you are happy with the layout and are ready to start the simulation, click the button at the bottom.");
-				log.setCaretPosition(log.getDocument().getLength());
-
-				/*if (args.length>0) // log file name can be input on running the applet as well
-		myapp.setLogFileName(args[0]);*/
-				
-				//start the applet using a new thread. 
-				Thread starter = new Thread(new Runnable() {
-					public void run() {
-						//Turn off metal's use of bold fonts
-						JFrame frame = new JFrame();
-						frame.setBounds(0, 0, DEFWIDTH, DEFHEIGHT);
-						frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-						frame.getContentPane().add(myapp);
-
-						myapp.init();
-						myapp.start();
-						frame.pack();
-						//this.setVisible(false);
-						frame.setVisible(true);
-
-					}
-				});
-				starter.start();
-
-			} else {
-				log.append("Open command cancelled by user.");
-			}
-			
+	//[start] Constructor
+	public P2PApplet(boolean onWeb) {
+		ontheweb = onWeb;
+		if(!onWeb) {
+			LogPanelWithFileChooser mygui = new LogPanelWithFileChooser(this);
+	
+			mygui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			//mygui.validate();
+			//mygui.setBounds(200,200,500,200);
+			mygui.pack();
+			mygui.setVisible(true);
+			loadingListeners = new LinkedList<LoadingListener>();
+			loadingListeners.add(mygui);
 		}
 	}
-	//[end]
+	//[end] Constructor
 
 	//[start] Initialization
+	
+	//[start] setters for when on the web
 	/** to use a particular log file (can be chosen from GUI)*/
 	public void setLogFile(File lf){
 		mylogfile = lf;
@@ -234,72 +148,97 @@ public class P2PApplet extends JApplet {
 	public void setOnWeb(boolean b){
 		ontheweb = b;	
 	}
-
+	//[end] setters for when on the web
 	
+	//[start] Calculate the Spring Layout
 	/**
-	 * applet initialization
+	 * Helper Method for setting up the spring layout.
+	 * @return The initialized spring layout.
 	 */
-	public void init() {
-		//TODO : see if synchronization (multi-thread safety) is necessary
-		
-		//[start] Open and Read Log file, create the layout of the graph
-		System.out.println("Reading the logs ...");
-		//TODO : make it possible to load a different log file
+	private SpringLayout<P2PVertex,P2PConnection> springLayoutInit(List<LogEvent> graphEvents) {
+		final int numSteps = 100;
+		for(LoadingListener l : loadingListeners) {
+			l.loadingChanged(numSteps, "Spring Layout");
+		}
 		SpringLayout<P2PVertex,P2PConnection> sp_layout=null;
+		sp_layout = new SpringLayout<P2PVertex,P2PConnection>(hiddenGraph, new P2PNetEdgeLengthFunction()); // here is my length calculation
+		//do it with the F-R  layout
+		//sp_layout = new FRLayout<P2PVertex,Number>(hiddenGraph); // here is my length calculation
+		sp_layout.setSize(new Dimension(DEFWIDTH,DEFHEIGHT));
+		sp_layout.setForceMultiplier(0.6); //testing this value
+		//((SpringLayout<Number,Number>)layout).setRepulsionRange(50);
+		sp_layout.setInitializer(new P2PVertexPlacer(sp_layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
+		
+		sp_layout.initialize();
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(1);
+		}
+		
+		for(int j =1;j<=numSteps;j++) {
+			sp_layout.step();
+			for(LoadingListener l : loadingListeners) {
+				l.loadingProgress(j);
+			}
+		}
+		return sp_layout;
+	}
+	//[end] Calculate the Spring Layout
+
+	//[start] Open the log file for reading
+	/**
+	 * Helper Method for opening the Log File.
+	 * @return The Log File for reading.
+	 */
+	private BufferedReader openLogFile() {
+		BufferedReader in;
 		try {
-			//[start] Open the log file for reading
-			BufferedReader in;
 			if (ontheweb){ // hack : when running on SCE server I can't read the log file without opening it through this URL reader ...
 				URL yahoo = new URL(DEF_LOG_URL);
 				in = new BufferedReader(new InputStreamReader(yahoo.openStream()));
 			} else {
-				if (mylogfile == null)
+				if (mylogfile == null) {
 					in = new BufferedReader(new FileReader(DEF_LOG_FILE));
-				else{
+				} else{
 					in = new BufferedReader(new FileReader(mylogfile));
-					System.out.println("reading from the file"+mylogfile.getAbsolutePath());
 				}
 			}
-			
-			//[end] Open the log file for reading
-			
-			myGraphEvolution = new LinkedList<LogEvent>();
-			hiddenGraph = new P2PNetworkGraph();
-
-			//[start] set up the spring layout
-			//create a spring layout for the hidden graph and give it my own parameters ----------
-			
-			sp_layout = new SpringLayout<P2PVertex,P2PConnection>(hiddenGraph, new P2PNetEdgeLengthFunction()); // here is my length calculation
-			//do it with the F-R  layout
-			//sp_layout = new FRLayout<P2PVertex,Number>(hiddenGraph); // here is my length calculation
-			sp_layout.setSize(new Dimension(DEFWIDTH,DEFHEIGHT));
-			sp_layout.setForceMultiplier(0.6); //testing this value
-			//((SpringLayout<Number,Number>)layout).setRepulsionRange(50);
-			sp_layout.setInitializer(new P2PVertexPlacer(sp_layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
-			
-			//[end] set up the spring layout
-			
-			//[start]Read the file, create log events and start calculating the resulting layout
-						
-			sp_layout.initialize();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+		return in;
+	}
+	//[end] Open the log file for reading
+	
+	//[start] Build the list of LogEvents
+	/**
+	 * 
+	 * @param logFile The file for which to read from 
+	 * @return
+	 */
+	private LinkedList<LogEvent> logEventBuilder(BufferedReader logFile) {
+		LinkedList<LogEvent> logEvents = new LinkedList<LogEvent>();
+		try {
 			String str;
 			List<LogEvent> colouringEvents = new LinkedList<LogEvent>();
 			List<P2PVertex> queryPeers = new LinkedList<P2PVertex>();
 			
-			int totalLines = Integer.parseInt(in.readLine());
+			int totalLines = Integer.parseInt(logFile.readLine());
 			int lineCount = 0;
 			
-			myGraphEvolution.add(new LogEvent("0:start:0:0")); //a start event to know when to stop playback of a reversing graph
-			while ((str = in.readLine()) != null) //reading lines log file
+			for(LoadingListener l : loadingListeners) {
+				l.loadingChanged(totalLines, "LogEvents");
+			}
+			
+			logEvents.add(new LogEvent("0:start:0:0")); //a start event to know when to stop playback of a reversing graph
+			while ((str = logFile.readLine()) != null) //reading lines log file
 			{
 				lineCount++;
 				LogEvent gev = new LogEvent(str);
 				
-				//add all the nodes to construct the new graph
 				if (gev.isConstructing()){
 					graphConstructionEvent(gev,hiddenGraph);
-					sp_layout.step(); //do one step in changing the layout of the graph
-					sp_layout.step(); //and another
 				}
 				
 				if(gev.getType().equals("query") || gev.getType().equals("queryhit"))
@@ -332,30 +271,33 @@ public class P2PApplet extends JApplet {
 				
 					LogEvent event = (LogEvent)iter.next();
 					if(event.getTime() < gev.getTime() ) { //add only if the event takes place before the LogEvent that was read this iteration
-						myGraphEvolution.addLast(event);
+						logEvents.addLast(event);
 						iter.remove();
 					} else {
 						break; //if this Event's time is greater than gev, the rest should be too, then there is no point continuing
 					}
 				}
-				myGraphEvolution.addLast(gev);
-				
+				logEvents.addLast(gev);
+				for(LoadingListener l : loadingListeners) {
+					l.loadingProgress(lineCount);
+				}
 				
 			}//end while
-			myGraphEvolution.add(new LogEvent((myGraphEvolution.getLast().getTime())+":end:0:0")); //add an end log to know to stop the playback of the graph
-			
-			//[end] Read the file, create log events and start calculating the resulting layout
-		} catch (Exception e) {
+			logEvents.add(new LogEvent((logEvents.getLast().getTime())+":end:0:0")); //add an end log to know to stop the playback of the graph
+		} catch(IOException e) {
 			e.printStackTrace();
-			
 		}
-		layout = sp_layout;
-		//[end] Open and Read Log file, create the layout of the graph
-		
-		//[start] Create Visualization Viewer
-		visibleGraph = new P2PNetworkGraph();
-		
-		vv = new VisualizationViewer<P2PVertex,P2PConnection>(layout, new Dimension(DEFWIDTH,DEFHEIGHT));
+		return logEvents;
+	}
+	//[end] Build the list of LogEvents
+	
+	//[start] Create the visualization viewer
+	/**
+	 * 
+	 * @return The Initialized Visualization Viewer
+	 */
+	private VisualizationViewer<P2PVertex,P2PConnection> visualizationViewerInit(final Layout<P2PVertex,P2PConnection>  layout, int width, int height) {
+		VisualizationViewer<P2PVertex,P2PConnection> viewer = new VisualizationViewer<P2PVertex,P2PConnection>(layout, new Dimension(width,height));
 
 		JRootPane rp = this.getRootPane();
 		rp.putClientProperty("defeatSystemEventQueueCheck", Boolean.TRUE);
@@ -364,35 +306,32 @@ public class P2PApplet extends JApplet {
 		//getContentPane().setBackground(java.awt.Color.lightGray);
 		getContentPane().setFont(new Font("Serif", Font.PLAIN, 12));
 		//try set the size
-		getContentPane().setBounds(0, 0, DEFWIDTH, DEFHEIGHT);
+		getContentPane().setBounds(0, 0, width, height);
 
 		// the default mouse makes the mouse usable as a picking tool (pick, drag vertices & edges) or as a transforming tool (pan, zoom)
 		DefaultModalGraphMouse<P2PVertex,P2PConnection> gm =new DefaultModalGraphMouse<P2PVertex,P2PConnection>(); 
-		vv.setGraphMouse(gm);
+		viewer.setGraphMouse(gm);
 
 		//set graph rendering parameters & functions
-		vv.getRenderer().getVertexLabelRenderer().setPosition(Renderer.VertexLabel.Position.CNTR);
-		//the vertex labeller will use the tostring method which is fine, the P2PVertex class has an appropriate toString() method implementation
-		vv.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<P2PVertex>());
+		viewer.getRenderer().getVertexLabelRenderer().setPosition(Renderer.VertexLabel.Position.CNTR);
+		//the vertex labeler will use the tostring method which is fine, the P2PVertex class has an appropriate toString() method implementation
+		viewer.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<P2PVertex>());
 
 		//add my own vertex shape & color fill transformers
-		vv.getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer());
+		viewer.getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer());
 		// note :the color depends on being picked.
 		
 		//make the p2p edges different from the peer to doc edges 
-		vv.getRenderContext().setEdgeStrokeTransformer(new P2PEdgeStrokeTransformer()); //stroke width
-		vv.getRenderContext().setEdgeShapeTransformer(new P2PEdgeShapeTransformer()); //stroke width
+		viewer.getRenderContext().setEdgeStrokeTransformer(new P2PEdgeStrokeTransformer()); //stroke width
+		viewer.getRenderContext().setEdgeShapeTransformer(new P2PEdgeShapeTransformer()); //stroke width
 		
 		
 		// P2PVertex objects also now have multiple states : we can represent which nodes are documents, picked, querying, queried, etc.
-		vv.getRenderContext().setVertexFillPaintTransformer(new P2PVertexFillPaintTransformer(vv.getPickedVertexState()));
-		vv.getRenderContext().setVertexStrokeTransformer(new P2PVertexStrokeTransformer());
-		vv.setForeground(Color.white);
+		viewer.getRenderContext().setVertexFillPaintTransformer(new P2PVertexFillPaintTransformer(viewer.getPickedVertexState()));
+		viewer.getRenderContext().setVertexStrokeTransformer(new P2PVertexStrokeTransformer());
+		viewer.setForeground(Color.white);
 		
-		/// create the event player
-		eventthread = new EventPlayingThread(myGraphEvolution);
-		
-		vv.addComponentListener(new ComponentAdapter() {
+		viewer.addComponentListener(new ComponentAdapter() {
 			
 			/**
 			 * @see java.awt.event.ComponentAdapter#componentResized(java.awt.event.ComponentEvent)
@@ -402,42 +341,68 @@ public class P2PApplet extends JApplet {
 				super.componentResized(arg0);
 				//System.err.println("resized");
 				layout.setSize(arg0.getComponent().getSize());
-			}});
+			}
+		});
 		
-		JPanel graphsPanel = new JPanel();
+		return viewer;
+	}
+	//[end] Create the visualization viewer
+	
+	//[start] Create Components
+	
+	//[start] South Panel
+	/**
+	 * Helper Method for initializing the Buttons and slider for the South Panel.
+	 * @return The South Panel, laid out properly, to be displayed.
+	 */
+	private JPanel initializeSouthPanel() {
+		for(LoadingListener l : loadingListeners) {
+			l.loadingChanged(9, "South Panel");
+		}
 		
-		graphsPanel.add(vv);
-		//[end] Create Visualization Viewer
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(1);
+		}
 		
-		//[start] Relaxer creation
-		Relaxer relaxer = new VisRunner((IterativeContext)layout);
-		relaxer.stop();
-		relaxer.setSleepTime(80L);
-		relaxer.relax();
-		//[end] Relaxer creation
-		
-		//[start] Panel Layout
-		//button to freeze layout, then to fast-forward
-		relaxerButton = new JButton("Finalize Layout");
-		relaxerButton.addActionListener(new relaxerButtonListener(relaxer)); 
-		
-		stopButton = new JButton("Stop Playback");
-		stopButton.addActionListener(new StopButtonListener());
-				
 		fastReverseButton = new JButton("<|<|");
 		fastReverseButton.addActionListener(new FastReverseButtonListener()); 
+		fastReverseButton.setEnabled(false);
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(2);
+		}
 		
 		reverseButton = new JButton("<|");
-		reverseButton.addActionListener(new ReverseButtonListener());		
+		reverseButton.addActionListener(new ReverseButtonListener());
+		reverseButton.setEnabled(false);
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(3);
+		}
 		
 		pauseButton = new JButton("||");
 		pauseButton.addActionListener(new PauseButtonListener()); 
+		pauseButton.setEnabled(false);
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(4);
+		}
 		
 		forwardButton = new JButton("|>");
 		forwardButton.addActionListener(new ForwardButtonListener());
+		forwardButton.setEnabled(false);
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(5);
+		}
 		
 		fastforwardButton = new JButton("|>|>");
 		fastforwardButton.addActionListener(new FastforwardButtonListener());
+		fastforwardButton.setEnabled(false);
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(6);
+		}
 		
 		playbackSlider = new JSlider(JSlider.HORIZONTAL,0,(int)myGraphEvolution.getLast().getTime(),0);
 		SliderListener s = new SliderListener();
@@ -448,8 +413,11 @@ public class P2PApplet extends JApplet {
 		playbackSlider.setPaintTicks(true);
 		playbackSlider.setPaintLabels(false);
 		playbackSlider.setBackground(Color.GRAY);
-		playbackSlider.setForeground(Color.BLUE);
-		//TODO More Slider stuff
+		playbackSlider.setEnabled(false);
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(7);
+		}
 		
 		GridBagLayout southLayout = new GridBagLayout();
 		GridBagConstraints southConstraints = new GridBagConstraints();
@@ -461,6 +429,10 @@ public class P2PApplet extends JApplet {
 		buttonPanel.setBackground(Color.GRAY);
 		buttonPanel.setLayout(southLayout);
 		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(8);
+		}
+		
 		buttonPanel.add(fastReverseButton);
 		buttonPanel.add(reverseButton);
 		buttonPanel.add(pauseButton);
@@ -469,63 +441,146 @@ public class P2PApplet extends JApplet {
 		southLayout.setConstraints(fastforwardButton, southConstraints);
 		buttonPanel.add(fastforwardButton);
 		
-		//southLayout.setConstraints(playbackSlider, southConstraints);
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(9);
+		}
+		
 		south.add(buttonPanel);
 		south.add(playbackSlider);
 		
+		return south;
+	}
+	//[end] South Panel
+	
+	//[start] West Panel
+	/**
+	 * Helper Method for initializing the Buttons and drop down menu for the West Panel.
+	 * @return The west Panel, laid out properly, to be displayed.
+	 */
+	private JPanel initializeWestPanel() {
+		for(LoadingListener l : loadingListeners) {
+			l.loadingChanged(8, "West Panel");
+		}
 		
+		//[start] Relaxer creation
+		Relaxer relaxer = new VisRunner((IterativeContext)layout);
+		relaxer.stop();
+		relaxer.setSleepTime(80L);
+		relaxer.relax();
+		//[end] Relaxer creation
+		relaxerButton = new JButton("Finalize Layout");
+		relaxerButton.addActionListener(new relaxerButtonListener(relaxer)); 
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(1);
+		}
+		
+
+		stopButton = new JButton("Stop Playback");
+		stopButton.addActionListener(new StopButtonListener());
 		stopButton.setEnabled(false);
-		fastReverseButton.setEnabled(false);
-		reverseButton.setEnabled(false);
-		pauseButton.setEnabled(false);
-		forwardButton.setEnabled(false);
-		fastforwardButton.setEnabled(false);
-		playbackSlider.setEnabled(false);
 		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(2);
+		}
 		
 		GridBagLayout westLayout = new GridBagLayout();
 		GridBagConstraints westConstraints = new GridBagConstraints();
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(3);
+		}
 		
 		JPanel west = new JPanel();
 		west.setBorder(BorderFactory.createTitledBorder("Options"));
 		west.setBackground(Color.GRAY);
 		west.setLayout(westLayout);
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(4);
+		}
+		
 		JPanel p = new JPanel();
 		//add little combo box to choose between the mouse picking and the mouse transforming the layout
 		p.setBorder(BorderFactory.createTitledBorder("Mouse Mode"));
 		p.setBackground(Color.GRAY);
-		p.add(gm.getModeComboBox());
+		p.add(((DefaultModalGraphMouse<P2PVertex,P2PConnection>)vv.getGraphMouse()).getModeComboBox());
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(5);
+		}
 		
 		westConstraints.gridwidth = GridBagConstraints.REMAINDER;//make each item take up a whole line
 		westLayout.setConstraints(p, westConstraints);
 		west.add(p);
 		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(6);
+		}
+		
 		westLayout.setConstraints(relaxerButton, westConstraints);
 		west.add(relaxerButton);
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(7);
+		}
 		
 		westLayout.setConstraints(stopButton, westConstraints);
 		west.add(stopButton);
 		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(8);
+		}
+		
+		return west;
+	}
+	//[end] West Panel
+	
+	//[end] Create Components
+	
+	/**
+	 * applet initialization
+	 */
+	public void init() {
+		for(LoadingListener l : loadingListeners) {
+			l.loadingStarted(1, "Graphs");
+		}
+		hiddenGraph = new P2PNetworkGraph();
+		visibleGraph = new P2PNetworkGraph();
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(1);
+		}
+		
+		myGraphEvolution = logEventBuilder(openLogFile());
+		
+		layout = springLayoutInit(myGraphEvolution);
+		
+		/// create the event player
+		eventthread = new EventPlayingThread(myGraphEvolution);
+		
+		vv = visualizationViewerInit(layout,DEFWIDTH,DEFHEIGHT);
+		
+		JPanel graphsPanel = new JPanel();
+		
+		graphsPanel.add(vv);
+		
 		getContentPane().add(graphsPanel,BorderLayout.CENTER);
-		getContentPane().add(south, BorderLayout.SOUTH);
-		getContentPane().add(west,BorderLayout.WEST);
-		//[end] Panel Layout
+		getContentPane().add(initializeSouthPanel(), BorderLayout.SOUTH);
+		getContentPane().add(initializeWestPanel(),BorderLayout.WEST);
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingComplete();
+		}
 	}
 	
 	@Override
 	public void start() {
 		validate();
-		//TODO : perhaps place the log reader here.
 
 		vv.repaint();
 		///----------run the spring layout algorithm with the full hidden graph for a bit -------
-		
 	}
-	
-	public void LOG(String message) {
-		System.out.println(message);
-	}
-	
 	//[end] Initialization
 	
 	//[start] Structural Graph Events
@@ -593,174 +648,19 @@ public class P2PApplet extends JApplet {
 	 */
 	public static void main(String[] args) {
 
-		P2PApplet myapp = new P2PApplet();
-		LittleGUI mygui = myapp.new LittleGUI(myapp);
-
-		mygui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		//mygui.validate();
-		//mygui.setBounds(200,200,500,200);
-		mygui.pack();
-		mygui.setVisible(true);
-		//mygui.log.append("\nho ho ho");
+		@SuppressWarnings("unused")
+		P2PApplet myapp = new P2PApplet(false); 
 	}
 	//[end] Main
 	
 	//[start] Event Playing Thread
-	
-	//[start] PlayState Enumeration
-	/**
-	 * 
-	 */
-	private enum PlayState {
-		FASTREVERSE("Fast Reverse"), 
-		REVERSE("Reverse"), 
-		PAUSE("Pause"), 
-		FORWARD("Forward"), 
-		FASTFORWARD("Fast Forward");
-		
-		/**
-		 * 
-		 * @param str
-		 */
-		private PlayState(String str) {
-			this.str = str;
-		}
-		private final String str; // The String representation of the enumerated state.
-		
-		/**
-		 * Returns the string value of the given state.
-		 * @return A <code>String</code> representation of the enumerated state.
-		 */
-		public String toString() {
-			return str;
-		}
-	}
-	
-	//[end] PlayState Enumeration
-
-	//[start] Time Counter for Scheduling
-	private class TimeCounter implements ActionListener {
-		
-		private long lowerBound;
-		private long upperBound; 
-		
-		private long time;
-		private long increment;
-		
-		/** 
-		 *<p>Default Constructor</p>
-		 *<ul>
-		 *<li>Sets initial time as <code>0</code></li>
-		 *<li>Sets increment as <code>1</code></li>
-		 *<li>Sets lower bound as <code>0</code></li>
-		 *<li>Sets upper bound as <code>100</code></li>
-		 *</ul>
-		 */
-		public TimeCounter() {
-			this(1);
-		}
-		
-		/** 
-		 *<ul>
-		 *<li>Sets initial time as <code>0</code></li>
-		 *<li>Sets increment as passed increment value</li>
-		 **<li>Sets lower bound as <code>0</code></li>
-		 *<li>Sets upper bound as <code>100</code></li>
-		 *</ul>
-		 *@param increment The value to increment the time as for each call of run.
-		 */
-		public TimeCounter(long increment) {
-			this(increment, 0);
-		}
-		
-		/**
-		 *<ul>
-		 *<li>Sets initial time as passed start time</li>
-		 *<li>Sets increment as passed increment value</li>
-		 **<li>Sets lower bound as <code>0</code></li>
-		 *<li>Sets upper bound as <code>100</code></li>
-		 *</ul>
-		 * @param increment The value to increment the time as for each call of run.
-		 * @param startTime The initial value of the counter.
-		 */
-		public TimeCounter(long increment, long startTime) {
-			this(increment,startTime,0,100);
-		}
-		
-		/**
-		 *<ul>
-		 *<li>Sets initial time as passed start time</li>
-		 *<li>Sets increment as passed increment value</li>
-		 **<li>Sets lower bound as passed lower bound</li>
-		 *<li>Sets upper bound as passed upper bound</li>
-		 *</ul>
-		 * @param increment The value to increment the time as for each call of run.
-		 * @param startTime The initial value of the counter.
-		 * @param lowerBound The lower bound on the Counter.
-		 * @param upperBound The upper bound on the Counter.
-		 */
-		public TimeCounter(long increment, long startTime, long lowerBound, long upperBound) {
-			this.increment = increment;
-			this.time = startTime;
-			this.lowerBound = lowerBound;
-			this.upperBound = upperBound;
-		}
-		
-		public long getTime() {
-			return time;
-		}
-		
-		public synchronized void setTime(long time) {
-			this.time = time;
-		}
-		
-		public long getIncrement() {
-			return increment;
-		}
-		
-		public long getLowerBound() {
-			return lowerBound;
-		}
-		
-		public long getUpperBound() {
-			return upperBound;
-		}
-		
-		public void setIncrement(long increment) {
-			this.increment = increment;
-		}
-		
-		public void setLowerBound(long bound) {
-			lowerBound = bound;
-		}
-		public void setUpperBound(long bound) {
-			upperBound = bound;
-		}
-		
-		public void doIncrement() {
-			setTime(time + increment);
-			if(time < lowerBound) {
-				time = lowerBound;
-			}
-			else if(time > upperBound) {
-				time = upperBound;
-			}
-		}
-
-		@Override
-		public void actionPerformed(ActionEvent ae) {
-			doIncrement();
-		}
-	}
-	//[end] Time Counter for Scheduling
-	
 	/**
 	 * an internal class extending thread, that can play the sequence of events from the log file in real time
 	 * or fast forward.
 	 * @author alan
 	 *
 	 */
-	private class EventPlayingThread extends Thread {
+	public class EventPlayingThread extends Thread {
 		
 		private Timer schedule;
 		private TimeCounter timeCounter;
@@ -1312,6 +1212,7 @@ public class P2PApplet extends JApplet {
 	class SliderListener implements ChangeListener, MouseListener {
 
 		PlayState prevState = PlayState.PAUSE;
+		
 		@Override
 		public void stateChanged(ChangeEvent ce) {
 			
