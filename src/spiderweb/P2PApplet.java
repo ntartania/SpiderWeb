@@ -32,7 +32,7 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JRootPane;
 import javax.swing.JSlider;
-import javax.swing.Timer;
+import javax.swing.JTabbedPane;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -306,13 +306,12 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		rp.putClientProperty("defeatSystemEventQueueCheck", Boolean.TRUE);
 
 		getContentPane().setLayout(new BorderLayout());
-		//getContentPane().setBackground(java.awt.Color.lightGray);
 		getContentPane().setFont(new Font("Serif", Font.PLAIN, 12));
 		//try set the size
 		getContentPane().setBounds(0, 0, width, height);
 
 		// the default mouse makes the mouse usable as a picking tool (pick, drag vertices & edges) or as a transforming tool (pan, zoom)
-		DefaultModalGraphMouse<P2PVertex,P2PConnection> gm =new DefaultModalGraphMouse<P2PVertex,P2PConnection>(); 
+		DefaultModalGraphMouse<P2PVertex,P2PConnection> gm = new DefaultModalGraphMouse<P2PVertex,P2PConnection>(); 
 		viewer.setGraphMouse(gm);
 
 		//set graph rendering parameters & functions
@@ -563,8 +562,13 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		vv = visualizationViewerInit(layout,DEFWIDTH,DEFHEIGHT);
 		
 		JPanel graphsPanel = new JPanel();
-		
-		graphsPanel.add(vv);
+		graphsPanel.setBackground(Color.GRAY);
+		JTabbedPane tabsPane = new JTabbedPane(JTabbedPane.TOP);
+		tabsPane.addTab("Collapsed Peers",vv);
+		JPanel test = new JPanel();
+		test.setBackground(Color.PINK);
+		tabsPane.addTab("Nothing Yet", test);
+		graphsPanel.add(tabsPane);
 		
 		getContentPane().add(graphsPanel,BorderLayout.CENTER);
 		getContentPane().add(initializeSouthPanel(), BorderLayout.SOUTH);
