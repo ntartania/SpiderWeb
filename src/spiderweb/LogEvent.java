@@ -81,7 +81,7 @@ public class LogEvent implements Comparable<LogEvent>{
 	
 	/**events that modify the graph*/ 
 	public boolean isStructural(){
-		return (isConstructing()||type.equals("offline")||type.equals("disconnect"));
+		return (isConstructing()||type.equals("offline")||type.equals("disconnect")||type.equals("depublish"));
 	}
 	/**
 	 * get one of the parameters of the event

@@ -253,7 +253,7 @@ public class EventPlayer extends Thread {
 	 * @param q
 	 */
 	public void doQueryHit(int peerNumber, int documentNumber) {
-		hiddenGraph.getDocument(peerNumber, documentNumber).setQueryHit(true);
+		hiddenGraph.getPeerDocument(peerNumber, documentNumber).setQueryHit(true);
 	}
 	
 	/**
@@ -262,7 +262,7 @@ public class EventPlayer extends Thread {
 	 * @param q
 	 */
 	public void undoQueryHit(int peerNumber, int documentNumber) {
-		hiddenGraph.getDocument(peerNumber, documentNumber).setQueryHit(false);
+		hiddenGraph.getPeerDocument(peerNumber, documentNumber).setQueryHit(false);
 	}
 	//[end]
 

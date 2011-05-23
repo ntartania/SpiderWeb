@@ -1,6 +1,9 @@
 package spiderweb;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -16,6 +19,20 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
 	
 	int edgecounter= 0;
 	
+	/**
+	 * Copy Constructor.
+	 * @param copy the P2PNetworkGraph to copy.
+	 */
+	public P2PNetworkGraph(P2PNetworkGraph copy) {
+		this.edgecounter = copy.edgecounter;
+		
+		//Collections.copy(edges, copy.edges);
+	}
+	
+	public P2PNetworkGraph() {
+		super();
+	}
+	
 	 /** adding a peer in the network*/
     public void addPeer(int peernumber){
     	P2PVertex v1 = new PeerVertex(peernumber);
@@ -25,41 +42,65 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
     public void removePeer(int peernum){
     	P2PVertex peer = new PeerVertex(peernum);
     	Collection<P2PConnection> edgeset = getIncidentEdges(peer);
-    	Set<P2PVertex> docsToRemove = new TreeSet<P2PVertex>();
+    	Set<PeerDocumentVertex> docsToRemove = new TreeSet<PeerDocumentVertex>();
+    	//TODO use an iterator?
+    	//TODO use removeDocument
     	for (P2PConnection e: edgeset){
     		P2PVertex node = getOpposite(peer, e); //node is what the edge connects the peer to  
-    		if (node instanceof DocumentVertex)//if that node is a document
-    			docsToRemove.add(node);
+    		if (node instanceof PeerDocumentVertex)//if that node is a document
+    			docsToRemove.add((PeerDocumentVertex)node);
     	}
     			
-    	for (P2PVertex n :docsToRemove){
-    		removeVertex(n);
+    	for (PeerDocumentVertex n :docsToRemove){
+    		removeDocument(n.getDocumentNumber(),n.getPublisherNumber());
     	}
     	removeVertex(peer);
     }
     
     
-    
-    /** adding a document connected to a peer*/
     public void addDocument(int docnumber, int peer){
     	addDocument(docnumber, peer, new Integer(++edgecounter));
+    	addPeerDocument(docnumber,peer,new Integer(++edgecounter),new Integer(++edgecounter));
+    }
+    
+    public void addPeerDocument(int docnumber, int peer, Integer peerEdgeKey, Integer docEdgeKey) {
+    	P2PVertex pDocV = new PeerDocumentVertex(peer, docnumber);
+    	addVertex(pDocV);
+    	
+    	P2PVertex vpeer = new PeerVertex(peer);
+    	P2PVertex vdoc = new DocumentVertex(docnumber);
+		addEdge(new P2PConnection(P2PConnection.P2PDOC,peerEdgeKey), pDocV, vpeer);
+		addEdge(new P2PConnection(P2PConnection.DOC2PDOC,docEdgeKey), pDocV, vdoc);
     }
     
     public void addDocument(int docnumber, int peer, Integer edgeKey) {
-    	P2PVertex vdoc = new DocumentVertex(peer, docnumber);
+    	P2PVertex vdoc = new DocumentVertex(docnumber);
 		addVertex(vdoc);
 		//create a vertex that we can compare with the ones in the graph to find the peer vertex
 		P2PVertex vpeer = new PeerVertex(peer);
 		addEdge(new P2PConnection(P2PConnection.P2DOC,edgeKey), vdoc, vpeer);
     }
     
+    
     public void removeDocument(int docnumber, int peer) {
-    	P2PVertex doc = getVertexInGraph(new DocumentVertex(peer, docnumber));
+    	P2PVertex peerDoc = getVertexInGraph(new PeerDocumentVertex(peer, docnumber));
     	P2PVertex publisher = getVertexInGraph(new PeerVertex(peer));
-    	P2PConnection edge = findEdge(publisher,doc);
+    	P2PVertex document = getVertexInGraph(new DocumentVertex(docnumber));
+    	P2PConnection peerToPeerDocEdge = findEdge(publisher,peerDoc);
+    	P2PConnection peerToDocEdge = findEdge(publisher, document);
+    	P2PConnection docToPeerDocEdge = findEdge(document,peerDoc);
     	
-    	super.removeEdge(edge);
-    	removeVertex(doc);
+    	
+    	removeEdge(peerToDocEdge);
+    	removeEdge(peerToPeerDocEdge);
+    	removeEdge(docToPeerDocEdge);
+    	removeVertex(peerDoc);
+    	if(document == null) {
+    		System.out.println(peer+", "+docnumber+"\n....................");
+    	}
+    	if(getIncidentEdges(document).size() == 0) {
+    		removeVertex(document);
+    	}
     }
     
     /**
@@ -107,8 +148,12 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
     	return (PeerVertex)getVertexInGraph(new PeerVertex(peerNumber));
     }
 	
-	public DocumentVertex getDocument(int publisherNumber, int documentNumber) {
-		return (DocumentVertex)getVertexInGraph(new DocumentVertex(publisherNumber,documentNumber));
+	public DocumentVertex getDocument(int documentNumber) {
+		return (DocumentVertex)getVertexInGraph(new DocumentVertex(documentNumber));
+	}
+	
+	public PeerDocumentVertex getPeerDocument(int publisherNumber, int documentNumber) {
+		return (PeerDocumentVertex)getVertexInGraph(new PeerDocumentVertex(publisherNumber,documentNumber));
 	}
 	
 	/**
@@ -120,14 +165,35 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
 	public P2PConnection findPeerConnection(int peerFrom, int peerTo){
 		return findEdge(new PeerVertex(peerFrom), new PeerVertex(peerTo));
 	}
+	
 	/**
 	 * Returns the edge that connects the vertex which the peer number peerFrom represents to the vertex which document number docnumber represents.
 	 * @param peerFrom	Peer that the edge emerges from (vertex 1)
-	 * @param peerTo	Peer that the edge terminates at (vertex 2)
+	 * @param docnumber	Document that the edge terminates at (vertex 2)
 	 * @return			The edge that connects the two peers.
 	 */
-	public P2PConnection findDocConnection(int peer, int docnumber){
-		return findEdge(new PeerVertex(peer), new DocumentVertex(peer, docnumber));
+	public P2PConnection findPeerToDocConnection(int peer, int docnumber){
+		return findEdge(new PeerVertex(peer), new DocumentVertex(docnumber));
+	}
+	
+	/**
+	 * Returns the edge that connects the vertex which the peer number peerFrom represents to the vertex which document number docnumber represents.
+	 * @param peerFrom	Peer that the edge emerges from (vertex 1)
+	 * @param docnumber	Document that the edge terminates at (vertex 2)
+	 * @return			The edge that connects the two peers.
+	 */
+	public P2PConnection findPeerToPeerDocConnection(int peer, int docnumber){
+		return findEdge(new PeerVertex(peer), new PeerDocumentVertex(peer, docnumber));
+	}
+	
+	/**
+	 * Returns the edge that connects the vertex which the peer number peerFrom represents to the vertex which document number docnumber represents.
+	 * @param peerFrom	Peer that the edge emerges from (vertex 1)
+	 * @param docnumber	Document that the edge terminates at (vertex 2)
+	 * @return			The edge that connects the two peers.
+	 */
+	public P2PConnection findDocToPeerDocConnection(int peer, int docnumber){
+		return findEdge(new DocumentVertex(docnumber), new PeerDocumentVertex(peer, docnumber));
 	}
 
 	//override these methods so the underlying collection is not unmodifiable
@@ -171,14 +237,16 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
 		if(forward) {
 			if (gev.getType().equals("online")){
 				eventGraph.addPeer(gev.getParam(1));
-			} else if (gev.getType().equals("offline")){
+			} else if (gev.getType().equals("offline")){//TODO restore documents after disconnecting
 				eventGraph.removePeer(gev.getParam(1));
 			} else if(gev.getType().equals("connect")){
 				eventGraph.connectPeers(gev.getParam(1), gev.getParam(2), referenceGraph.findPeerConnection(gev.getParam(1), gev.getParam(2)).getKey());
 			} else if(gev.getType().equals("disconnect")){
 				eventGraph.disconnectPeers(gev.getParam(1), gev.getParam(2));
 			} else if(gev.getType().equals("publish")){
-				eventGraph.addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
+				eventGraph.addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
+				eventGraph.addPeerDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey(),
+																				 referenceGraph.findDocToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
 			} else if(gev.getType().equals("depublish")){
 				eventGraph.removeDocument(gev.getParam(2), gev.getParam(1));
 			}
@@ -194,8 +262,24 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
 			} else if(gev.getType().equals("publish")){
 				eventGraph.removeDocument(gev.getParam(2), gev.getParam(1));
 			} else if(gev.getType().equals("depublish")){
-				eventGraph.addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
+				eventGraph.addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
+				eventGraph.addPeerDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey(),
+																				 referenceGraph.findDocToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
 			}
 		}
 	}
+	/*
+	@Override
+	public P2PNetworkGraph clone() {
+		try {
+			P2PNetworkGraph cloned = (P2PNetworkGraph)super.clone();
+			cloned.edgecounter = this.edgecounter;
+			return cloned;
+		} 
+		catch(CloneNotSupportedException e) {
+			System.out.println(e);
+			return null;
+		}
+	}
+	*/
 }

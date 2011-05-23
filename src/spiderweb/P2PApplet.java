@@ -14,13 +14,16 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -46,8 +49,12 @@ import edu.uci.ics.jung.algorithms.layout.StaticLayout;
 import edu.uci.ics.jung.algorithms.layout.util.Relaxer;
 import edu.uci.ics.jung.algorithms.layout.util.VisRunner;
 import edu.uci.ics.jung.algorithms.util.IterativeContext;
+import edu.uci.ics.jung.graph.Graph;
 import edu.uci.ics.jung.visualization.VisualizationViewer;
+import edu.uci.ics.jung.visualization.VisualizationViewer.GraphMouse;
 import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
+import edu.uci.ics.jung.visualization.decorators.AbstractEdgeShapeTransformer;
+import edu.uci.ics.jung.visualization.decorators.EdgeShape;
 import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
 import edu.uci.ics.jung.visualization.renderers.Renderer;
 //[end] Imports
@@ -86,9 +93,10 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	//private String logfilename=null;
 	private File mylogfile =null;
 	
-	private P2PNetworkGraph visibleGraph = null;
-
-	private VisualizationViewer<P2PVertex,P2PConnection> vv = null;
+	private VisualizationViewer<P2PVertex,P2PConnection> fullViewViewer = null;
+	private VisualizationViewer<P2PVertex,P2PConnection> collapsedDocumentViewViewer = null;
+	private VisualizationViewer<P2PVertex,P2PConnection> collapsedPeerViewViewer = null;
+	private VisualizationViewer<P2PVertex,P2PConnection> collapsedPeerAndDocumentViewViewer = null;
 
 	private AbstractLayout<P2PVertex,P2PConnection> layout = null;
 	
@@ -97,12 +105,14 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	//a hidden graph that contains all the nodes that will ever be added... 
 	//in order to calculate the positions of all the nodes
 	private P2PNetworkGraph hiddenGraph; 
+	private P2PNetworkGraph visibleGraph = null;
 	
 	private List<LoadingListener> loadingListeners;
 	
 	//[end] Private Variables
 	
 	//[start] Protected Variables
+	protected JTabbedPane tabsPane;
 	protected JButton relaxerButton;
 	protected JButton fastForwardButton;
 	protected JButton forwardButton;
@@ -158,19 +168,18 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	 * Helper Method for setting up the spring layout.
 	 * @return The initialized spring layout.
 	 */
-	private SpringLayout<P2PVertex,P2PConnection> springLayoutInit(List<LogEvent> graphEvents) {
+	private SpringLayout<P2PVertex,P2PConnection> springLayoutBuilder(List<LogEvent> graphEvents, int width, int height, P2PNetworkGraph graph) {
 		final int numSteps = 100;
 		for(LoadingListener l : loadingListeners) {
 			l.loadingChanged(numSteps, "Spring Layout");
 		}
 		SpringLayout<P2PVertex,P2PConnection> sp_layout=null;
-		sp_layout = new SpringLayout<P2PVertex,P2PConnection>(hiddenGraph, new P2PNetEdgeLengthFunction()); // here is my length calculation
-		//do it with the F-R  layout
-		//sp_layout = new FRLayout<P2PVertex,Number>(hiddenGraph); // here is my length calculation
-		sp_layout.setSize(new Dimension(DEFWIDTH,DEFHEIGHT));
+		sp_layout = new SpringLayout<P2PVertex,P2PConnection>(graph, new P2PNetEdgeLengthFunction()); // here is my length calculation
+		
+		sp_layout.setSize(new Dimension(width,height));
 		sp_layout.setForceMultiplier(0.6); //testing this value
-		//((SpringLayout<Number,Number>)layout).setRepulsionRange(50);
-		sp_layout.setInitializer(new P2PVertexPlacer(sp_layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
+
+		sp_layout.setInitializer(new P2PVertexPlacer(sp_layout, new Dimension(width,height)));
 		
 		sp_layout.initialize();
 		
@@ -280,13 +289,27 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 						break; //if this Event's time is greater than gev, the rest should be too, then there is no point continuing
 					}
 				}
+				if(gev.getType().equals("offline")) {
+					P2PVertex peerGoingOffline = new PeerVertex(gev.getParam(1));
+					for(P2PConnection edge : hiddenGraph.getIncidentEdges(peerGoingOffline)) {
+						P2PVertex opposite = hiddenGraph.getOpposite(peerGoingOffline, edge);
+						if(opposite instanceof PeerDocumentVertex) 
+						{
+							logEvents.addLast(new LogEvent(gev.getTime(),"depublish",gev.getParam(1),((PeerDocumentVertex) opposite).getDocumentNumber()));
+						}
+					}
+				}
 				logEvents.addLast(gev);
 				for(LoadingListener l : loadingListeners) {
 					l.loadingProgress(lineCount);
 				}
 				
 			}//end while
-			logEvents.add(new LogEvent((logEvents.getLast().getTime())+":end:0:0")); //add an end log to know to stop the playback of the graph
+			for(LogEvent leftOver : colouringEvents) {
+				logEvents.add(leftOver); //if any colouring events are left over add them into the list
+			}
+			//System.out.println(logEvents.getLast());
+			logEvents.add(new LogEvent((logEvents.getLast().getTime()+100)+":end:0:0")); //add an end log to know to stop the playback of the graph 100 ms after 
 		} catch(IOException e) {
 			e.printStackTrace();
 		}
@@ -299,19 +322,14 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	 * 
 	 * @return The Initialized Visualization Viewer
 	 */
-	private VisualizationViewer<P2PVertex,P2PConnection> visualizationViewerInit(final Layout<P2PVertex,P2PConnection>  layout, int width, int height) {
+	private VisualizationViewer<P2PVertex,P2PConnection> visualizationViewerBuilder(final Layout<P2PVertex, P2PConnection> layout, int width, int height, GraphMouse gm) {
 		VisualizationViewer<P2PVertex,P2PConnection> viewer = new VisualizationViewer<P2PVertex,P2PConnection>(layout, new Dimension(width,height));
-
 		JRootPane rp = this.getRootPane();
 		rp.putClientProperty("defeatSystemEventQueueCheck", Boolean.TRUE);
 
-		getContentPane().setLayout(new BorderLayout());
-		getContentPane().setFont(new Font("Serif", Font.PLAIN, 12));
-		//try set the size
-		getContentPane().setBounds(0, 0, width, height);
+		
 
 		// the default mouse makes the mouse usable as a picking tool (pick, drag vertices & edges) or as a transforming tool (pan, zoom)
-		DefaultModalGraphMouse<P2PVertex,P2PConnection> gm = new DefaultModalGraphMouse<P2PVertex,P2PConnection>(); 
 		viewer.setGraphMouse(gm);
 
 		//set graph rendering parameters & functions
@@ -319,19 +337,11 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		//the vertex labeler will use the tostring method which is fine, the P2PVertex class has an appropriate toString() method implementation
 		viewer.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<P2PVertex>());
 
-		//add my own vertex shape & color fill transformers
-		viewer.getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer());
-		// note :the color depends on being picked.
-		
-		//make the p2p edges different from the peer to doc edges 
-		viewer.getRenderContext().setEdgeStrokeTransformer(new P2PEdgeStrokeTransformer()); //stroke width
-		viewer.getRenderContext().setEdgeShapeTransformer(new P2PEdgeShapeTransformer()); //stroke width
-		
-		
 		// P2PVertex objects also now have multiple states : we can represent which nodes are documents, picked, querying, queried, etc.
 		viewer.getRenderContext().setVertexFillPaintTransformer(new P2PVertexFillPaintTransformer(viewer.getPickedVertexState()));
 		viewer.getRenderContext().setVertexStrokeTransformer(new P2PVertexStrokeTransformer());
 		viewer.setForeground(Color.white);
+		viewer.setBounds(0,0,width,height);
 		
 		viewer.addComponentListener(new ComponentAdapter() {
 			
@@ -341,12 +351,25 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 			@Override
 			public void componentResized(ComponentEvent arg0) {
 				super.componentResized(arg0);
-				//System.err.println("resized");
-				layout.setSize(arg0.getComponent().getSize());
+				//viewer.getGraphLayout().setSize(arg0.getComponent().getSize());
 			}
 		});
 		
 		return viewer;
+	}
+	
+	private void initSpecialTransformers(VisualizationViewer<P2PVertex,P2PConnection> viewer,
+			VertexShapeType peerShape, VertexShapeType documentShape, VertexShapeType peerDocumentShape,
+			EdgeShapeType P2PEdgeShape, EdgeShapeType P2DocEdgeShape, EdgeShapeType Doc2PDocEdgeShape, EdgeShapeType P2PDocEdgeShape) {
+		
+		//add my own vertex shape & color fill transformers
+		viewer.getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer(peerShape,documentShape, peerDocumentShape));
+		// note :the color depends on being picked.
+		
+		//make the p2p edges different from the peer to doc edges 
+		viewer.getRenderContext().setEdgeStrokeTransformer(new P2PEdgeStrokeTransformer()); //stroke width
+		viewer.getRenderContext().setEdgeShapeTransformer(new P2PEdgeShapeTransformer(P2PEdgeShape,P2DocEdgeShape,Doc2PDocEdgeShape,P2PDocEdgeShape)); //stroke width
+		
 	}
 	//[end] Create the visualization viewer
 	
@@ -459,7 +482,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	 * Helper Method for initializing the Buttons and drop down menu for the West Panel.
 	 * @return The west Panel, laid out properly, to be displayed.
 	 */
-	private JPanel initializeWestPanel() {
+	private JPanel initializeWestPanel(DefaultModalGraphMouse<P2PVertex,P2PConnection> gm) {
 		for(LoadingListener l : loadingListeners) {
 			l.loadingChanged(8, "West Panel");
 		}
@@ -506,7 +529,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		//add little combo box to choose between the mouse picking and the mouse transforming the layout
 		p.setBorder(BorderFactory.createTitledBorder("Mouse Mode"));
 		p.setBackground(Color.GRAY);
-		p.add(((DefaultModalGraphMouse<P2PVertex,P2PConnection>)vv.getGraphMouse()).getModeComboBox());
+		p.add(gm.getModeComboBox());
 		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(5);
@@ -557,22 +580,80 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		
 		myGraphEvolution = logEventBuilder(openLogFile());
 		
-		layout = springLayoutInit(myGraphEvolution);
+		layout = springLayoutBuilder(myGraphEvolution,DEFWIDTH,DEFHEIGHT,hiddenGraph);
 		
-		vv = visualizationViewerInit(layout,DEFWIDTH,DEFHEIGHT);
+		DefaultModalGraphMouse<P2PVertex,P2PConnection> gm = new DefaultModalGraphMouse<P2PVertex,P2PConnection>(); 
+		
+		fullViewViewer = visualizationViewerBuilder(layout, DEFWIDTH,DEFHEIGHT, gm);
+		//add my own vertex shape & color fill transformers
+		initSpecialTransformers(fullViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
+								EdgeShapeType.QUAD_CURVE,
+								EdgeShapeType.CUBIC_CURVE,
+								EdgeShapeType.LINE,
+								EdgeShapeType.LINE);
+		
+		collapsedDocumentViewViewer = visualizationViewerBuilder(fullViewViewer.getGraphLayout(),DEFWIDTH,DEFHEIGHT, fullViewViewer.getGraphMouse());
+		initSpecialTransformers(collapsedDocumentViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.ELLIPSE,
+								EdgeShapeType.QUAD_CURVE,
+								EdgeShapeType.CUBIC_CURVE,
+								EdgeShapeType.LINE,
+								EdgeShapeType.LINE);
+		
+		collapsedPeerViewViewer = visualizationViewerBuilder(fullViewViewer.getGraphLayout(),DEFWIDTH,DEFHEIGHT, fullViewViewer.getGraphMouse());
+		initSpecialTransformers(collapsedPeerViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
+								EdgeShapeType.QUAD_CURVE,
+								EdgeShapeType.CUBIC_CURVE,
+								EdgeShapeType.LINE,
+								EdgeShapeType.LINE);
+		collapsedPeerAndDocumentViewViewer = visualizationViewerBuilder(fullViewViewer.getGraphLayout(),DEFWIDTH,DEFHEIGHT, fullViewViewer.getGraphMouse());
+		initSpecialTransformers(collapsedPeerAndDocumentViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
+								EdgeShapeType.QUAD_CURVE,
+								EdgeShapeType.CUBIC_CURVE,
+								EdgeShapeType.LINE,
+								EdgeShapeType.LINE);
+		
+		tabsPane = new JTabbedPane(JTabbedPane.TOP);
+		
+		/*
+		JPanel test1 = new JPanel();
+		test1.setBackground(Color.GREEN);
+		JPanel test2 = new JPanel();
+		test2.setBackground(Color.BLUE);
+		JPanel test3 = new JPanel();
+		test3.setBackground(Color.RED);
+		*/
+		
+		tabsPane.addTab("Full View",fullViewViewer);
+		tabsPane.addTab("Collapsed Document View", collapsedDocumentViewViewer);
+		tabsPane.addTab("Collapsed Peer View", collapsedPeerViewViewer);
+		tabsPane.addTab("Collapsed Peer and Document View", collapsedPeerAndDocumentViewViewer);
+		
+		
+		
+		tabsPane.setEnabled(false);
+		
+		//JPanel allViews = new JPanel(new GridLayout(2,2));
+		//allViews.add(fullViewViewer);
+		//allViews.add(test1);
+		//allViews.add(test2);
+		//allViews.add(test3);
+		//((Graphics2D)allViews.getGraphics()).scale(0.5, 0.5);
+		//allViews.setSize(DEFWIDTH, DEFHEIGHT);
+		//allViews.setMaximumSize(new Dimension(DEFWIDTH,DEFHEIGHT));
+		
+		//tabsPane.addTab("All Views",allViews);
 		
 		JPanel graphsPanel = new JPanel();
 		graphsPanel.setBackground(Color.GRAY);
-		JTabbedPane tabsPane = new JTabbedPane(JTabbedPane.TOP);
-		tabsPane.addTab("Collapsed Peers",vv);
-		JPanel test = new JPanel();
-		test.setBackground(Color.PINK);
-		tabsPane.addTab("Nothing Yet", test);
 		graphsPanel.add(tabsPane);
 		
+		getContentPane().setLayout(new BorderLayout());
+		getContentPane().setFont(new Font("Serif", Font.PLAIN, 12));
+		//try set the size
+		getContentPane().setBounds(0, 0, DEFWIDTH, DEFHEIGHT);
 		getContentPane().add(graphsPanel,BorderLayout.CENTER);
 		getContentPane().add(initializeSouthPanel(), BorderLayout.SOUTH);
-		getContentPane().add(initializeWestPanel(),BorderLayout.WEST);
+		getContentPane().add(initializeWestPanel(gm),BorderLayout.WEST);
 		
 		/// create the event player
 		eventThread = new EventPlayer(myGraphEvolution,hiddenGraph,visibleGraph, playbackSlider);
@@ -589,7 +670,10 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	public void start() {
 		validate();
 
-		vv.repaint();
+		fullViewViewer.repaint();
+		collapsedDocumentViewViewer.repaint();
+		collapsedPeerViewViewer.repaint();
+		collapsedPeerAndDocumentViewViewer.repaint();
 		///----------run the spring layout algorithm with the full hidden graph for a bit -------
 	}
 	//[end] overridden start method
@@ -604,8 +688,8 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	 */
 	public static void main(String[] args) {
 
-		@SuppressWarnings("unused")
 		P2PApplet myapp = new P2PApplet(false); 
+		System.out.println(myapp);
 	}
 	//[end] Main
 
@@ -668,7 +752,10 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	
 	@Override
 	public void doRepaint() {
-		vv.repaint();
+		fullViewViewer.repaint();
+		collapsedDocumentViewViewer.repaint();
+		collapsedPeerViewViewer.repaint();
+		collapsedPeerAndDocumentViewViewer.repaint();
 	}
 	
 	//[end] EventPlayer Handlers
@@ -704,13 +791,17 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 					relaxer.stop();
 					relaxerButton.setText("Layout Complete");
 					relaxerButton.setEnabled(false);
-					//System.out.println("freezing layout !");
+					
 					layout = new StaticLayout<P2PVertex,P2PConnection>(hiddenGraph, layout);
 	
 					//change the layout we're viewing
-					vv.getModel().setGraphLayout(layout);
-					vv.repaint();
+					fullViewViewer.getModel().setGraphLayout(layout);
+					collapsedPeerAndDocumentViewViewer.getModel().setGraphLayout(layout);
+					collapsedPeerViewViewer.getModel().setGraphLayout(layout);
+					collapsedDocumentViewViewer.getModel().setGraphLayout(layout);
+					//fullViewViewer.repaint();
 					//	tie the "include functions" of the viewer to the visible graph
+					
 					
 					started = true;
 	
@@ -723,6 +814,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 					forwardButton.setEnabled(false);
 					fastForwardButton.setEnabled(true);
 					playbackSlider.setEnabled(true);
+					tabsPane.setEnabled(true);
 	
 					//System.out.println("starting activity now !");
 	
@@ -730,9 +822,18 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 					e.printStackTrace();
 				} //wait 5 seconds
 				//these predicates say : if the considered node /edge (which will be evaluated in the context of the hiddengraph) is found in the visible graph, then show it !
-				vv.getRenderContext().setVertexIncludePredicate(new VertexIsInTheOtherGraphPredicate(visibleGraph));
-				vv.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
-	
+				fullViewViewer.getRenderContext().setVertexIncludePredicate(new VertexIsInTheOtherGraphPredicate(visibleGraph));
+				fullViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
+				
+				collapsedPeerAndDocumentViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(visibleGraph,PeerDocumentVertex.class));
+				collapsedPeerAndDocumentViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
+				
+				collapsedPeerViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(visibleGraph, DocumentVertex.class));
+				collapsedPeerViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
+				
+				collapsedDocumentViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(visibleGraph,PeerVertex.class));
+				collapsedDocumentViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
+				
 				eventThread.start();
 			}		
 		}
