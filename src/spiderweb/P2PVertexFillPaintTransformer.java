@@ -31,24 +31,21 @@ import edu.uci.ics.jung.visualization.picking.PickedInfo;
 		
 		private Color peerColor = DEF_PEER_COLOR;
 		private Color pickedPeerColor = DEF_PICKED_PEER_COLOR;
-		private Color peerAnsweringColor = DEF_PEER_ANSWERING_COLOR;
 		private Color peerQueryColor = DEF_PEER_QUERY_COLOR;
 		private Color peerDocQueryHitColor = DEF_PEERDOC_QUERYHIT_COLOR;
 		private Color peerDocColor = DEF_PEERDOC_COLOR;
-		private Color docColor = DEF_DOC_COLOR;
-		
+		private Color docColor = DEF_DOC_COLOR;		
 		
 		    public P2PVertexFillPaintTransformer(PickedInfo<P2PVertex> pi) 
 		    {
 		    	super(pi, DEF_PEER_COLOR, DEF_PICKED_PEER_COLOR);
 		    }
-		    public P2PVertexFillPaintTransformer(PickedInfo<P2PVertex> pi, Color peerColor, Color pickedPeerColor, Color peerAnsweringColor,
+		    public P2PVertexFillPaintTransformer(PickedInfo<P2PVertex> pi, Color peerColor, Color pickedPeerColor,
 		    		Color peerQueryColor, Color peerDocQueryHitColor, Color peerDocColor, Color docColor) 
 		    {
 		    	super(pi, peerColor, pickedPeerColor);
 		    	this.peerColor = peerColor;
 		    	this.pickedPeerColor = pickedPeerColor;
-		    	this.peerAnsweringColor = peerAnsweringColor;
 		    	this.peerQueryColor = peerQueryColor;
 		    	this.peerDocQueryHitColor = peerDocQueryHitColor;
 		    	this.peerDocColor = peerDocColor;

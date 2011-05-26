@@ -7,6 +7,27 @@ package spiderweb;
  *
  */
 public class LogEvent implements Comparable<LogEvent>{
+	
+	/* (non-javaDoc) Types of Events
+	 * start
+	 * end
+	 * 
+	 * online
+	 * offline
+	 * publish
+	 * depublish
+	 * connect
+	 * disconnect
+	 * 
+	 * query
+	 * unquery
+	 * queryhit
+	 * unqueryhit
+	 * queryedge
+	 * unqueryedge
+	 * queryreachespeer
+	 * unqueryreachespeer
+	 */
 
 	private long time=0;
 	private String type="default"; //publish, join, connect...
@@ -70,8 +91,15 @@ public class LogEvent implements Comparable<LogEvent>{
 	/** indicates whether this event is a "construction" event in the graph (adds an edge or a vertex)*/
 	public boolean isConstructing(){
 		return (type.equals("connect")||type.equals("publish")||type.equals("online"));
-		
 	}
+	/**events that modify the graph*/ 
+	public boolean isStructural(){
+		return (isConstructing()||type.equals("offline")||type.equals("disconnect")||type.equals("depublish")||type.equals("remove"));
+	}
+	public boolean isImportantToPeer() {
+		return (type.equals("connect")||type.equals("publish")||type.equals("disconnect")||type.equals("remove"));
+	}
+	
 	public long getTime(){
 		return time;
 	}
@@ -79,10 +107,7 @@ public class LogEvent implements Comparable<LogEvent>{
 		return type;
 	}
 	
-	/**events that modify the graph*/ 
-	public boolean isStructural(){
-		return (isConstructing()||type.equals("offline")||type.equals("disconnect")||type.equals("depublish"));
-	}
+	
 	/**
 	 * get one of the parameters of the event
 	 * @param which 1 or 2
@@ -93,6 +118,11 @@ public class LogEvent implements Comparable<LogEvent>{
 			return param1;
 		else
 			return param2;
+	}
+	
+	public Object[] toArray() {
+		Object[] array = { (new Long(time)), type, (new Integer(param1)), (new Integer(param2)) };
+		return array;
 	}
 	
 	@Override

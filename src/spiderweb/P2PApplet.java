@@ -1,7 +1,6 @@
 package spiderweb;
 
 //[start] Imports
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -14,28 +13,26 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-
 import javax.swing.BorderFactory;
 import javax.swing.JApplet;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JRootPane;
+import javax.swing.JScrollPane;
 import javax.swing.JSlider;
+import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
+import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -49,12 +46,9 @@ import edu.uci.ics.jung.algorithms.layout.StaticLayout;
 import edu.uci.ics.jung.algorithms.layout.util.Relaxer;
 import edu.uci.ics.jung.algorithms.layout.util.VisRunner;
 import edu.uci.ics.jung.algorithms.util.IterativeContext;
-import edu.uci.ics.jung.graph.Graph;
 import edu.uci.ics.jung.visualization.VisualizationViewer;
 import edu.uci.ics.jung.visualization.VisualizationViewer.GraphMouse;
 import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
-import edu.uci.ics.jung.visualization.decorators.AbstractEdgeShapeTransformer;
-import edu.uci.ics.jung.visualization.decorators.EdgeShape;
 import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
 import edu.uci.ics.jung.visualization.renderers.Renderer;
 //[end] Imports
@@ -112,6 +106,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	//[end] Private Variables
 	
 	//[start] Protected Variables
+	protected JTable logList;
 	protected JTabbedPane tabsPane;
 	protected JButton relaxerButton;
 	protected JButton fastForwardButton;
@@ -120,7 +115,9 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	protected JButton reverseButton;
 	protected JButton fastReverseButton;
 	protected JButton stopButton;
-	
+	protected JButton saveButton;
+	protected JButton loadButton;
+	protected JSlider fastSpeedSlider;
 	protected JSlider playbackSlider;
 
 	protected EventPlayer eventThread;
@@ -163,6 +160,32 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	}
 	//[end] setters for when on the web
 	
+	//[start] Open the log file for reading
+	/**
+	 * Helper Method for opening the Log File.
+	 * @return The Log File for reading.
+	 */
+	private BufferedReader openLogFile() {
+		BufferedReader in;
+		try {
+			if (ontheweb){ // hack : when running on SCE server I can't read the log file without opening it through this URL reader ...
+				URL yahoo = new URL(DEF_LOG_URL);
+				in = new BufferedReader(new InputStreamReader(yahoo.openStream()));
+			} else {
+				if (mylogfile == null) {
+					in = new BufferedReader(new FileReader(DEF_LOG_FILE));
+				} else{
+					in = new BufferedReader(new FileReader(mylogfile));
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+		return in;
+	}
+	//[end] Open the log file for reading
+	
 	//[start] Calculate the Spring Layout
 	/**
 	 * Helper Method for setting up the spring layout.
@@ -196,126 +219,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		return sp_layout;
 	}
 	//[end] Calculate the Spring Layout
-
-	//[start] Open the log file for reading
-	/**
-	 * Helper Method for opening the Log File.
-	 * @return The Log File for reading.
-	 */
-	private BufferedReader openLogFile() {
-		BufferedReader in;
-		try {
-			if (ontheweb){ // hack : when running on SCE server I can't read the log file without opening it through this URL reader ...
-				URL yahoo = new URL(DEF_LOG_URL);
-				in = new BufferedReader(new InputStreamReader(yahoo.openStream()));
-			} else {
-				if (mylogfile == null) {
-					in = new BufferedReader(new FileReader(DEF_LOG_FILE));
-				} else{
-					in = new BufferedReader(new FileReader(mylogfile));
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
-		}
-		return in;
-	}
-	//[end] Open the log file for reading
-	
-	//[start] Build the list of LogEvents
-	/**
-	 * 
-	 * @param logFile The file for which to read from 
-	 * @return
-	 */
-	private LinkedList<LogEvent> logEventBuilder(BufferedReader logFile) {
-		LinkedList<LogEvent> logEvents = new LinkedList<LogEvent>();
-		try {
-			String str;
-			List<LogEvent> colouringEvents = new LinkedList<LogEvent>();
-			List<P2PVertex> queryPeers = new LinkedList<P2PVertex>();
-			
-			int totalLines = Integer.parseInt(logFile.readLine());
-			int lineCount = 0;
-			
-			for(LoadingListener l : loadingListeners) {
-				l.loadingChanged(totalLines, "LogEvents");
-			}
-			
-			logEvents.add(new LogEvent("0:start:0:0")); //a start event to know when to stop playback of a reversing graph
-			while ((str = logFile.readLine()) != null) //reading lines log file
-			{
-				lineCount++;
-				LogEvent gev = new LogEvent(str);
-				
-				if (gev.isConstructing()){
-					P2PNetworkGraph.graphConstructionEvent(gev,hiddenGraph);
-				}
-				
-				if(gev.getType().equals("query") || gev.getType().equals("queryhit"))
-				{
-					colouringEvents.add(LogEvent.createOpposingLogEvent(gev,2000)); // add an opposing event to decolour/debold
-					if(gev.getType().equals("query")) {
-						queryPeers.add(new PeerVertex(gev.getParam(1)));
-					}
-					
-				} 
-				else if(gev.getType().equals("queryreachespeer")) {
-					colouringEvents.add(LogEvent.createOpposingLogEvent(gev,750));
-					P2PVertex queriedPeer = new PeerVertex(gev.getParam(1));
-					for(P2PVertex querySender : queryPeers) {
-						if(hiddenGraph.findEdge(querySender, queriedPeer) != null) {
-							LogEvent ev = new LogEvent(gev.getTime()+1,"queryedge",querySender.getKey(),queriedPeer.getKey());
-							
-							colouringEvents.add(ev);
-							colouringEvents.add(LogEvent.createOpposingLogEvent(ev,750));
-							break;
-						}
-					}
-					
-					queryPeers.add(queriedPeer);
-				}
-				Collections.sort(colouringEvents);
-				
-				
-				for(Iterator<LogEvent> iter = colouringEvents.iterator(); iter.hasNext(); ) {//start at first element (time should increase with each index)
-				
-					LogEvent event = (LogEvent)iter.next();
-					if(event.getTime() < gev.getTime() ) { //add only if the event takes place before the LogEvent that was read this iteration
-						logEvents.addLast(event);
-						iter.remove();
-					} else {
-						break; //if this Event's time is greater than gev, the rest should be too, then there is no point continuing
-					}
-				}
-				if(gev.getType().equals("offline")) {
-					P2PVertex peerGoingOffline = new PeerVertex(gev.getParam(1));
-					for(P2PConnection edge : hiddenGraph.getIncidentEdges(peerGoingOffline)) {
-						P2PVertex opposite = hiddenGraph.getOpposite(peerGoingOffline, edge);
-						if(opposite instanceof PeerDocumentVertex) 
-						{
-							logEvents.addLast(new LogEvent(gev.getTime(),"depublish",gev.getParam(1),((PeerDocumentVertex) opposite).getDocumentNumber()));
-						}
-					}
-				}
-				logEvents.addLast(gev);
-				for(LoadingListener l : loadingListeners) {
-					l.loadingProgress(lineCount);
-				}
-				
-			}//end while
-			for(LogEvent leftOver : colouringEvents) {
-				logEvents.add(leftOver); //if any colouring events are left over add them into the list
-			}
-			//System.out.println(logEvents.getLast());
-			logEvents.add(new LogEvent((logEvents.getLast().getTime()+100)+":end:0:0")); //add an end log to know to stop the playback of the graph 100 ms after 
-		} catch(IOException e) {
-			e.printStackTrace();
-		}
-		return logEvents;
-	}
-	//[end] Build the list of LogEvents
 	
 	//[start] Create the visualization viewer
 	/**
@@ -374,6 +277,55 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	//[end] Create the visualization viewer
 	
 	//[start] Create Components
+	
+	//[start] East Panel
+	private JPanel initializeEastPanel() {
+		for(LoadingListener l : loadingListeners) {
+			l.loadingChanged(myGraphEvolution.size()+2, "East Panel");
+		}
+		
+		Object[][] table = new Object[myGraphEvolution.size()][4];
+		int i=0;
+		for(LogEvent evt : myGraphEvolution) {
+			table[i] = evt.toArray();
+			i++;
+			for(LoadingListener l : loadingListeners) {
+				l.loadingProgress(i);
+			}
+		}
+		Object[] titles = { "Time", "Type", "Param 1", "Param 2" };
+		
+		
+		logList = new JTable(table, titles);
+		
+		logList.setBackground(Color.LIGHT_GRAY);
+		logList.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
+		logList.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+		logList.setEnabled(false);
+		logList.setColumnSelectionAllowed(false);
+		
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(myGraphEvolution.size()+1);
+		}
+		
+		JScrollPane listScroller = new JScrollPane(logList);
+		listScroller.setWheelScrollingEnabled(true);
+		listScroller.setBorder(BorderFactory.createLoweredBevelBorder());
+		listScroller.setSize(logList.getWidth(),logList.getHeight());
+		
+		JPanel eastPanel = new JPanel(new GridLayout(1,1));
+		eastPanel.add(listScroller);
+		eastPanel.setBackground(Color.GRAY);
+		eastPanel.setBorder(BorderFactory.createTitledBorder("Log Events"));
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(myGraphEvolution.size()+2);
+		}
+		
+		return eastPanel;
+	}
+	//[end] EastPanel
 	
 	//[start] South Panel
 	/**
@@ -447,12 +399,11 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		GridBagLayout southLayout = new GridBagLayout();
 		GridBagConstraints southConstraints = new GridBagConstraints();
 		
-		JPanel south = new JPanel();
-		south.setBackground(Color.GRAY);
-		south.setLayout(new GridLayout(2,1));
+		
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.setBackground(Color.GRAY);
 		buttonPanel.setLayout(southLayout);
+		
 		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(8);
@@ -469,7 +420,10 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(9);
 		}
-		
+		JPanel south = new JPanel();
+		south.setBackground(Color.GRAY);
+		south.setLayout(new GridLayout(2,1));
+		south.setBorder(BorderFactory.createTitledBorder("Playback Options"));
 		south.add(buttonPanel);
 		south.add(playbackSlider);
 		
@@ -486,6 +440,16 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		for(LoadingListener l : loadingListeners) {
 			l.loadingChanged(8, "West Panel");
 		}
+		
+		fastSpeedSlider = new JSlider(JSlider.HORIZONTAL,0,100,25);
+		fastSpeedSlider.addChangeListener(new SpeedSliderListener());
+		fastSpeedSlider.setMajorTickSpacing((fastSpeedSlider.getMaximum()-fastSpeedSlider.getMinimum())/4);
+		fastSpeedSlider.setPaintTicks(true);
+		fastSpeedSlider.setPaintLabels(true);
+		fastSpeedSlider.setBackground(Color.GRAY);
+		fastSpeedSlider.setForeground(Color.BLACK);
+		fastSpeedSlider.setBorder(BorderFactory.createTitledBorder("Fast Playback Speed"));
+		fastSpeedSlider.setEnabled(false);
 		
 		//[start] Relaxer creation
 		Relaxer relaxer = new VisRunner((IterativeContext)layout);
@@ -504,6 +468,14 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		stopButton = new JButton("Stop Playback");
 		stopButton.addActionListener(new StopButtonListener());
 		stopButton.setEnabled(false);
+		
+		saveButton = new JButton("Save");
+		saveButton.addActionListener(new SaveButtonListener());
+		saveButton.setEnabled(false);
+		
+		loadButton = new JButton("Load");
+		loadButton.addActionListener(new LoadButtonListener());
+		loadButton.setEnabled(false);
 		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(2);
@@ -553,6 +525,15 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		westLayout.setConstraints(stopButton, westConstraints);
 		west.add(stopButton);
 		
+		westLayout.setConstraints(saveButton, westConstraints);
+		west.add(saveButton);
+		
+		westLayout.setConstraints(loadButton, westConstraints);
+		west.add(loadButton);
+		
+		westLayout.setConstraints(fastSpeedSlider, westConstraints);
+		west.add(fastSpeedSlider);
+		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(8);
 		}
@@ -578,7 +559,13 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 			l.loadingProgress(1);
 		}
 		
-		myGraphEvolution = logEventBuilder(openLogFile());
+		LogEventListBuilder logBuilder = new LogEventListBuilder(hiddenGraph);
+		for(LoadingListener l : loadingListeners) {
+			logBuilder.addLoadingListener(l);
+		}
+		
+		
+		myGraphEvolution = logBuilder.createLinkedList(openLogFile());
 		
 		layout = springLayoutBuilder(myGraphEvolution,DEFWIDTH,DEFHEIGHT,hiddenGraph);
 		
@@ -614,51 +601,45 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		
 		tabsPane = new JTabbedPane(JTabbedPane.TOP);
 		
-		/*
-		JPanel test1 = new JPanel();
-		test1.setBackground(Color.GREEN);
-		JPanel test2 = new JPanel();
-		test2.setBackground(Color.BLUE);
-		JPanel test3 = new JPanel();
-		test3.setBackground(Color.RED);
-		*/
-		
 		tabsPane.addTab("Full View",fullViewViewer);
 		tabsPane.addTab("Collapsed Document View", collapsedDocumentViewViewer);
 		tabsPane.addTab("Collapsed Peer View", collapsedPeerViewViewer);
 		tabsPane.addTab("Collapsed Peer and Document View", collapsedPeerAndDocumentViewViewer);
 		
-		
-		
 		tabsPane.setEnabled(false);
 		
-		//JPanel allViews = new JPanel(new GridLayout(2,2));
-		//allViews.add(fullViewViewer);
-		//allViews.add(test1);
-		//allViews.add(test2);
-		//allViews.add(test3);
-		//((Graphics2D)allViews.getGraphics()).scale(0.5, 0.5);
-		//allViews.setSize(DEFWIDTH, DEFHEIGHT);
-		//allViews.setMaximumSize(new Dimension(DEFWIDTH,DEFHEIGHT));
 		
 		//tabsPane.addTab("All Views",allViews);
 		
-		JPanel graphsPanel = new JPanel();
+		JPanel graphsPanel = new JPanel(new GridLayout(1,1));
 		graphsPanel.setBackground(Color.GRAY);
 		graphsPanel.add(tabsPane);
+				
+		JSplitPane p3 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+		p3.setResizeWeight(0);
+		p3.add(initializeWestPanel(gm));
+		p3.add(graphsPanel);
 		
-		getContentPane().setLayout(new BorderLayout());
+		JSplitPane p2 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+		p2.setResizeWeight(0);
+		p2.add(p3);
+		p2.add(initializeEastPanel());
+		
+		JSplitPane p = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+		p.setResizeWeight(1);
+		p.add(p2);
+		p.add(initializeSouthPanel());
+		
 		getContentPane().setFont(new Font("Serif", Font.PLAIN, 12));
 		//try set the size
 		getContentPane().setBounds(0, 0, DEFWIDTH, DEFHEIGHT);
-		getContentPane().add(graphsPanel,BorderLayout.CENTER);
-		getContentPane().add(initializeSouthPanel(), BorderLayout.SOUTH);
-		getContentPane().add(initializeWestPanel(gm),BorderLayout.WEST);
+		getContentPane().add(p);
 		
 		/// create the event player
 		eventThread = new EventPlayer(myGraphEvolution,hiddenGraph,visibleGraph, playbackSlider);
 		eventThread.addEventPlayerListener(this);
 		
+		setBounds(0, 0, 1024, 768);
 		for(LoadingListener l : loadingListeners) {
 			l.loadingComplete();
 		}
@@ -688,8 +669,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	 */
 	public static void main(String[] args) {
 
-		P2PApplet myapp = new P2PApplet(false); 
-		System.out.println(myapp);
+		P2PApplet myapp = new P2PApplet(false);
 	}
 	//[end] Main
 
@@ -814,9 +794,11 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 					forwardButton.setEnabled(false);
 					fastForwardButton.setEnabled(true);
 					playbackSlider.setEnabled(true);
+					saveButton.setEnabled(true);
+					loadButton.setEnabled(true);
 					tabsPane.setEnabled(true);
+					fastSpeedSlider.setEnabled(true);
 	
-					//System.out.println("starting activity now !");
 	
 				} catch (InterruptedException e) {
 					e.printStackTrace();
@@ -834,7 +816,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 				collapsedDocumentViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(visibleGraph,PeerVertex.class));
 				collapsedDocumentViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
 				
-				eventThread.start();
+				eventThread.run();
 			}		
 		}
 	}
@@ -843,6 +825,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	//[start] Stop Button
 	class StopButtonListener implements ActionListener {
 		
+		@Override
 		public void actionPerformed(ActionEvent ae) {
 			fastReverseButton.setEnabled(false);
 			reverseButton.setEnabled(false);
@@ -854,6 +837,40 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		}
 	}
 	//[end] Stop Button
+	
+	//[start] Save Button
+	class SaveButtonListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent arg0) {
+			pauseButton.doClick();
+			JFileChooser fileNamer = new JFileChooser();
+			fileNamer.setFileFilter(new ExtensionFileFilter(".xml Files", "xml"));
+			int returnVal = fileNamer.showSaveDialog(null);
+
+			if (returnVal == JFileChooser.APPROVE_OPTION) {
+				eventThread.save(fileNamer.getSelectedFile());
+			}
+		}	
+	}
+	//[end] Save Button
+	
+	//[start] Load Button
+	class LoadButtonListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent arg0) {
+			pauseButton.doClick();
+			JFileChooser fileNamer = new JFileChooser();
+			fileNamer.setFileFilter(new ExtensionFileFilter(".xml Files", "xml"));
+			int returnVal = fileNamer.showOpenDialog(null);
+
+			if (returnVal == JFileChooser.APPROVE_OPTION) {
+				//eventThread.save(fileNamer.getSelectedFile());
+			}
+		}	
+	}
+	//[end] Load Button
 	
 	//[start] Fast Reverse Button
 	class FastReverseButtonListener implements ActionListener {
@@ -908,6 +925,17 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	}
 	//[end] Fast Forward Button
 	
+	//[start] Speed Slider
+	class SpeedSliderListener implements ChangeListener {
+
+		@Override
+		public void stateChanged(ChangeEvent arg0) {
+			eventThread.setFastSpeed(((JSlider)arg0.getSource()).getValue());
+		}
+		
+	}
+	//[end] Speed Slider
+	
 	//[start] Playback Slider
 	class SliderListener implements ChangeListener, MouseListener {
 
@@ -915,10 +943,11 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		
 		@Override
 		public void stateChanged(ChangeEvent ce) {
-			
 			JSlider source = (JSlider)ce.getSource();
-			//eventThread.schedule.stop();
 			eventThread.goToTime(source.getValue());
+			logList.clearSelection();
+			logList.addRowSelectionInterval(0, eventThread.getCurrentIndex()-1);
+			logList.scrollRectToVisible(logList.getCellRect(eventThread.getCurrentIndex()-1, 0, true));
 		}
 
 		@Override
@@ -935,29 +964,31 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 
 		@Override
 		public void mousePressed(MouseEvent arg0) {
-			prevState = eventThread.getPlayState();
-			eventThread.pause();
-			
+			if(((JSlider)(arg0.getSource())).isEnabled()){
+				prevState = eventThread.getPlayState();
+				eventThread.pause();
+			}
 		}
 
 		@Override
 		public void mouseReleased(MouseEvent arg0) {
-			if(prevState == PlayState.FASTREVERSE) {
-				eventThread.fastReverse();
+			if(((JSlider)(arg0.getSource())).isEnabled()){
+				if(prevState == PlayState.FASTREVERSE) {
+					eventThread.fastReverse();
+				}
+				else if (prevState == PlayState.REVERSE) {
+					eventThread.reverse();
+				}
+				else if (prevState == PlayState.FORWARD) {
+					eventThread.forward();
+				}
+				else if (prevState == PlayState.FASTFORWARD) {
+					eventThread.fastForward();
+				}
+				else if (prevState == PlayState.PAUSE) {
+					eventThread.pause();
+				}
 			}
-			else if (prevState == PlayState.REVERSE) {
-				eventThread.reverse();
-			}
-			else if (prevState == PlayState.FORWARD) {
-				eventThread.forward();
-			}
-			else if (prevState == PlayState.FASTFORWARD) {
-				eventThread.fastForward();
-			}
-			else if (prevState == PlayState.PAUSE) {
-				eventThread.pause();
-			}
-			
 		}
 	}
 	//[end] Playback Slider

@@ -1,5 +1,8 @@
 package spiderweb;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -12,16 +15,15 @@ import javax.swing.Timer;
  * @author alan
  *
  */
-public class EventPlayer extends Thread {
+public class EventPlayer implements ActionListener{
 	
 	private Timer schedule;
 	private TimeCounter timeCounter;
 	
 	private static final int speed = 33; // 33 millisec between events while playing regularly
-	private static final int ffMultiplier = 10;
+	private int fastMultiplier = 10;
 	
 	private PlayState state;
-	private boolean playing;
 
 	private List<LogEvent> my_eventlist;
 	
@@ -32,17 +34,17 @@ public class EventPlayer extends Thread {
 	private P2PNetworkGraph hiddenGraph;
 	private P2PNetworkGraph visibleGraph;
 	
+	private long myTimeNow = 0L;
+	
 	JSlider playbackSlider;
 	
 	public EventPlayer(LinkedList<LogEvent> eventlist, P2PNetworkGraph hiddenGraph, P2PNetworkGraph visibleGraph, JSlider playbackSlider){
 		this.hiddenGraph = hiddenGraph;
 		this.visibleGraph = visibleGraph;
 		this.playbackSlider = playbackSlider;
-		playing = true;
 		my_eventlist = eventlist;
 		current_index = 0; 
 		state = PlayState.FORWARD;
-		//currentTime = 0;
 		timeCounter = new TimeCounter(speed,0,eventlist.getFirst().getTime(),eventlist.getLast().getTime());
 		my_listeners = new LinkedList<EventPlayerListener>();
 	}
@@ -51,8 +53,27 @@ public class EventPlayer extends Thread {
 		my_listeners.add(epl);
 	}
 	
+	public void setFastSpeed(int value) {
+		if(value!=fastMultiplier) {
+			fastMultiplier = value;
+			if(state == PlayState.FASTFORWARD) {
+				timeCounter.setIncrement(speed*fastMultiplier);
+			} else if(state == PlayState.FASTREVERSE) {
+				timeCounter.setIncrement(-speed*fastMultiplier);
+			}
+		}
+	}
+	
+	public void save(File file) {
+		
+	}
+	
 	public PlayState getPlayState() {
 		return state;
+	}
+	
+	public int getCurrentIndex() {
+		return current_index;
 	}
 	
 	//[start] Playback Properties
@@ -113,7 +134,7 @@ public class EventPlayer extends Thread {
 		if(state != PlayState.FASTREVERSE) {
 			PlayState prevState = state;
 			state = PlayState.FASTREVERSE;
-			timeCounter.setIncrement(-speed*ffMultiplier);
+			timeCounter.setIncrement(-speed*fastMultiplier);
 			wakeup(prevState);
 		}
 	}
@@ -137,7 +158,7 @@ public class EventPlayer extends Thread {
 		if(state != PlayState.FASTFORWARD) {
 			PlayState prevState = state;
 			state = PlayState.FASTFORWARD;
-			timeCounter.setIncrement(speed*ffMultiplier);
+			timeCounter.setIncrement(speed*fastMultiplier);
 			wakeup(prevState);
 		}
 	}
@@ -162,9 +183,6 @@ public class EventPlayer extends Thread {
 			schedule.start();
 			notify();
 		}
-		if (this.getState().equals(Thread.State.TIMED_WAITING)) {
-			interrupt(); //if we were waiting for the next event, we'll just wake the thread.
-		}
 	}
 	
 	public synchronized void pause(){
@@ -174,10 +192,10 @@ public class EventPlayer extends Thread {
 		if(state != PlayState.PAUSE) {
 			state = PlayState.PAUSE;
 			notify();
-			schedule.stop();
-			for(EventPlayerListener epl : my_listeners) {
+			//schedule.stop();
+			/*for(EventPlayerListener epl : my_listeners) {
 				epl.doRepaint();
-			}
+			}*/
 		}
 	}
 	
@@ -191,20 +209,20 @@ public class EventPlayer extends Thread {
 			state = PlayState.FORWARD;
 		}
 		
-		for( LogEvent evt : getLogEventsUntil(value) ) {
+		/*for( LogEvent evt : getLogEventsUntil(value) ) {
 			handleLogEvent(evt);
-		}
-		for(EventPlayerListener epl : my_listeners) {
+		}*/
+		/*for(EventPlayerListener epl : my_listeners) {
 			epl.doRepaint();
-		}
+		}*/
 		
 		timeCounter.setTime(value);
 		state = prevState;
 	}
 	
 	public void stopPlayback() {
-		playing = false;
 		wakeup(state);
+		schedule.stop();
 	}
 	//[end]
 			 
@@ -270,56 +288,10 @@ public class EventPlayer extends Thread {
 	public void run() {
 		//System.out.println("Starting log event sequence.");
 
-		long myTimeNow = 0L;//System.currentTimeMillis();
-		long nextTime;
-		boolean oldDirection;
 		//READING FROM CD++ LOG FILE/////////////
 		
-		schedule = new Timer(speed,timeCounter);
+		schedule = new Timer(speed,this);
 		schedule.start();
-		
-		while (playing) //reading lines from config file to get parameter list
-		{
-			if(timeCounter.getTime() == myTimeNow) {
-				try {
-					Thread.sleep(20);
-					continue;
-				} catch (InterruptedException e) { }
-			}
-			
-			if(state != PlayState.PAUSE && !playbackSlider.getValueIsAdjusting()) {
-				nextTime = timeCounter.getTime();
-				oldDirection = isForward();
-				if(atAnEnd()) {
-					pause();
-				}
-				
-				for( LogEvent evt : getLogEventsUntil(nextTime) ) {
-					if(oldDirection==isForward()) { 
-						handleLogEvent(evt);
-					} else {//if the playback direction changed while getting the events
-						break;
-					}
-				}
-				myTimeNow = nextTime; //advance time
-				//playbackSlider.setValueIsAdjusting(true);
-				playbackSlider.setValue((int)myTimeNow);
-				//playbackSlider.setValueIsAdjusting(false);
-				for(EventPlayerListener epl : my_listeners) {
-					epl.doRepaint();
-				}// update visual
-			}				
-			else {
-				try {
-					synchronized(this) {
-						while (state == PlayState.PAUSE) {
-							wait();
-						}
-					}
-				} catch (InterruptedException e) { }
-			}
-			
-		}//end while
 
 	}
 	
@@ -336,9 +308,8 @@ public class EventPlayer extends Thread {
 	 */
 	private List<LogEvent> getLogEventsUntil(long timeGoingTo) {
 		List<LogEvent> events = new LinkedList<LogEvent>();
-		//System.out.println(current_index+", "+timeGoingTo);
 		LogEvent evt;
-		if(isForward()) {
+		if(myTimeNow<timeGoingTo) {
 			evt = my_eventlist.get(current_index);
 			while(evt.getTime() < timeGoingTo) {
 				current_index++;
@@ -346,6 +317,16 @@ public class EventPlayer extends Thread {
 					current_index = my_eventlist.size()-1;
 					break;
 				}
+				//if the difference in time is more than 5 seconds ignore query events as they will not have any 
+				//importance since they all happen at once(both the query and unquery)
+				/*if((timeGoingTo-evt.getTime()) > 5000) { 
+					if(evt.isStructural()) {
+						events.add(evt);
+					} //else don't add it
+				}
+				else {
+					events.add(evt);
+				}*/
 				events.add(evt);
 				evt = my_eventlist.get(current_index);
 									
@@ -354,14 +335,23 @@ public class EventPlayer extends Thread {
 		else {
 			evt = my_eventlist.get(current_index-1);
 			while(evt.getTime() > timeGoingTo) {
+				
 				current_index--;
 				if(current_index < 1) {
 					break;
 				}
-				
+				//if the difference in time is more than 5 seconds ignore query events as they will not have any 
+				//importance since they all happen at once(both the query and unquery)
+				/*if((evt.getTime()-timeGoingTo) > 5000) { 
+					if(evt.isStructural()) {
+						events.add(evt);
+					} //else don't add it
+				}
+				else {
+					events.add(evt);
+				}*/
 				events.add(evt);
 				evt = my_eventlist.get(current_index-1);
-				
 			}
 		}
 		return events;
@@ -371,64 +361,65 @@ public class EventPlayer extends Thread {
 	 * Handles the passed LogEvent be it structural or visual.
 	 * @param evt The Log event to handle.
 	 */
-	private void handleLogEvent(LogEvent evt) {
+	private void handleLogEvent(LogEvent evt, boolean forward) {
+		
 		if (evt.isStructural()){ //if the event is to modify the structure of the graph
-			P2PNetworkGraph.graphEvent(evt,isForward(),visibleGraph,hiddenGraph);
+			P2PNetworkGraph.graphEvent(evt,forward,visibleGraph,hiddenGraph);
 		} else { //other events: queries
 			String what = evt.getType();
 			int val1 = evt.getParam(1);
 			int val2 = evt.getParam(2);
 			if(what.equals("query")) {
-				if(isForward()) {
+				if(forward) {
 					doQuery(val1, val2);
 				} else {
 					undoQuery(val1,val2);
 				}
 			}
 			else if (what.equals("unquery")) {
-				if(isForward()) {
+				if(forward) {
 					undoQuery(val1,val2);
 				} else {
 					doQuery(val1, val2);
 				}
 			}
 			else if (what.equals("queryhit")) {
-				if(isForward()) {
+				if(forward) {
 					doQueryHit(val1, val2);
 				} else {
 					undoQueryHit(val1, val2);
 				}
 			}
 			else if (what.equals("unqueryhit")) {
-				if(isForward()) {
+				if(forward) {
 					undoQueryHit(val1, val2);
 				} else {
 					doQueryHit(val1, val2);
 				}
 			}
 			else if (what.equals("queryreachespeer")) {
-				if(isForward()) {
+				if(forward) {
 					doQueryReachesPeer(val1,val2);
 				} else {
 					undoQueryReachesPeer(val1,val2);
 				}
 			}
 			else if (what.equals("unqueryreachespeer")) {
-				if(isForward()) {
+				if(forward) {
 					undoQueryReachesPeer(val1,val2);
 				} else {
 					doQueryReachesPeer(val1,val2);
 				}
 			}
 			else if (what.equals("queryedge")) {
-				if(isForward()) {
+				if(forward) {
 					doQueryEdge(val1,val2);
 				} else {
 					undoQueryEdge(val1,val2);
 				}
 			}
 			else if (what.equals("unqueryedge")) {
-				if(isForward()) {
+				if(forward) {
 					undoQueryEdge(val1,val2);
 				} else {
 					doQueryEdge(val1,val2);
@@ -437,4 +428,33 @@ public class EventPlayer extends Thread {
 		}
 	}
 	//[end] Graph Event Handling
+
+	@Override
+	public void actionPerformed(ActionEvent arg0) {
+		if(state != PlayState.PAUSE /*&& !playbackSlider.getValueIsAdjusting()*/) {
+			timeCounter.doIncrement();
+		}
+		long nextTime = timeCounter.getTime();
+
+		boolean isforward = nextTime>myTimeNow;
+		
+		
+		if(atAnEnd()) {
+			pause();
+		}
+		
+		List<LogEvent> events = getLogEventsUntil(nextTime);
+		
+		for( LogEvent evt :  events) {
+			handleLogEvent(evt,isforward);
+		}
+		myTimeNow = nextTime; //advance time
+		playbackSlider.setValue((int)myTimeNow);
+		if(!events.isEmpty()) {
+			for(EventPlayerListener epl : my_listeners) {
+				epl.doRepaint();
+			}// if anything happened, update visual
+		}
+		
+	}
 }

@@ -1,9 +1,6 @@
 package spiderweb;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -23,11 +20,9 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
 	 * Copy Constructor.
 	 * @param copy the P2PNetworkGraph to copy.
 	 */
-	public P2PNetworkGraph(P2PNetworkGraph copy) {
-		this.edgecounter = copy.edgecounter;
-		
-		//Collections.copy(edges, copy.edges);
-	}
+	//public P2PNetworkGraph(P2PNetworkGraph copy) {
+	//	this.edgecounter = copy.edgecounter;
+	//}
 	
 	public P2PNetworkGraph() {
 		super();
@@ -95,9 +90,6 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
     	removeEdge(peerToPeerDocEdge);
     	removeEdge(docToPeerDocEdge);
     	removeVertex(peerDoc);
-    	if(document == null) {
-    		System.out.println(peer+", "+docnumber+"\n....................");
-    	}
     	if(getIncidentEdges(document).size() == 0) {
     		removeVertex(document);
     	}
@@ -117,8 +109,11 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
      * @param to	peer 2 (vertex 2)
      */
     public void connectPeers(int from, int to, Integer key) {
-    	P2PConnection p = new P2PConnection(P2PConnection.P2P,key);
-    	addEdge(p, getVertexInGraph(new PeerVertex(from)), getVertexInGraph(new PeerVertex(to)));
+    	if(!containsEdge(new P2PConnection(P2PConnection.P2P,key))) {
+	    	P2PConnection p = new P2PConnection(P2PConnection.P2P,key);
+	    	addEdge(p, getVertexInGraph(new PeerVertex(from)), getVertexInGraph(new PeerVertex(to)));
+    	}
+    	
     }
     /**
      * remove an edge from the graph
@@ -237,7 +232,7 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
 		if(forward) {
 			if (gev.getType().equals("online")){
 				eventGraph.addPeer(gev.getParam(1));
-			} else if (gev.getType().equals("offline")){//TODO restore documents after disconnecting
+			} else if (gev.getType().equals("offline")){
 				eventGraph.removePeer(gev.getParam(1));
 			} else if(gev.getType().equals("connect")){
 				eventGraph.connectPeers(gev.getParam(1), gev.getParam(2), referenceGraph.findPeerConnection(gev.getParam(1), gev.getParam(2)).getKey());
