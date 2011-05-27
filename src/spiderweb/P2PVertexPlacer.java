@@ -6,7 +6,6 @@ import java.awt.geom.Point2D;
 import org.apache.commons.collections15.Transformer;
 
 import edu.uci.ics.jung.algorithms.layout.Layout;
-import edu.uci.ics.jung.graph.Graph;
 
 /**
  * this vertex placer is used in the spring layout to initialize the position of a new node in the graph when calculating the layout.
@@ -25,10 +24,14 @@ public class P2PVertexPlacer implements Transformer<P2PVertex, Point2D> {
 	}
 	@Override
 	public Point2D transform(P2PVertex v) {
-		if (v.isPeer())
-		return rt.transform(v);
+		if (v instanceof PeerVertex) {
+			return rt.transform(v); //placing a peer
+		}
+		else if(v instanceof PeerDocumentVertex) {
+			return existinglayout.transform(new PeerVertex(((PeerDocumentVertex)v).getPublisherNumber()));
+		}
 		else { //placing a document : put it on it's publisher's position in the layout...
-			return existinglayout.transform(P2PVertex.makePeerVertex(v.getPublishingPeer()));
+			return rt.transform(v);
 		}
 			
 	}

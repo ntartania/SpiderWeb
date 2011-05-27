@@ -14,6 +14,7 @@ import org.apache.commons.collections15.Transformer;
 public class P2PVertexSizeFunction implements Transformer<P2PVertex,Integer>{
 
 	int my_doc_size;
+	int my_peer_doc_size;
 	int my_peer_size;
 	
 	/**
@@ -22,20 +23,25 @@ public class P2PVertexSizeFunction implements Transformer<P2PVertex,Integer>{
 	 * @param ds document vertex size
 	 * @param ps peer document size
 	 */
-	public P2PVertexSizeFunction(int ds, int ps){
+	public P2PVertexSizeFunction(int ds, int ps, int pds){
 		
 		my_doc_size = ds;
 		my_peer_size = ps;
+		my_peer_doc_size = pds;
 	}
 	
 	@Override
-	public Integer transform(P2PVertex vertexId) {
+	public Integer transform(P2PVertex vertexID) {
 		
-			if (((P2PVertex)vertexId).isPeer())
-    			return new Integer(my_peer_size);
-    		else
-    			return new Integer(my_doc_size);
-		 
+		if (vertexID instanceof PeerVertex) {
+			return new Integer(my_peer_size);
+		}
+		else if (vertexID instanceof PeerDocumentVertex) {
+			return new Integer(my_peer_doc_size);
+		}
+		else {
+			return new Integer(my_doc_size);
+		}
 	}
 	    
 }

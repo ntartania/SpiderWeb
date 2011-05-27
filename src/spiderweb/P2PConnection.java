@@ -1,9 +1,11 @@
 package spiderweb;
 
-public class P2PConnection implements Comparable {
+public class P2PConnection implements Comparable<P2PConnection> {
 
 	public static final int P2P = 0;
 	public static final int P2DOC = 10;
+	public static final int P2PDOC = 20;
+	public static final int DOC2PDOC = 30;
 	public static final int QUERYING = 1;
 	public static final int ANSWERING = 2;
 	public static final int MATCHING_DOC = 11;
@@ -34,8 +36,35 @@ public class P2PConnection implements Comparable {
 	 * is this edge a peer-to-peer edge 
 	 * @return true for edges that relate peers, false for edges that relate peers to docs
 	 */
-	public boolean isP2P(){
-		return (mytypeandstate <10);
+	public int getType(){
+		if (mytypeandstate <10) {
+			return P2P;
+		}
+		else if (mytypeandstate >=10 && mytypeandstate <20) {
+			return P2DOC;
+		}
+		else if (mytypeandstate >=20 && mytypeandstate <30) {
+			return P2PDOC;
+		}
+		else {
+			return DOC2PDOC;
+		}
+	}
+	
+	public boolean isP2P() {
+		return (getType() == P2P);
+	}
+	
+	public boolean isP2DOC() {
+		return (getType() == P2DOC);
+	}
+	
+	public boolean isP2PDOC() {
+		return (getType() == P2PDOC);
+	}
+	
+	public boolean isDOC2PDOC() {
+		return (getType() == DOC2PDOC);
 	}
 	
 	/** change state to "query"*/ 
@@ -65,11 +94,11 @@ public class P2PConnection implements Comparable {
 
 	@Override
 	public int hashCode(){
-	return key.hashCode();	
+		return key.hashCode();	
 	}
 	
 	@Override
-	public int compareTo(Object other) {
+	public int compareTo(P2PConnection other) {
 		if(other instanceof P2PConnection)
 			return (key.compareTo(((P2PConnection)other).getKey()));
 		else 
