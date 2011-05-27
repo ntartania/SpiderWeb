@@ -23,7 +23,6 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JApplet;
 import javax.swing.JButton;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JRootPane;
@@ -844,13 +843,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			pauseButton.doClick();
-			JFileChooser fileNamer = new JFileChooser();
-			fileNamer.setFileFilter(new ExtensionFileFilter(".xml Files", "xml"));
-			int returnVal = fileNamer.showSaveDialog(null);
-
-			if (returnVal == JFileChooser.APPROVE_OPTION) {
-				eventThread.save(fileNamer.getSelectedFile());
-			}
+			GraphSaverAndLoader.save(((JButton)(arg0.getSource())).getParent(), visibleGraph);
 		}	
 	}
 	//[end] Save Button
@@ -861,13 +854,9 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			pauseButton.doClick();
-			JFileChooser fileNamer = new JFileChooser();
-			fileNamer.setFileFilter(new ExtensionFileFilter(".xml Files", "xml"));
-			int returnVal = fileNamer.showOpenDialog(null);
-
-			if (returnVal == JFileChooser.APPROVE_OPTION) {
-				//eventThread.save(fileNamer.getSelectedFile());
-			}
+			P2PNetworkGraph graph = GraphSaverAndLoader.load(((JButton)(arg0.getSource())).getParent());
+			hiddenGraph = graph;
+			visibleGraph = graph;
 		}	
 	}
 	//[end] Load Button
