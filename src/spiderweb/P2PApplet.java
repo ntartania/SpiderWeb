@@ -928,24 +928,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	//[start] Speed Slider
 	class SpeedSliderListener implements ChangeListener {
 
-
-
-	/**
-	 * 
-	 * to run this applet as a java application
-	 * @param args optional argument : the log file to process
-	 */
-	public static void main(String[] args) {
-
-		P2PApplet myapp = new P2PApplet();
-		LittleGUI mygui = myapp.new LittleGUI(myapp);
-
-		mygui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		//mygui.validate();
-		//mygui.setBounds(200,200,500,200);
-		mygui.pack();
-		mygui.setVisible(true);
-		//mygui.log.append("\nho ho ho");
 		@Override
 		public void stateChanged(ChangeEvent arg0) {
 			eventThread.setFastSpeed(((JSlider)arg0.getSource()).getValue());
