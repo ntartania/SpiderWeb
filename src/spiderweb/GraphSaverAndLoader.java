@@ -194,10 +194,23 @@ public class GraphSaverAndLoader {
 		Element edgemap = new Element("edgemap");
 		for(P2PConnection e : edges) {//write out all the edge information
 			Element edge = new Element("edge");
-			edge.setAttribute("type", Integer.toString(e.getType()));
 			
+			switch(e.getType()) {
+			case P2PConnection.P2P:
+				edge.setAttribute("type", "PeerToPeer");
+				break;
+			case P2PConnection.P2DOC:
+				edge.setAttribute("type", "PeerToDocument");
+				break;
+			case P2PConnection.P2PDOC:
+				edge.setAttribute("type", "PeerToPeerDocument");
+				break;
+			case P2PConnection.DOC2PDOC:
+				edge.setAttribute("type", "DocumentToPeerDocument");
+				break;
+			}
 			Element key = new Element("key");
-	        key.addContent(Integer.toString(e.getKey())); 
+			key.addContent(Integer.toString(e.getKey()));
 	        edge.addContent(key);
 				        
 	        Pair<P2PVertex> ends = graph.getEndpoints(e);
@@ -287,28 +300,28 @@ public class GraphSaverAndLoader {
 				Element elem = (Element)o;
 				String type = elem.getAttribute("type").getName();
 				
-				if(type.equals("0")) { //Peer to Peer
+				if(type.equals("PeerToPeer")) { //Peer to Peer
 					int key = Integer.parseInt(elem.getChild("key").getText());
 					int v1Key = Integer.parseInt(elem.getChild("v1").getText());
 					int v2Key = Integer.parseInt(elem.getChild("v2").getText());
 					Pair<P2PVertex> pair = new Pair<P2PVertex>(new PeerVertex(v2Key), new PeerVertex(v1Key));
 					graph.addEdge(new P2PConnection(P2PConnection.P2P,key),pair);
 				}
-				else if(type.equals("10")) { //Peer to Document
+				else if(type.equals("PeerToDocument")) { //Peer to Document
 					int key = Integer.parseInt(elem.getChild("key").getText());
 					int v1Key = Integer.parseInt(elem.getChild("v1").getText());
 					int v2Key = Integer.parseInt(elem.getChild("v2").getText());
 					Pair<P2PVertex> pair = new Pair<P2PVertex>(new DocumentVertex(v2Key-1000), new PeerVertex(v1Key));
 					graph.addEdge(new P2PConnection(P2PConnection.P2DOC,key),pair);
 				}
-				else if(type.equals("20")) { //Peer to PeerDocument
+				else if(type.equals("PeerToPeerDocument")) { //Peer to PeerDocument
 					int key = Integer.parseInt(elem.getChild("key").getText());
 					int v1Key = Integer.parseInt(elem.getChild("v1").getText());
 					int v2Key = Integer.parseInt(elem.getChild("v2").getText());
 					Pair<P2PVertex> pair = new Pair<P2PVertex>(new PeerDocumentVertex(v1Key,v2Key-2000), new PeerVertex(v1Key));
 					graph.addEdge(new P2PConnection(P2PConnection.P2PDOC,key),pair);
 				}
-				else if(type.equals("30")) { //Document to PeerDocument
+				else if(type.equals("DocumentToPeerDocument")) { //Document to PeerDocument
 					int key = Integer.parseInt(elem.getChild("key").getText());
 					int v1Key = Integer.parseInt(elem.getChild("v1").getText());
 					int v2Key = Integer.parseInt(elem.getChild("v2").getText());
