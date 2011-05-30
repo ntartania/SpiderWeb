@@ -118,7 +118,7 @@ public class GraphSaverAndLoader {
     /**
 	 * @param args
 	 */
-	public static void save(Component parentComponent, P2PNetworkGraph graph) {		
+	public static void save(P2PNetworkGraph graph) {		
 		String path = chooseSaveFile();
 		if(path != null) {
 			if(fileWriter(path, graph)) {
@@ -242,7 +242,7 @@ public class GraphSaverAndLoader {
 	/**
 	 * @param args
 	 */
-	public static P2PNetworkGraph load(Component parentComponent) {
+	public static P2PNetworkGraph load() {
 		String path = chooseLoadFile();
 		if(path != null) {
 			P2PNetworkGraph graph = fileLoader(path);

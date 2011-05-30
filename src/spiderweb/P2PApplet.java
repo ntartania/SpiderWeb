@@ -2,8 +2,11 @@ package spiderweb;
 
 //[start] Imports
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -28,6 +31,7 @@ import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JRootPane;
@@ -112,15 +116,11 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	//[start] Protected Variables
 	protected JTable logList;
 	protected JTabbedPane tabsPane;
-	protected JButton relaxerButton;
 	protected JButton fastForwardButton;
 	protected JButton forwardButton;
 	protected JButton pauseButton;
 	protected JButton reverseButton;
 	protected JButton fastReverseButton;
-	protected JButton stopButton;
-	protected JButton saveButton;
-	protected JButton loadButton;
 	protected JSlider fastSpeedSlider;
 	protected JSlider playbackSlider;
 	protected JPopupMenu mouseContext;
@@ -250,7 +250,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		viewer.getRenderContext().setVertexStrokeTransformer(new P2PVertexStrokeTransformer());
 		viewer.setForeground(Color.white);
 		viewer.setBounds(0,0,width,height);
-		viewer.addMouseListener(new PopClickListener());
 		
 		viewer.addComponentListener(new ComponentAdapter() {
 			
@@ -288,6 +287,49 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	private JMenuBar createFileMenu() {
 		JMenu file = new JMenu("File");
 		
+		JMenuItem save = new JMenuItem("Save");
+		save.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				pauseButton.doClick();
+				GraphSaverAndLoader.save(visibleGraph);
+			}	
+		});
+		
+		JMenuItem load = new JMenuItem("Load");
+		load.addActionListener(new ActionListener() {	
+			public void actionPerformed(ActionEvent arg0) {
+				pauseButton.doClick();
+				P2PNetworkGraph graph = GraphSaverAndLoader.load();
+				
+				visibleGraph = graph;
+			}	
+		});
+		
+		JMenuItem exit = new JMenuItem("Exit");
+		exit.addActionListener(new ActionListener() {	
+			public void actionPerformed(ActionEvent arg0) {
+				pauseButton.doClick();
+				int option = JOptionPane.showConfirmDialog(null, "Would you like to save before quitting?", "Save", 
+						JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+				
+				if(option == JOptionPane.OK_OPTION) {
+					GraphSaverAndLoader.save(visibleGraph);
+					//TODO Quit Program
+				}
+				else if(option == JOptionPane.NO_OPTION) {
+					//TODO Quit Program
+				}
+				//else if(option == JOptionPane.CANCEL_OPTION) {
+					//do nothing
+				//}
+			}	
+		});
+		
+		file.addSeparator();
+		file.add(save);
+		file.add(load);
+		file.addSeparator();
+		file.add(exit);
 		
 		JMenuBar bar = new JMenuBar();
 		bar.add(file);
@@ -462,38 +504,15 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	 * Helper Method for initializing the Buttons and drop down menu for the West Panel.
 	 * @return The west Panel, laid out properly, to be displayed.
 	 */
-	private JPanel initializeWestPanel(DefaultModalGraphMouse<P2PVertex,P2PConnection> gm) {
+	/*private JPanel initializeWestPanel(DefaultModalGraphMouse<P2PVertex,P2PConnection> gm) {
 		for(LoadingListener l : loadingListeners) {
-			l.loadingChanged(6, "West Panel");
+			l.loadingChanged(5, "West Panel");
 		}
-		
-		
-		
-		//[start] Relaxer creation
-		Relaxer relaxer = new VisRunner((IterativeContext)layout);
-		relaxer.stop();
-		relaxer.setSleepTime(80L);
-		relaxer.relax();
-		//[end] Relaxer creation
-		relaxerButton = new JButton("Finalize Layout");
-		relaxerButton.addActionListener(new relaxerButtonListener(relaxer)); 
 		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(1);
 		}
 		
-
-		stopButton = new JButton("Stop Playback");
-		stopButton.addActionListener(new StopButtonListener());
-		stopButton.setEnabled(false);
-		
-		saveButton = new JButton("Save");
-		saveButton.addActionListener(new SaveButtonListener());
-		saveButton.setEnabled(false);
-		
-		loadButton = new JButton("Load");
-		loadButton.addActionListener(new LoadButtonListener());
-		loadButton.setEnabled(false);
 		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(2);
@@ -515,28 +534,14 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 			l.loadingProgress(4);
 		}
 		westConstraints.gridwidth = GridBagConstraints.REMAINDER;//make each item take up a whole line
-		westLayout.setConstraints(relaxerButton, westConstraints);
-		west.add(relaxerButton);
+		//westLayout.setConstraints(relaxerButton, westConstraints);
+		//west.add(relaxerButton);
 		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(5);
 		}
-		
-		westLayout.setConstraints(stopButton, westConstraints);
-		west.add(stopButton);
-		
-		westLayout.setConstraints(saveButton, westConstraints);
-		west.add(saveButton);
-		
-		westLayout.setConstraints(loadButton, westConstraints);
-		west.add(loadButton);
-		
-		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(6);
-		}
-		
 		return west;
-	}
+	}*/
 	//[end] West Panel
 	
 	//[start] Mouse Context Menu
@@ -595,9 +600,18 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		
 		layout = springLayoutBuilder(myGraphEvolution,DEFWIDTH,DEFHEIGHT,hiddenGraph);
 		
+		//[start] Relaxer creation
+		Relaxer relaxer = new VisRunner((IterativeContext)layout);
+		relaxer.stop();
+		relaxer.setSleepTime(80L);
+		relaxer.relax();
+		//[end] Relaxer creation
+		
 		DefaultModalGraphMouse<P2PVertex,P2PConnection> gm = new DefaultModalGraphMouse<P2PVertex,P2PConnection>(); 
 		
 		fullViewViewer = visualizationViewerBuilder(layout, DEFWIDTH,DEFHEIGHT, gm);
+		fullViewViewer.addMouseListener(new GraphMouseListener(relaxer));
+		fullViewViewer.add(new MyGlassPane());
 		//add my own vertex shape & color fill transformers
 		initSpecialTransformers(fullViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
 								EdgeShapeType.QUAD_CURVE,
@@ -641,14 +655,14 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		graphsPanel.setBackground(Color.GRAY);
 		graphsPanel.add(tabsPane);
 				
-		JSplitPane p3 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+		/*JSplitPane p3 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
 		p3.setResizeWeight(0);
 		p3.add(initializeWestPanel(gm));
 		p3.add(graphsPanel);
-		
+		*/
 		JSplitPane p2 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
 		p2.setResizeWeight(0);
-		p2.add(p3);
+		p2.add(graphsPanel);
 		p2.add(initializeEastPanel());
 		
 		JSplitPane p = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
@@ -662,6 +676,9 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		getContentPane().setBounds(0, 0, DEFWIDTH, DEFHEIGHT);
 		setJMenuBar(createFileMenu());
 		getContentPane().add(p);
+		
+		setGlassPane(new MyGlassPane());
+		getGlassPane().setVisible(true);
 		
 		/// create the event player
 		eventThread = new EventPlayer(myGraphEvolution,hiddenGraph,visibleGraph, playbackSlider);
@@ -771,35 +788,59 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 
 	//[start] Swing Event Listeners
 	
-	//[start] Relaxer Button
+	//[start] Relaxer and mouse context listener
 	 /**
 	 * an actionlistener that defines the use of a button to stop the spring-layout processing
 	 * @author adavoust
 	 *
 	 */
-	class relaxerButtonListener implements ActionListener {
+	private class GraphMouseListener extends MouseAdapter {
 		
 		//this is the SpringLayout relaxer for the beginning
 		private Relaxer relaxer;
 		boolean started;
 		
-		public relaxerButtonListener (Relaxer rr){ // the relaxer is the thread that's doing the dynamic layout.
+		public GraphMouseListener (Relaxer rr){ // the relaxer is the thread that's doing the dynamic layout.
 										  // we need to stop it then switch to a static layout,
 										  // then show the full graph layout for one sec then make it hidden
 			this.relaxer = rr;
 			started = false; // says if we've passed the initial problem of freezing the layout and getting started
 			
 		}
+		
+		@Override 
+		public void mousePressed(MouseEvent e) {
+			doPop(e);
+		}
+		
+		@Override 
+		public void mouseReleased(MouseEvent e) {
+			doPop(e);
+		}
+		
+		private void doPop(MouseEvent e) {
+			if (e.isPopupTrigger()) {
+				JPopupMenu test = new JPopupMenu("test");
+				test.add(new JMenuItem("Picking"));
+				test.add(new JMenuItem("Transforming"));
+				mouseContext.setEnabled(true);
+	    		mouseContext.show(null, e.getXOnScreen(), e.getYOnScreen());
+	    	}
+			else {
+				mouseContext.setVisible(false);
+				mouseContext.setEnabled(false);
+			}
+		}
+		
 		/**
 		 * handles the button : first to freeze the layout, then to toggle between fast-forward and normal speed
 		 */
-		public void actionPerformed(ActionEvent ae) {
+		@Override
+		public void mouseClicked(MouseEvent event) {
 
-			if(!started){ // this will be the first button task : freeze layout and start the simulation
+			if(!started && event.getButton() == MouseEvent.BUTTON1){ // this will be the first button task : freeze layout and start the simulation
 				try {
 					relaxer.stop();
-					relaxerButton.setText("Layout Complete");
-					relaxerButton.setEnabled(false);
 					
 					layout = new StaticLayout<P2PVertex,P2PConnection>(hiddenGraph, layout);
 	
@@ -816,15 +857,12 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	
 					Thread.sleep(1000);
 					
-					stopButton.setEnabled(true);
 					fastReverseButton.setEnabled(true);
 					reverseButton.setEnabled(true);
 					pauseButton.setEnabled(true);
 					forwardButton.setEnabled(false);
 					fastForwardButton.setEnabled(true);
 					playbackSlider.setEnabled(true);
-					saveButton.setEnabled(true);
-					loadButton.setEnabled(true);
 					tabsPane.setEnabled(true);
 					fastSpeedSlider.setEnabled(true);
 	
@@ -832,65 +870,34 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				} //wait 5 seconds
+
+				getGlassPane().setVisible(false);
+				
 				//these predicates say : if the considered node /edge (which will be evaluated in the context of the hiddengraph) is found in the visible graph, then show it !
 				fullViewViewer.getRenderContext().setVertexIncludePredicate(new VertexIsInTheOtherGraphPredicate(visibleGraph));
 				fullViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
 				
 				collapsedPeerAndDocumentViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(visibleGraph,PeerDocumentVertex.class));
 				collapsedPeerAndDocumentViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
-				
+								
 				collapsedPeerViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(visibleGraph, DocumentVertex.class));
 				collapsedPeerViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
-				
+								
 				collapsedDocumentViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(visibleGraph,PeerVertex.class));
 				collapsedDocumentViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
+
+				for(MouseListener ml: fullViewViewer.getMouseListeners()) {
+					collapsedPeerAndDocumentViewViewer.addMouseListener(ml);
+					collapsedPeerViewViewer.addMouseListener(ml);
+					collapsedDocumentViewViewer.addMouseListener(ml);
+				}
 				
 				eventThread.run();
 			}		
 		}
 	}
-	//[end] Relaxer Button
+	//[end] Relaxer and mouse context listener
 
-	//[start] Stop Button
-	class StopButtonListener implements ActionListener {
-		
-		@Override
-		public void actionPerformed(ActionEvent ae) {
-			fastReverseButton.setEnabled(false);
-			reverseButton.setEnabled(false);
-			pauseButton.setEnabled(false);
-			forwardButton.setEnabled(false);
-			fastForwardButton.setEnabled(false);
-			playbackSlider.setEnabled(false);
-			eventThread.stopPlayback();
-		}
-	}
-	//[end] Stop Button
-	
-	//[start] Save Button
-	class SaveButtonListener implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent arg0) {
-			pauseButton.doClick();
-			GraphSaverAndLoader.save(((JButton)(arg0.getSource())).getParent(), visibleGraph);
-		}	
-	}
-	//[end] Save Button
-	
-	//[start] Load Button
-	class LoadButtonListener implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent arg0) {
-			pauseButton.doClick();
-			P2PNetworkGraph graph = GraphSaverAndLoader.load(((JButton)(arg0.getSource())).getParent());
-			
-			visibleGraph = graph;
-		}	
-	}
-	//[end] Load Button
-	
 	//[start] Fast Reverse Button
 	class FastReverseButtonListener implements ActionListener {
 		
@@ -943,35 +950,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		}
 	}
 	//[end] Fast Forward Button
-	
-	//[start] Context Menu Listener
-	class PopClickListener extends MouseAdapter {
-		
-		@Override 
-		public void mousePressed(MouseEvent e) {
-			doPop(e);
-		}
-		
-		@Override 
-		public void mouseReleased(MouseEvent e) {
-			doPop(e);
-		}
-		
-		private void doPop(MouseEvent e) {
-			if (e.isPopupTrigger()) {
-				JPopupMenu test = new JPopupMenu("test");
-				test.add(new JMenuItem("Picking"));
-				test.add(new JMenuItem("Transforming"));
-				mouseContext.setEnabled(true);
-	    		mouseContext.show(null, e.getXOnScreen(), e.getYOnScreen());
-	    	}
-			else {
-				mouseContext.setVisible(false);
-				mouseContext.setEnabled(false);
-			}
-		}
-	}
-	//[end] Context Menu Listener
 	
 	//[start] Speed Slider
 	class SpeedSliderListener implements ChangeListener {
@@ -1031,4 +1009,33 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	//[end] Playback Slider
 
 	//[end] Swing Event Listeners
+	
+	private class MyGlassPane extends JPanel {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+		public MyGlassPane() {
+			setOpaque(false);
+		}
+		/**
+	     * Handling Paint
+	     */
+	    public void paint(Graphics g)
+	    {
+	    	Graphics2D g2d = (Graphics2D)g;
+	        super.paint(g);
+	        
+	        Component vv = this.getParent();
+	        
+	        int cx = (vv.getX()+vv.getWidth())/2;
+	        int cy = (vv.getY()+vv.getHeight())/2;
+	        
+            g2d.setFont(new Font("Arial", Font.BOLD, 35));
+            g2d.setColor(new Color(100,149,237,100));
+            g2d.rotate(Math.toRadians(-45),cx,cy);
+            g2d.drawString("Click to Finalize Layout", cx-cx/2,cy-cy/2);
+            
+	    }
+	}
 }
