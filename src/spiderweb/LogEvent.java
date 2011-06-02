@@ -107,6 +107,13 @@ public class LogEvent implements Comparable<LogEvent>{
 		return type;
 	}
 	
+	/**
+	 * Returns <code>true</code> if the event type has a second parameter.
+	 * @return<code>true</code> if the event type has a second parameter.
+	 */
+	public boolean hasParamTwo() {
+		return !(type.equals("online")||type.equals("offline"));
+	}	
 	
 	/**
 	 * get one of the parameters of the event
@@ -146,6 +153,4 @@ public class LogEvent implements Comparable<LogEvent>{
 		}
 		return 0; //Otherwise they may as well be equal
 	}
-	
-	
 }

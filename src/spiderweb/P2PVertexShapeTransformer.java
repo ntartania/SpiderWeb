@@ -40,6 +40,16 @@ public class P2PVertexShapeTransformer extends AbstractVertexShapeTransformer<P2
 	    	this.peerDocumentShape = peerDocumentShape;
 	    }
 	    
+	    @SuppressWarnings({ "rawtypes", "unchecked" })
+		public P2PVertexShapeTransformer(VertexShapeType peerShape, VertexShapeType documentShape, VertexShapeType peerDocumentShape,
+										 int peerSize, int documentSize, int peerDocumentSize) 
+	    {
+	    	super ( new P2PVertexSizeFunction(peerSize,documentSize,peerDocumentSize), new ConstantTransformer(1.0f));
+	    	this.peerShape = peerShape;
+	    	this.documentShape = documentShape;
+	    	this.peerDocumentShape = peerDocumentShape;
+	    }
+	    
 	    public Shape transform(P2PVertex v)
 	    {
 	    		if (v instanceof PeerVertex) {

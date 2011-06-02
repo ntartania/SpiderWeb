@@ -18,20 +18,20 @@ package spiderweb;
 public class PeerDocumentVertex extends P2PVertex {
 	
 	//[start] Private Attributes
-	private int publisher; // The peer number of the peer who published this document.
+	private int peer; // The peer number of the peer who published this document.
 	private boolean queryHit; // for state changing when a this document matches a query.
 	//[end] Private Attributes
 	
 	//[start] Constructors
 	/**
 	 * Creates a vertex which represents a Document in the P2P network visualization.
-	 * @param publisher	The key of the Peer which published this document.
-	 * @param key	The key value of this document.
+	 * @param peer	The key of the Peer which published this document.
+	 * @param document	The key value of this document.
 	 */
-	public PeerDocumentVertex(int publisher, Integer key) {
-		super(2000+key.intValue());
-		this.publisher = publisher;
-		this.label = new Integer(key.intValue() % 2000);
+	public PeerDocumentVertex(int peer, Integer document) {
+		super(2000+document.intValue());
+		this.peer = peer;
+		this.label = new Integer(document.intValue() % 2000);
 		this.queryHit = false;
 	}
 	//[end] Constructors
@@ -41,8 +41,8 @@ public class PeerDocumentVertex extends P2PVertex {
 	 * Returns the Peer Number for the publisher of this document.
 	 * @return The PeerNumber of this document's publisher.
 	 */
-	public int getPublisherNumber() {
-		return publisher;
+	public int getPeerNumber() {
+		return peer;
 	}
 	
 	public Integer getDocumentNumber() {
@@ -73,13 +73,13 @@ public class PeerDocumentVertex extends P2PVertex {
 	//[start] Overridden Methods
 	@Override
 	public String toString() {
-		return "P"+publisher+":D"+getDocumentNumber();
+		return "P"+peer+":D"+getDocumentNumber();
 	}
 	
 	@Override
 	public boolean equals(Object other){
 		if(other instanceof PeerDocumentVertex) {
-			return ( (this.publisher == ((PeerDocumentVertex)other).publisher) && super.equals(other) );
+			return ( (this.peer == ((PeerDocumentVertex)other).peer) && super.equals(other) );
 		}
 		return false; 
 	}

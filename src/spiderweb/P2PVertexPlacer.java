@@ -28,14 +28,10 @@ public class P2PVertexPlacer implements Transformer<P2PVertex, Point2D> {
 			return rt.transform(v); //placing a peer
 		}
 		else if(v instanceof PeerDocumentVertex) {
-			return existinglayout.transform(new PeerVertex(((PeerDocumentVertex)v).getPublisherNumber()));
+			return existinglayout.transform(new PeerVertex(((PeerDocumentVertex)v).getPeerNumber()));
 		}
 		else { //placing a document : put it on it's publisher's position in the layout...
 			return rt.transform(v);
 		}
-			
 	}
-	
-	
-
 }

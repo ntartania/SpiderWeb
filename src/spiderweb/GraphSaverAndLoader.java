@@ -1,10 +1,10 @@
 package spiderweb;
 
 //[start] Imports
-import java.awt.Component;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.LinkedList;
+import java.util.List;
 
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -107,7 +107,7 @@ public class GraphSaverAndLoader {
 
         } catch(java.io.IOException e) {
         	JOptionPane.showMessageDialog(null, e.getMessage(), "Failure", JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
+            //e.printStackTrace();
             return false;
         }
         return true;
@@ -121,13 +121,25 @@ public class GraphSaverAndLoader {
 	public static void save(P2PNetworkGraph graph) {		
 		String path = chooseSaveFile();
 		if(path != null) {
-			if(fileWriter(path, graph)) {
+			if(fileWriter(path, graph, null, 0)) {
+				JOptionPane.showMessageDialog(null, "Success: File Saved", "Success", JOptionPane.INFORMATION_MESSAGE);
+			}
+		}
+	}
+	
+	/**
+	 * @param args
+	 */
+	public static void save(P2PNetworkGraph graph, List<LogEvent> events, long currentTime) {		
+		String path = chooseSaveFile();
+		if(path != null) {
+			if(fileWriter(path, graph, events, currentTime)) {
 				JOptionPane.showMessageDialog(null, "Success: File Saved", "Success", JOptionPane.INFORMATION_MESSAGE);
 			}
 		}
 	}
     
-	private static boolean fileWriter(String path, P2PNetworkGraph graph) {
+	private static boolean fileWriter(String path, P2PNetworkGraph graph, List<LogEvent> events, long currentTime) {
 		//[start] compile separate lists for peers, documents and peerdocuments
 		LinkedList<PeerVertex> peers = new LinkedList<PeerVertex>();
 		LinkedList<DocumentVertex> documents = new LinkedList<DocumentVertex>();
@@ -147,9 +159,11 @@ public class GraphSaverAndLoader {
 		}
 		//[end] compile separate lists for peers, documents and peerdocuments
 		
-		//[start] Creating Graph Elements
-		
 		// Create the root element
+		Element networkElement = new Element("network");
+		
+		
+		//[start] Creating Graph Elements
         Element graphElement = new Element("graph");
         //add a comment
         graphElement.addContent(new Comment("Description of a P2PNetworkGraph"));
@@ -179,12 +193,12 @@ public class GraphSaverAndLoader {
 			Element node = new Element("node");
 	        node.setAttribute("type", "PeerDocumentVertex");
 	        
-	        Element key = new Element("key");
+	        Element key = new Element("document");
 	        key.addContent(Integer.toString(peerDoc.getDocumentNumber())); 
 	        node.addContent(key);
 	        
-	        Element publisher = new Element("publisher");
-	        publisher.addContent(Integer.toString(peerDoc.getPublisherNumber()));
+	        Element publisher = new Element("peer");
+	        publisher.addContent(Integer.toString(peerDoc.getPeerNumber()));
 	        node.addContent(publisher);
 	        
 	        nodemap.addContent(node);
@@ -225,14 +239,44 @@ public class GraphSaverAndLoader {
 	        edgemap.addContent(edge);
 		}
 		graphElement.addContent(edgemap);
+		networkElement.addContent(graphElement);
 		//[end] Creating Graph Elements
+		
+		//[start] Creating LogEvent Elements
+		if(events != null) {
+			Element logEventsElement = new Element("logevents");
+			for(LogEvent ev : events) {
+				Element event = new Element("event");
+				event.setAttribute("type", ev.getType());
+		        
+		        Element timeDifference = new Element("timedifference");
+		        timeDifference.addContent(Integer.toString((int)(ev.getTime()-currentTime))); 
+		        event.addContent(timeDifference);
+		        
+		        Element paramOne = new Element("param1");
+		        paramOne.addContent(Integer.toString(ev.getParam(1)));
+		        event.addContent(paramOne);
+		        
+		        if(ev.hasParamTwo()) {
+		        	Element paramTwo = new Element("param2");
+		        	paramTwo.addContent(Integer.toString(ev.getParam(2)));
+			        event.addContent(paramTwo);
+		        }
+		        
+		        logEventsElement.addContent(event);
+			}
+			
+			networkElement.addContent(logEventsElement);
+		}
+		//[end] Creating LogEvent Elements
+				
 		
 		//[start] Output Document to the file
 		//create the document
-        Document graphDoc = new Document(graphElement);
+        Document networkDoc = new Document(networkElement);
         
-	    return outputDocumentToFile(graphDoc,path);
-			
+	    return outputDocumentToFile(networkDoc,path);
+	    			
 		//[end] Output Document to the file
 	}
 	//[end] Saving Methods
@@ -268,7 +312,7 @@ public class GraphSaverAndLoader {
 	}
 	
 	private static P2PNetworkGraph graphBuilder(Document graphDoc) {
-		if(graphDoc.getRootElement().getName().equals("graph")) {
+		if(graphDoc.getRootElement().getName().equals("network")) {
 			P2PNetworkGraph graph = new P2PNetworkGraph();
 			Element graphElem = graphDoc.getRootElement();
 			

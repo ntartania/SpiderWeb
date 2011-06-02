@@ -47,7 +47,7 @@ public class P2PNetworkGraph extends UndirectedSparseGraph<P2PVertex, P2PConnect
     	}
     			
     	for (PeerDocumentVertex n :docsToRemove){
-    		removeDocument(n.getDocumentNumber(),n.getPublisherNumber());
+    		removeDocument(n.getDocumentNumber(),n.getPeerNumber());
     	}
     	removeVertex(peer);
     }

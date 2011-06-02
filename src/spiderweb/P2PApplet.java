@@ -27,6 +27,7 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JApplet;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -78,15 +79,15 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	//the log file (default value)
 	private static final String DEF_LOG_FILE = "ProcessedLog.txt";
 	private static final String DEF_LOG_URL = "http://www.sce.carleton.ca/~adavoust/simuldemo/ProcessedLog.txt";
+	
+	//default size for the swing graphic components
+	public static final int DEFWIDTH = 1360;
+	public static final int DEFHEIGHT = 768;
 	//[end] Static Final Attributes
 	
 	//[start] Private Variables
 	private static final long serialVersionUID = 2L;
 	
-	//default size for the swing graphic components
-	public static final int DEFWIDTH = 800;
-	public static final int DEFHEIGHT = 600;
-
 	private static final boolean ONWEB = true;
 	
 	// this boolean indicates, as ONWEB above, that we are running on the web.
@@ -133,16 +134,28 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	//[start] Constructor
 	public P2PApplet(boolean onWeb) {
 		ontheweb = onWeb;
+		loadingListeners = new LinkedList<LoadingListener>();
+		init();
+		start();
+		
 		if(!onWeb) {
-			LogPanelWithFileChooser mygui = new LogPanelWithFileChooser(this);
+			
+			JFrame frame = new JFrame();
+			//frame.setBounds(0, 0, DEFWIDTH, DEFHEIGHT);
+			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			frame.getContentPane().add(this);
+
+			frame.pack();
+			frame.setVisible(true);
+			
+			//LogPanelWithFileChooser mygui = new LogPanelWithFileChooser(this);
 	
-			mygui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			//mygui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			//mygui.validate();
 			//mygui.setBounds(200,200,500,200);
-			mygui.pack();
-			mygui.setVisible(true);
-			loadingListeners = new LinkedList<LoadingListener>();
-			loadingListeners.add(mygui);
+			//mygui.pack();
+			//mygui.setVisible(true);
+			
 		}
 	}
 	//[end] Constructor
@@ -244,11 +257,12 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		viewer.getRenderer().getVertexLabelRenderer().setPosition(Renderer.VertexLabel.Position.CNTR);
 		//the vertex labeler will use the tostring method which is fine, the P2PVertex class has an appropriate toString() method implementation
 		viewer.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<P2PVertex>());
-
-		// P2PVertex objects also now have multiple states : we can represent which nodes are documents, picked, querying, queried, etc.
 		viewer.getRenderContext().setVertexFillPaintTransformer(new P2PVertexFillPaintTransformer(viewer.getPickedVertexState()));
+		// P2PVertex objects also now have multiple states : we can represent which nodes are documents, picked, querying, queried, etc.
+		
 		viewer.getRenderContext().setVertexStrokeTransformer(new P2PVertexStrokeTransformer());
 		viewer.setForeground(Color.white);
+		viewer.setBackground(Color.GRAY);
 		viewer.setBounds(0,0,width,height);
 		
 		viewer.addComponentListener(new ComponentAdapter() {
@@ -285,26 +299,105 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	
 	//[start] File Menu
 	private JMenuBar createFileMenu() {
+		//[start] File Menu
 		JMenu file = new JMenu("File");
+		//[start] Connect Entry
+		JMenuItem connect = new JMenuItem("Connect to...");
+		connect.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				pauseButton.doClick();
+				String option = JOptionPane.showInputDialog(null, "Enter a URL:", "Connect", JOptionPane.PLAIN_MESSAGE);
+				if(option != null ) {
+					if(option.startsWith("http://")){
+						
+					}
+					else {
+						JOptionPane.showMessageDialog(null, "Invalid URL", "Error", JOptionPane.ERROR_MESSAGE);
+					}
+				}
+				//else cancel option, don't do anything
+			}	
+		});
+		//[end] Connect Entry
 		
+		//[start] Save Entry
 		JMenuItem save = new JMenuItem("Save");
 		save.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				pauseButton.doClick();
-				GraphSaverAndLoader.save(visibleGraph);
+				int option = JOptionPane.showConfirmDialog(null, "Would you like to save the first 500 log events after this graph snapshot", 
+						"Save", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+				if(option == JOptionPane.YES_OPTION) {
+					GraphSaverAndLoader.save(visibleGraph,eventThread.getSaveEvents(), eventThread.getCurrentTime());
+				}
+				else if(option == JOptionPane.NO_OPTION) {
+					GraphSaverAndLoader.save(visibleGraph);
+				}
+				//else cancel option, don't do anything
 			}	
 		});
+		//[end] Save Entry
 		
+		//[start] Load Entry
 		JMenuItem load = new JMenuItem("Load");
 		load.addActionListener(new ActionListener() {	
 			public void actionPerformed(ActionEvent arg0) {
-				pauseButton.doClick();
-				P2PNetworkGraph graph = GraphSaverAndLoader.load();
 				
-				visibleGraph = graph;
+				
+				JFileChooser fileNamer = new JFileChooser();
+				String [] extensions = { "xml","txt" };
+				fileNamer.setFileFilter(new ExtensionFileFilter(".xml and .txt Files", extensions));
+				int returnVal = fileNamer.showOpenDialog(null);
+				
+
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
+					if(fileNamer.getSelectedFile().getAbsolutePath().endsWith(".xml") ||
+							fileNamer.getSelectedFile().getAbsolutePath().endsWith(".txt")) {
+
+						mylogfile = fileNamer.getSelectedFile();
+						
+						if(myGraphEvolution != null) {
+							myGraphEvolution.clear();
+							eventThread.stopPlayback();
+							fastReverseButton.setEnabled(false);
+							reverseButton.setEnabled(false);
+							pauseButton.setEnabled(false);
+							forwardButton.setEnabled(false);
+							fastForwardButton.setEnabled(false);
+							playbackSlider.setEnabled(false);
+							playbackSlider.setValue(0);
+							tabsPane.setEnabled(false);
+							fastSpeedSlider.setEnabled(false);
+						}
+						Thread test = new Thread(new Runnable() {
+							
+							@Override
+							public void run() {
+								startGraph();
+							}
+						});
+						test.start();
+						
+					}
+					else {
+						JOptionPane.showMessageDialog(null, "Wrong File Type", "Error", JOptionPane.ERROR_MESSAGE);
+					}
+				}
+				else if(returnVal == JFileChooser.CANCEL_OPTION || returnVal == JFileChooser.ERROR_OPTION) {
+					
+				}
+				
+				
+				//pauseButton.doClick();
+				//P2PNetworkGraph graph = GraphSaverAndLoader.load();
+				//if(graph != null) {
+					//visibleGraph = graph;
+				//}
 			}	
 		});
+		//[end] Load Entry
 		
+		//[start] Exit Entry
 		JMenuItem exit = new JMenuItem("Exit");
 		exit.addActionListener(new ActionListener() {	
 			public void actionPerformed(ActionEvent arg0) {
@@ -314,39 +407,71 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 				
 				if(option == JOptionPane.OK_OPTION) {
 					GraphSaverAndLoader.save(visibleGraph);
-					//TODO Quit Program
+					System.exit(0);
 				}
 				else if(option == JOptionPane.NO_OPTION) {
-					//TODO Quit Program
+					System.exit(0);
 				}
 				//else if(option == JOptionPane.CANCEL_OPTION) {
 					//do nothing
 				//}
 			}	
 		});
+		//[end] Exit Entry
 		
+		file.add(connect);
 		file.addSeparator();
 		file.add(save);
 		file.add(load);
 		file.addSeparator();
 		file.add(exit);
+		//[end] File Menu
+		
+		//[start] Window Menu
+		JMenu window = new JMenu("Window");
+		//[start] Connect Entry
+		JMenuItem logTable = new JMenuItem("Show Log Table");
+		logTable.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				if(myGraphEvolution != null) { //graph has been initialized
+					JSplitPane p = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+					p.setResizeWeight(1);
+					p.add(getContentPane().getComponent(0));
+					p.add(initializeLogList(myGraphEvolution));
+					
+					getContentPane().add(p);
+				}
+			}	
+		});
+		window.add(logTable);
+		//[end] Window Menu
 		
 		JMenuBar bar = new JMenuBar();
 		bar.add(file);
+		bar.add(window);
 		bar.setVisible(true);
 		return bar;
 	}
 	//[end] File Menu
 	
 	//[start] East Panel
-	private JPanel initializeEastPanel() {
+	
+	/*private JPanel initializeEastPanel() {
+		logList = new JTable();
+		
+		
+		
+		return eastPanel;
+	}*/
+	
+	private JPanel initializeLogList(List<LogEvent> logEvents) {
 		for(LoadingListener l : loadingListeners) {
-			l.loadingChanged(myGraphEvolution.size()+2, "East Panel");
+			l.loadingStarted(logEvents.size(), "Log List");
 		}
 		
-		Object[][] table = new Object[myGraphEvolution.size()][4];
+		Object[][] table = new Object[logEvents.size()][4];
 		int i=0;
-		for(LogEvent evt : myGraphEvolution) {
+		for(LogEvent evt : logEvents) {
 			table[i] = evt.toArray();
 			i++;
 			for(LoadingListener l : loadingListeners) {
@@ -363,10 +488,10 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		logList.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 		logList.setEnabled(false);
 		logList.setColumnSelectionAllowed(false);
-		
+		logList.setVisible(true);
 		
 		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(myGraphEvolution.size()+1);
+			l.loadingProgress(logEvents.size()+1);
 		}
 		
 		JScrollPane listScroller = new JScrollPane(logList);
@@ -374,18 +499,14 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		listScroller.setBorder(BorderFactory.createLoweredBevelBorder());
 		listScroller.setSize(logList.getWidth(),logList.getHeight());
 		
-		JPanel eastPanel = new JPanel(new GridLayout(1,1));
-		eastPanel.add(listScroller);
-		eastPanel.setBackground(Color.GRAY);
-		eastPanel.setBorder(BorderFactory.createTitledBorder("Log Events"));
+		JPanel tablePanel = new JPanel(new GridLayout(1,1));
+		tablePanel.add(listScroller);
+		//tablePanel.setBackground(Color.GRAY);
+		tablePanel.setBorder(BorderFactory.createTitledBorder("Log Events"));
 		
-		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(myGraphEvolution.size()+2);
-		}
-		
-		return eastPanel;
+		return tablePanel;
 	}
-	//[end] EastPanel
+	//[end] tablePanel
 	
 	//[start] South Panel
 	/**
@@ -393,9 +514,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	 * @return The South Panel, laid out properly, to be displayed.
 	 */
 	private JPanel initializeSouthPanel() {
-		for(LoadingListener l : loadingListeners) {
-			l.loadingChanged(9, "South Panel");
-		}
 		
 		fastSpeedSlider = new JSlider(JSlider.HORIZONTAL,0,100,25);
 		fastSpeedSlider.addChangeListener(new SpeedSliderListener());
@@ -403,78 +521,43 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		fastSpeedSlider.setFont(new Font("Arial",Font.PLAIN,8));
 		fastSpeedSlider.setPaintTicks(false);
 		fastSpeedSlider.setPaintLabels(true);
-		fastSpeedSlider.setBackground(Color.GRAY);
+		//fastSpeedSlider.setBackground(Color.DARK_GRAY);
 		fastSpeedSlider.setForeground(Color.BLACK);
 		fastSpeedSlider.setBorder(BorderFactory.createTitledBorder("Quick Playback Speed"));
 		fastSpeedSlider.setEnabled(false);
-		
-		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(1);
-		}
 		
 		fastReverseButton = new JButton("<|<|");
 		fastReverseButton.addActionListener(new FastReverseButtonListener()); 
 		fastReverseButton.setEnabled(false);
 		
-		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(2);
-		}
-		
 		reverseButton = new JButton("<|");
 		reverseButton.addActionListener(new ReverseButtonListener());
 		reverseButton.setEnabled(false);
-		
-		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(3);
-		}
 		
 		pauseButton = new JButton("||");
 		pauseButton.addActionListener(new PauseButtonListener()); 
 		pauseButton.setEnabled(false);
 		
-		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(4);
-		}
-		
 		forwardButton = new JButton("|>");
 		forwardButton.addActionListener(new ForwardButtonListener());
 		forwardButton.setEnabled(false);
-		
-		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(5);
-		}
 		
 		fastForwardButton = new JButton("|>|>");
 		fastForwardButton.addActionListener(new FastForwardButtonListener());
 		fastForwardButton.setEnabled(false);
 		
-		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(6);
-		}
+		playbackSlider = new JSlider(JSlider.HORIZONTAL,0,100,0);
 		
-		playbackSlider = new JSlider(JSlider.HORIZONTAL,0,(int)myGraphEvolution.getLast().getTime(),0);
-		SliderListener s = new SliderListener();
-		playbackSlider.addChangeListener(s);
-		playbackSlider.addMouseListener(s);
-		playbackSlider.setBackground(Color.GRAY);
+		//playbackSlider.setBackground(Color.LIGHT_GRAY);
 		playbackSlider.setEnabled(false);
-		
-		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(7);
-		}
 		
 		GridBagLayout southLayout = new GridBagLayout();
 		GridBagConstraints southConstraints = new GridBagConstraints();
 		
 		
 		JPanel buttonPanel = new JPanel();
-		buttonPanel.setBackground(Color.GRAY);
+		//buttonPanel.setBackground(Color.LIGHT_GRAY);
 		buttonPanel.setLayout(southLayout);
-		
-		
-		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(8);
-		}
 		
 		buttonPanel.add(fastReverseButton);
 		buttonPanel.add(reverseButton);
@@ -485,11 +568,9 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		southLayout.setConstraints(fastSpeedSlider, southConstraints);
 		buttonPanel.add(fastSpeedSlider);
 		
-		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(9);
-		}
+		
 		JPanel south = new JPanel();
-		south.setBackground(Color.GRAY);
+		//south.setBackground(Color.LIGHT_GRAY);
 		south.setLayout(new GridLayout(2,1));
 		south.setBorder(BorderFactory.createTitledBorder("Playback Options"));
 		south.add(buttonPanel);
@@ -564,11 +645,11 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 				mouseContext.setEnabled(false);
 			}
 		});
-		mouseContext.add("Mouse Mode").setEnabled(false);
-		mouseContext.addSeparator();
+		mouseContext.add("Mouse Mode:").setEnabled(false);
 		mouseContext.add(picking);
 		mouseContext.add(transforming);
-		
+		mouseContext.addSeparator();
+		mouseContext.add("Set Layout:").setEnabled(false);
 	}
 	
 	//[end] Mouse Context Menu
@@ -580,6 +661,42 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	 * applet initialization
 	 */
 	public void init() {
+		
+		//[start] Tabs Pane
+		tabsPane = new JTabbedPane(JTabbedPane.TOP);
+		JPanel initialTab = new JPanel();
+		//initialTab.setSize(DEFWIDTH, DEFHEIGHT);
+		tabsPane.addTab("Welcome", initialTab);
+		
+		tabsPane.setEnabled(false);
+		//[end] Tabs Pane
+		
+		JPanel graphsPanel = new JPanel(new GridLayout(1,1));
+		//graphsPanel.setBackground(Color.GRAY);
+		graphsPanel.add(tabsPane);
+		//graphsPanel.setSize(DEFWIDTH, DEFHEIGHT);
+		//graphsPanel.setPreferredSize(new Dimension(DEFWIDTH, DEFHEIGHT));
+				
+		JSplitPane p = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+		p.setResizeWeight(1);
+		p.add(graphsPanel);
+		p.add(initializeSouthPanel());
+		
+		
+		getContentPane().setFont(new Font("Arial", Font.PLAIN, 12));
+		//try set the size
+		getContentPane().setBounds(0, 0, DEFWIDTH, DEFHEIGHT);
+		setJMenuBar(createFileMenu());
+		getContentPane().add(p);
+		setPreferredSize(new Dimension(DEFWIDTH, DEFHEIGHT));
+		
+		//startGraph();
+		loadingListeners.add(new LoadingBar());
+	}
+	//[end] init method
+	
+	//[start] Init Graph
+	public void startGraph() {
 		for(LoadingListener l : loadingListeners) {
 			l.loadingStarted(1, "Graphs");
 		}
@@ -590,13 +707,13 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 			l.loadingProgress(1);
 		}
 		
+		//[start] Build Log Event List
 		LogEventListBuilder logBuilder = new LogEventListBuilder(hiddenGraph);
 		for(LoadingListener l : loadingListeners) {
 			logBuilder.addLoadingListener(l);
 		}
-		
-		
 		myGraphEvolution = logBuilder.createLinkedList(openLogFile());
+		//[end] Build Log Event List
 		
 		layout = springLayoutBuilder(myGraphEvolution,DEFWIDTH,DEFHEIGHT,hiddenGraph);
 		
@@ -609,73 +726,62 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		
 		DefaultModalGraphMouse<P2PVertex,P2PConnection> gm = new DefaultModalGraphMouse<P2PVertex,P2PConnection>(); 
 		
+		//[start] Full Visualization Viewer Init
 		fullViewViewer = visualizationViewerBuilder(layout, DEFWIDTH,DEFHEIGHT, gm);
 		fullViewViewer.addMouseListener(new GraphMouseListener(relaxer));
 		fullViewViewer.add(new MyGlassPane());
+		fullViewViewer.setName("Full View");
 		//add my own vertex shape & color fill transformers
 		initSpecialTransformers(fullViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
 								EdgeShapeType.QUAD_CURVE,
 								EdgeShapeType.CUBIC_CURVE,
 								EdgeShapeType.LINE,
 								EdgeShapeType.LINE);
+		//[end] Full Visualization Viewer Init
 		
+		//[start] Collapsed Document Visualization Viewer Init
 		collapsedDocumentViewViewer = visualizationViewerBuilder(fullViewViewer.getGraphLayout(),DEFWIDTH,DEFHEIGHT, fullViewViewer.getGraphMouse());
-		initSpecialTransformers(collapsedDocumentViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.ELLIPSE,
-								EdgeShapeType.QUAD_CURVE,
-								EdgeShapeType.CUBIC_CURVE,
-								EdgeShapeType.LINE,
-								EdgeShapeType.LINE);
+		collapsedDocumentViewViewer.setName("Collapsed Document View");		
+		collapsedDocumentViewViewer.getRenderContext().setVertexFillPaintTransformer(new P2PVertexFillPaintTransformer(
+				collapsedDocumentViewViewer.getPickedVertexState(),Color.RED, Color.YELLOW, Color.MAGENTA, Color.RED, Color.RED, Color.BLUE));
+		collapsedDocumentViewViewer.getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer(
+				VertexShapeType.ELLIPSE, VertexShapeType.PENTAGON, VertexShapeType.ELLIPSE, 
+				P2PVertexShapeTransformer.PEER_SIZE, P2PVertexShapeTransformer.DOC_SIZE, P2PVertexShapeTransformer.PEER_SIZE));
+		collapsedDocumentViewViewer.getRenderContext().setEdgeStrokeTransformer(new P2PEdgeStrokeTransformer()); //stroke width
+		collapsedDocumentViewViewer.getRenderContext().setEdgeShapeTransformer(new P2PEdgeShapeTransformer(EdgeShapeType.QUAD_CURVE,
+				EdgeShapeType.CUBIC_CURVE,EdgeShapeType.LINE,EdgeShapeType.LINE)); //stroke width
+		//[end] Collapsed Document Visualization Viewer Init
 		
+		//[start] Collapsed Peer Visualization Viewer Init
 		collapsedPeerViewViewer = visualizationViewerBuilder(fullViewViewer.getGraphLayout(),DEFWIDTH,DEFHEIGHT, fullViewViewer.getGraphMouse());
+		collapsedPeerViewViewer.setName("Collapsed Peer View");
 		initSpecialTransformers(collapsedPeerViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
 								EdgeShapeType.QUAD_CURVE,
 								EdgeShapeType.CUBIC_CURVE,
 								EdgeShapeType.LINE,
 								EdgeShapeType.LINE);
+		//[end] Collapsed Peer Visualization Viewer Init
+		
+		//[start] Collapsed Peer AndDocument Visualization Viewer Init
 		collapsedPeerAndDocumentViewViewer = visualizationViewerBuilder(fullViewViewer.getGraphLayout(),DEFWIDTH,DEFHEIGHT, fullViewViewer.getGraphMouse());
+		collapsedPeerAndDocumentViewViewer.setName("Collapsed Peer and Document View");
 		initSpecialTransformers(collapsedPeerAndDocumentViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
 								EdgeShapeType.QUAD_CURVE,
 								EdgeShapeType.CUBIC_CURVE,
 								EdgeShapeType.LINE,
 								EdgeShapeType.LINE);
-		
-		tabsPane = new JTabbedPane(JTabbedPane.TOP);
+		//[end] Collapsed Peer AndDocument Visualization Viewer Init
 		
 		initializeMouseContext(gm);
 		
-		tabsPane.addTab("Full View",fullViewViewer);
-		tabsPane.addTab("Collapsed Document View", collapsedDocumentViewViewer);
-		tabsPane.addTab("Collapsed Peer View", collapsedPeerViewViewer);
-		tabsPane.addTab("Collapsed Peer and Document View", collapsedPeerAndDocumentViewViewer);
+		//initializeLogList(myGraphEvolution);
+		playbackSlider.setMaximum((int)myGraphEvolution.getLast().getTime());
 		
-		tabsPane.setEnabled(false);
-			
-		
-		JPanel graphsPanel = new JPanel(new GridLayout(1,1));
-		graphsPanel.setBackground(Color.GRAY);
-		graphsPanel.add(tabsPane);
-				
-		/*JSplitPane p3 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-		p3.setResizeWeight(0);
-		p3.add(initializeWestPanel(gm));
-		p3.add(graphsPanel);
-		*/
-		JSplitPane p2 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-		p2.setResizeWeight(0);
-		p2.add(graphsPanel);
-		p2.add(initializeEastPanel());
-		
-		JSplitPane p = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-		p.setResizeWeight(1);
-		p.add(p2);
-		p.add(initializeSouthPanel());
-		
-		
-		getContentPane().setFont(new Font("Arial", Font.PLAIN, 12));
-		//try set the size
-		getContentPane().setBounds(0, 0, DEFWIDTH, DEFHEIGHT);
-		setJMenuBar(createFileMenu());
-		getContentPane().add(p);
+		tabsPane.removeAll();
+		tabsPane.addTab(fullViewViewer.getName(),fullViewViewer);
+		tabsPane.addTab(collapsedDocumentViewViewer.getName(), collapsedDocumentViewViewer);
+		tabsPane.addTab(collapsedPeerViewViewer.getName(), collapsedPeerViewViewer);
+		tabsPane.addTab(collapsedPeerAndDocumentViewViewer.getName(), collapsedPeerAndDocumentViewViewer);
 		
 		setGlassPane(new MyGlassPane());
 		getGlassPane().setVisible(true);
@@ -684,22 +790,27 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		eventThread = new EventPlayer(myGraphEvolution,hiddenGraph,visibleGraph, playbackSlider);
 		eventThread.addEventPlayerListener(this);
 		
-		setBounds(0, 0, 1024, 768);
+		SliderListener s = new SliderListener();
+		playbackSlider.addChangeListener(s);
+		playbackSlider.addMouseListener(s);
+		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingComplete();
 		}
+		
+		fullViewViewer.repaint();
+		collapsedDocumentViewViewer.repaint();
+		collapsedPeerViewViewer.repaint();
+		collapsedPeerAndDocumentViewViewer.repaint();
 	}
-	//[end] init method
-
+	//[end] Init Graph
+	
 	//[start] overridden start method
 	@Override
 	public void start() {
 		validate();
 
-		fullViewViewer.repaint();
-		collapsedDocumentViewViewer.repaint();
-		collapsedPeerViewViewer.repaint();
-		collapsedPeerAndDocumentViewViewer.repaint();
+		
 		///----------run the spring layout algorithm with the full hidden graph for a bit -------
 	}
 	//[end] overridden start method
@@ -719,6 +830,42 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	}
 	//[end] Main
 
+	//[start] Helper Methods
+	
+	//[start] Layout Items for context menu
+	public List<JMenuItem> getLayoutItems() {
+		List<JMenuItem> menuItems = new LinkedList<JMenuItem>();
+		
+		
+		if(tabsPane.getSelectedComponent().getName().equals("Full View")) {
+			JMenuItem j = new JMenuItem("Full Layout 1");
+			menuItems.add(j);
+		}
+		else if(tabsPane.getSelectedComponent().getName().equals("Collapsed Document View")) {
+			JMenuItem j = new JMenuItem("Collapsed Document Layout 1");
+			menuItems.add(j);
+		}
+		else if(tabsPane.getSelectedComponent().getName().equals("Collapsed Peer View")) {
+			JMenuItem j = new JMenuItem("Collapsed Peer Layout 1");
+			JMenuItem j2 = new JMenuItem("Collapsed Peer Layout 2");
+			menuItems.add(j);
+			menuItems.add(j2);
+		}
+		else if(tabsPane.getSelectedComponent().getName().equals("Collapsed Peer and Document View")) {
+			JMenuItem j = new JMenuItem("Collapsed Peer and Document Layout 1");
+			JMenuItem j2 = new JMenuItem("Collapsed Peer and Document Layout 2");
+			JMenuItem j3 = new JMenuItem("Collapsed Peer and Document Layout 3");
+			menuItems.add(j);
+			menuItems.add(j2);
+			menuItems.add(j3);
+		}
+		
+		return menuItems;
+	}
+	//[end] Layout Items for context menu
+	
+	//[end] Helper Methods
+	
 	//[start] EventPlayer Handlers
 	
 	@Override
@@ -795,6 +942,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	 *
 	 */
 	private class GraphMouseListener extends MouseAdapter {
+		//[start] Relaxer freeze
 		
 		//this is the SpringLayout relaxer for the beginning
 		private Relaxer relaxer;
@@ -806,30 +954,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 			this.relaxer = rr;
 			started = false; // says if we've passed the initial problem of freezing the layout and getting started
 			
-		}
-		
-		@Override 
-		public void mousePressed(MouseEvent e) {
-			doPop(e);
-		}
-		
-		@Override 
-		public void mouseReleased(MouseEvent e) {
-			doPop(e);
-		}
-		
-		private void doPop(MouseEvent e) {
-			if (e.isPopupTrigger()) {
-				JPopupMenu test = new JPopupMenu("test");
-				test.add(new JMenuItem("Picking"));
-				test.add(new JMenuItem("Transforming"));
-				mouseContext.setEnabled(true);
-	    		mouseContext.show(null, e.getXOnScreen(), e.getYOnScreen());
-	    	}
-			else {
-				mouseContext.setVisible(false);
-				mouseContext.setEnabled(false);
-			}
 		}
 		
 		/**
@@ -893,7 +1017,36 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 				}
 				
 				eventThread.run();
-			}		
+			}
+		}
+		//[end] Relaxer Freeze
+		
+		@Override 
+		public void mousePressed(MouseEvent e) {
+			doPop(e);
+		}
+		
+		@Override 
+		public void mouseReleased(MouseEvent e) {
+			doPop(e);
+		}
+		
+		private void doPop(MouseEvent e) {
+			if (e.isPopupTrigger()) {
+				for(JMenuItem item : getLayoutItems()) {
+					mouseContext.add(item);
+				}
+				mouseContext.setEnabled(true);
+	    		mouseContext.show(null, e.getXOnScreen(), e.getYOnScreen());
+	    	}
+			else if(mouseContext.isVisible()) {
+				int size = mouseContext.getComponentCount();
+				for(int i = size-1;i>4;i--) {
+					mouseContext.remove(i);
+				}
+				mouseContext.setVisible(false);
+				mouseContext.setEnabled(false);
+			}
 		}
 	}
 	//[end] Relaxer and mouse context listener
@@ -971,9 +1124,13 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		public void stateChanged(ChangeEvent ce) {
 			JSlider source = (JSlider)ce.getSource();
 			eventThread.goToTime(source.getValue());
-			logList.clearSelection();
-			logList.addRowSelectionInterval(0, eventThread.getCurrentIndex()-1);
-			logList.scrollRectToVisible(logList.getCellRect(eventThread.getCurrentIndex()-1, 0, true));
+			if(logList != null) { //if log list is initialized and showing
+				if(logList.isVisible()) {
+					logList.clearSelection();
+					logList.addRowSelectionInterval(0, eventThread.getCurrentIndex()-1);
+					logList.scrollRectToVisible(logList.getCellRect(eventThread.getCurrentIndex()-1, 0, true));
+				}
+			}
 		}
 
 
@@ -1007,9 +1164,20 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		}
 	}
 	//[end] Playback Slider
-
+	
+	//[start] Layout Context Listener
+	
+	class  LayoutContextListener implements ActionListener {
+		public void actionPerformed(ActionEvent ae) {
+			
+		}
+	}
+	
+	//[end] Layout Context Listener
+	
 	//[end] Swing Event Listeners
 	
+	//[start] Glass panel for drawing the click to finalize
 	private class MyGlassPane extends JPanel {
 		/**
 		 * 
@@ -1032,10 +1200,11 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	        int cy = (vv.getY()+vv.getHeight())/2;
 	        
             g2d.setFont(new Font("Arial", Font.BOLD, 35));
-            g2d.setColor(new Color(100,149,237,100));
+            g2d.setColor(new Color(100,149,237,200));
             g2d.rotate(Math.toRadians(-45),cx,cy);
             g2d.drawString("Click to Finalize Layout", cx-cx/2,cy-cy/2);
             
 	    }
 	}
+	//[end] Glass panel for drawing the click to finalize
 }

@@ -5,6 +5,7 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 
 import javax.swing.JSlider;
 import javax.swing.Timer;
@@ -25,7 +26,7 @@ public class EventPlayer implements ActionListener{
 	
 	private PlayState state;
 
-	private List<LogEvent> my_eventlist;
+	private List<LogEvent> myEventList;
 	
 	private List<EventPlayerListener> my_listeners;
 	
@@ -42,7 +43,7 @@ public class EventPlayer implements ActionListener{
 		this.hiddenGraph = hiddenGraph;
 		this.visibleGraph = visibleGraph;
 		this.playbackSlider = playbackSlider;
-		my_eventlist = eventlist;
+		myEventList = eventlist;
 		current_index = 0; 
 		state = PlayState.FORWARD;
 		timeCounter = new TimeCounter(speed,0,eventlist.getFirst().getTime(),eventlist.getLast().getTime());
@@ -310,11 +311,11 @@ public class EventPlayer implements ActionListener{
 		List<LogEvent> events = new LinkedList<LogEvent>();
 		LogEvent evt;
 		if(myTimeNow<timeGoingTo) {
-			evt = my_eventlist.get(current_index);
+			evt = myEventList.get(current_index);
 			while(evt.getTime() < timeGoingTo) {
 				current_index++;
-				if(current_index >= my_eventlist.size()) {
-					current_index = my_eventlist.size()-1;
+				if(current_index >= myEventList.size()) {
+					current_index = myEventList.size()-1;
 					break;
 				}
 				//if the difference in time is more than 5 seconds ignore query events as they will not have any 
@@ -328,12 +329,12 @@ public class EventPlayer implements ActionListener{
 					events.add(evt);
 				}*/
 				events.add(evt);
-				evt = my_eventlist.get(current_index);
+				evt = myEventList.get(current_index);
 									
 			}
 		}
 		else {
-			evt = my_eventlist.get(current_index-1);
+			evt = myEventList.get(current_index-1);
 			while(evt.getTime() > timeGoingTo) {
 				
 				current_index--;
@@ -351,7 +352,7 @@ public class EventPlayer implements ActionListener{
 					events.add(evt);
 				}*/
 				events.add(evt);
-				evt = my_eventlist.get(current_index-1);
+				evt = myEventList.get(current_index-1);
 			}
 		}
 		return events;
@@ -431,7 +432,7 @@ public class EventPlayer implements ActionListener{
 
 	@Override
 	public void actionPerformed(ActionEvent arg0) {
-		if(state != PlayState.PAUSE /*&& !playbackSlider.getValueIsAdjusting()*/) {
+		if(state != PlayState.PAUSE) {
 			timeCounter.doIncrement();
 		}
 		long nextTime = timeCounter.getTime();
@@ -456,5 +457,18 @@ public class EventPlayer implements ActionListener{
 			}// if anything happened, update visual
 		}
 		
+	}
+
+	public List<LogEvent> getSaveEvents() {
+		ListIterator<LogEvent> i = myEventList.listIterator(current_index);
+		List<LogEvent> events = new LinkedList<LogEvent>();
+		while(i.hasNext()) {
+			events.add(i.next());
+		}
+		return events;
+	}
+	
+	public long getCurrentTime() {
+		return myTimeNow;
 	}
 }
