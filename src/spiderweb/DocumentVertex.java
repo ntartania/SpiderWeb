@@ -54,5 +54,10 @@ public class DocumentVertex extends P2PVertex {
 		else 
 		return 0;
 	}
+	
+	@Override
+	public String toString() {
+		return "D"+super.toString();
+	}
 	//[end] Overridden Methods
 }

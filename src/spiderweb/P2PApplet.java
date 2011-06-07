@@ -2,11 +2,8 @@ package spiderweb;
 
 //[start] Imports
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -17,17 +14,11 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.InputStreamReader;
-import java.net.URL;
 import java.util.LinkedList;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JApplet;
 import javax.swing.JButton;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -49,6 +40,10 @@ import org.apache.commons.collections15.Transformer;
 import org.apache.commons.collections15.functors.ConstantTransformer;
 
 import edu.uci.ics.jung.algorithms.layout.AbstractLayout;
+import edu.uci.ics.jung.algorithms.layout.CircleLayout;
+import edu.uci.ics.jung.algorithms.layout.FRLayout;
+import edu.uci.ics.jung.algorithms.layout.ISOMLayout;
+import edu.uci.ics.jung.algorithms.layout.KKLayout;
 import edu.uci.ics.jung.algorithms.layout.Layout;
 import edu.uci.ics.jung.algorithms.layout.SpringLayout;
 import edu.uci.ics.jung.algorithms.layout.StaticLayout;
@@ -76,10 +71,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static final Transformer<P2PConnection,Integer> UNITLENGTHFUNCTION = new ConstantTransformer(100);
 
-	//the log file (default value)
-	private static final String DEF_LOG_FILE = "ProcessedLog.txt";
-	private static final String DEF_LOG_URL = "http://www.sce.carleton.ca/~adavoust/simuldemo/ProcessedLog.txt";
-	
 	//default size for the swing graphic components
 	public static final int DEFWIDTH = 1360;
 	public static final int DEFHEIGHT = 768;
@@ -87,14 +78,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	
 	//[start] Private Variables
 	private static final long serialVersionUID = 2L;
-	
-	private static final boolean ONWEB = true;
-	
-	// this boolean indicates, as ONWEB above, that we are running on the web.
-	//it can be changed through the main()
-	private boolean ontheweb=ONWEB;
-	
-	private File mylogfile =null;
 	
 	private VisualizationViewer<P2PVertex,P2PConnection> fullViewViewer = null;
 	private VisualizationViewer<P2PVertex,P2PConnection> collapsedDocumentViewViewer = null;
@@ -132,84 +115,28 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	//[end] Attributes
 	
 	//[start] Constructor
-	public P2PApplet(boolean onWeb) {
-		ontheweb = onWeb;
+	public P2PApplet() {
 		loadingListeners = new LinkedList<LoadingListener>();
 		init();
 		start();
-		
-		if(!onWeb) {
-			
-			JFrame frame = new JFrame();
-			//frame.setBounds(0, 0, DEFWIDTH, DEFHEIGHT);
-			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-			frame.getContentPane().add(this);
+		JFrame frame = new JFrame();
 
-			frame.pack();
-			frame.setVisible(true);
-			
-			//LogPanelWithFileChooser mygui = new LogPanelWithFileChooser(this);
-	
-			//mygui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-			//mygui.validate();
-			//mygui.setBounds(200,200,500,200);
-			//mygui.pack();
-			//mygui.setVisible(true);
-			
-		}
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.getContentPane().add(this);
+
+		frame.pack();
+		frame.setVisible(true);
 	}
 	//[end] Constructor
 
 	//[start] Initialization
-	
-	//[start] setters for when on the web
-	/** to use a particular log file (can be chosen from GUI)*/
-	public void setLogFile(File lf){
-		mylogfile = lf;
-	}
-	
-	/**
-	 * to set if the applet is running on the web 
-	 * (in which case we need to access the log file through an http connection)
-	 * @param b true if the applet is running on the web (default). If not, it must be set from the main()
-	 */
-	public void setOnWeb(boolean b){
-		ontheweb = b;	
-	}
-	//[end] setters for when on the web
-	
-	//[start] Open the log file for reading
-	/**
-	 * Helper Method for opening the Log File.
-	 * @return The Log File for reading.
-	 */
-	private BufferedReader openLogFile() {
-		BufferedReader in;
-		try {
-			if (ontheweb){ // hack : when running on SCE server I can't read the log file without opening it through this URL reader ...
-				URL yahoo = new URL(DEF_LOG_URL);
-				in = new BufferedReader(new InputStreamReader(yahoo.openStream()));
-			} else {
-				if (mylogfile == null) {
-					in = new BufferedReader(new FileReader(DEF_LOG_FILE));
-				} else{
-					in = new BufferedReader(new FileReader(mylogfile));
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
-		}
-		return in;
-	}
-	//[end] Open the log file for reading
 	
 	//[start] Calculate the Spring Layout
 	/**
 	 * Helper Method for setting up the spring layout.
 	 * @return The initialized spring layout.
 	 */
-	private SpringLayout<P2PVertex,P2PConnection> springLayoutBuilder(List<LogEvent> graphEvents, int width, int height, P2PNetworkGraph graph) {
+	private SpringLayout<P2PVertex,P2PConnection> springLayoutBuilder(int width, int height, P2PNetworkGraph graph) {
 		final int numSteps = 100;
 		for(LoadingListener l : loadingListeners) {
 			l.loadingChanged(numSteps, "Spring Layout");
@@ -327,11 +254,16 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 				pauseButton.doClick();
 				int option = JOptionPane.showConfirmDialog(null, "Would you like to save the first 500 log events after this graph snapshot", 
 						"Save", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+				
 				if(option == JOptionPane.YES_OPTION) {
-					GraphSaverAndLoader.save(visibleGraph,eventThread.getSaveEvents(), eventThread.getCurrentTime());
+					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(visibleGraph,eventThread.getSaveEvents(), eventThread.getCurrentTime());
+					saver.addLoadingListener(new LoadingBar());
+					saver.doSave();
 				}
 				else if(option == JOptionPane.NO_OPTION) {
-					GraphSaverAndLoader.save(visibleGraph);
+					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(visibleGraph);
+					saver.addLoadingListener(new LoadingBar());
+					saver.doSave();
 				}
 				//else cancel option, don't do anything
 			}	
@@ -340,61 +272,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		
 		//[start] Load Entry
 		JMenuItem load = new JMenuItem("Load");
-		load.addActionListener(new ActionListener() {	
-			public void actionPerformed(ActionEvent arg0) {
-				
-				
-				JFileChooser fileNamer = new JFileChooser();
-				String [] extensions = { "xml","txt" };
-				fileNamer.setFileFilter(new ExtensionFileFilter(".xml and .txt Files", extensions));
-				int returnVal = fileNamer.showOpenDialog(null);
-				
-
-				if (returnVal == JFileChooser.APPROVE_OPTION) {
-					if(fileNamer.getSelectedFile().getAbsolutePath().endsWith(".xml") ||
-							fileNamer.getSelectedFile().getAbsolutePath().endsWith(".txt")) {
-
-						mylogfile = fileNamer.getSelectedFile();
-						
-						if(myGraphEvolution != null) {
-							myGraphEvolution.clear();
-							eventThread.stopPlayback();
-							fastReverseButton.setEnabled(false);
-							reverseButton.setEnabled(false);
-							pauseButton.setEnabled(false);
-							forwardButton.setEnabled(false);
-							fastForwardButton.setEnabled(false);
-							playbackSlider.setEnabled(false);
-							playbackSlider.setValue(0);
-							tabsPane.setEnabled(false);
-							fastSpeedSlider.setEnabled(false);
-						}
-						Thread test = new Thread(new Runnable() {
-							
-							@Override
-							public void run() {
-								startGraph();
-							}
-						});
-						test.start();
-						
-					}
-					else {
-						JOptionPane.showMessageDialog(null, "Wrong File Type", "Error", JOptionPane.ERROR_MESSAGE);
-					}
-				}
-				else if(returnVal == JFileChooser.CANCEL_OPTION || returnVal == JFileChooser.ERROR_OPTION) {
-					
-				}
-				
-				
-				//pauseButton.doClick();
-				//P2PNetworkGraph graph = GraphSaverAndLoader.load();
-				//if(graph != null) {
-					//visibleGraph = graph;
-				//}
-			}	
-		});
+		load.addActionListener(new LoadListener());
 		//[end] Load Entry
 		
 		//[start] Exit Entry
@@ -406,7 +284,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 						JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
 				
 				if(option == JOptionPane.OK_OPTION) {
-					GraphSaverAndLoader.save(visibleGraph);
+					//GraphSaverAndLoader.save(visibleGraph);
 					System.exit(0);
 				}
 				else if(option == JOptionPane.NO_OPTION) {
@@ -429,7 +307,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		
 		//[start] Window Menu
 		JMenu window = new JMenu("Window");
-		//[start] Connect Entry
 		JMenuItem logTable = new JMenuItem("Show Log Table");
 		logTable.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
@@ -440,6 +317,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 					p.add(initializeLogList(myGraphEvolution));
 					
 					getContentPane().add(p);
+					validate();
 				}
 			}	
 		});
@@ -454,16 +332,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	}
 	//[end] File Menu
 	
-	//[start] East Panel
-	
-	/*private JPanel initializeEastPanel() {
-		logList = new JTable();
-		
-		
-		
-		return eastPanel;
-	}*/
-	
+	//[start] Table Panel
 	private JPanel initializeLogList(List<LogEvent> logEvents) {
 		for(LoadingListener l : loadingListeners) {
 			l.loadingStarted(logEvents.size(), "Log List");
@@ -504,9 +373,13 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		//tablePanel.setBackground(Color.GRAY);
 		tablePanel.setBorder(BorderFactory.createTitledBorder("Log Events"));
 		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingComplete();
+		}
+		
 		return tablePanel;
 	}
-	//[end] tablePanel
+	//[end] Table Panel
 	
 	//[start] South Panel
 	/**
@@ -632,6 +505,10 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		picking.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				gm.setMode(Mode.PICKING);
+				int size = mouseContext.getComponentCount();
+				for(int i = size-1;i>4;i--) {
+					mouseContext.remove(i);
+				}
 				mouseContext.setVisible(false);
 				mouseContext.setEnabled(false);
 			}
@@ -641,6 +518,10 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		transforming.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				gm.setMode(Mode.TRANSFORMING);
+				int size = mouseContext.getComponentCount();
+				for(int i = size-1;i>4;i--) {
+					mouseContext.remove(i);
+				}
 				mouseContext.setVisible(false);
 				mouseContext.setEnabled(false);
 			}
@@ -665,17 +546,13 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		//[start] Tabs Pane
 		tabsPane = new JTabbedPane(JTabbedPane.TOP);
 		JPanel initialTab = new JPanel();
-		//initialTab.setSize(DEFWIDTH, DEFHEIGHT);
 		tabsPane.addTab("Welcome", initialTab);
 		
 		tabsPane.setEnabled(false);
 		//[end] Tabs Pane
 		
 		JPanel graphsPanel = new JPanel(new GridLayout(1,1));
-		//graphsPanel.setBackground(Color.GRAY);
 		graphsPanel.add(tabsPane);
-		//graphsPanel.setSize(DEFWIDTH, DEFHEIGHT);
-		//graphsPanel.setPreferredSize(new Dimension(DEFWIDTH, DEFHEIGHT));
 				
 		JSplitPane p = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		p.setResizeWeight(1);
@@ -695,8 +572,132 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	}
 	//[end] init method
 	
-	//[start] Init Graph
 	public void startGraph() {
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingStarted(7,"Building Visualizer");
+		}
+		
+		layout = springLayoutBuilder(DEFWIDTH,DEFHEIGHT,hiddenGraph);
+		//layout = new FRLayout<P2PVertex, P2PConnection>(hiddenGraph);
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingChanged(7, "Building Visualizer");
+			l.loadingProgress(1);
+		}
+		
+		//[start] Relaxer creation
+		Relaxer relaxer = new VisRunner((IterativeContext)layout);
+		relaxer.stop();
+		relaxer.setSleepTime(80L);
+		relaxer.relax();
+		//[end] Relaxer creation
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(2);
+		}
+		
+		DefaultModalGraphMouse<P2PVertex,P2PConnection> gm = new DefaultModalGraphMouse<P2PVertex,P2PConnection>(); 
+		
+		//[start] Full Visualization Viewer Init
+		fullViewViewer = visualizationViewerBuilder(layout, DEFWIDTH,DEFHEIGHT, gm);
+		fullViewViewer.addMouseListener(new GraphMouseListener(relaxer));
+		fullViewViewer.setName("Full View");
+		//add my own vertex shape & color fill transformers
+		initSpecialTransformers(fullViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
+								EdgeShapeType.QUAD_CURVE,
+								EdgeShapeType.CUBIC_CURVE,
+								EdgeShapeType.LINE,
+								EdgeShapeType.LINE);
+		//[end] Full Visualization Viewer Init
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(3);
+		}
+		//[start] Collapsed Document Visualization Viewer Init
+		collapsedDocumentViewViewer = visualizationViewerBuilder(fullViewViewer.getGraphLayout(),DEFWIDTH,DEFHEIGHT, fullViewViewer.getGraphMouse());
+		collapsedDocumentViewViewer.setName("Collapsed Document View");		
+		collapsedDocumentViewViewer.getRenderContext().setVertexFillPaintTransformer(new P2PVertexFillPaintTransformer(
+				collapsedDocumentViewViewer.getPickedVertexState(),Color.RED, Color.YELLOW, Color.MAGENTA, Color.RED, Color.RED, Color.BLUE));
+		collapsedDocumentViewViewer.getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer(
+				VertexShapeType.ELLIPSE, VertexShapeType.PENTAGON, VertexShapeType.ELLIPSE, 
+				P2PVertexShapeTransformer.PEER_SIZE, P2PVertexShapeTransformer.DOC_SIZE, P2PVertexShapeTransformer.PEER_SIZE));
+		collapsedDocumentViewViewer.getRenderContext().setEdgeStrokeTransformer(new P2PEdgeStrokeTransformer()); //stroke width
+		collapsedDocumentViewViewer.getRenderContext().setEdgeShapeTransformer(new P2PEdgeShapeTransformer(EdgeShapeType.QUAD_CURVE,
+				EdgeShapeType.CUBIC_CURVE,EdgeShapeType.LINE,EdgeShapeType.LINE)); //stroke width
+		//[end] Collapsed Document Visualization Viewer Init
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(4);
+		}
+		//[start] Collapsed Peer Visualization Viewer Init
+		collapsedPeerViewViewer = visualizationViewerBuilder(fullViewViewer.getGraphLayout(),DEFWIDTH,DEFHEIGHT, fullViewViewer.getGraphMouse());
+		collapsedPeerViewViewer.setName("Collapsed Peer View");
+		initSpecialTransformers(collapsedPeerViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
+								EdgeShapeType.QUAD_CURVE,
+								EdgeShapeType.CUBIC_CURVE,
+								EdgeShapeType.LINE,
+								EdgeShapeType.LINE);
+		//[end] Collapsed Peer Visualization Viewer Init
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(5);
+		}
+		//[start] Collapsed Peer AndDocument Visualization Viewer Init
+		collapsedPeerAndDocumentViewViewer = visualizationViewerBuilder(fullViewViewer.getGraphLayout(),DEFWIDTH,DEFHEIGHT, fullViewViewer.getGraphMouse());
+		collapsedPeerAndDocumentViewViewer.setName("Collapsed Peer and Document View");
+		initSpecialTransformers(collapsedPeerAndDocumentViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
+								EdgeShapeType.QUAD_CURVE,
+								EdgeShapeType.CUBIC_CURVE,
+								EdgeShapeType.LINE,
+								EdgeShapeType.LINE);
+		//[end] Collapsed Peer AndDocument Visualization Viewer Init
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(6);
+		}
+		
+		initializeMouseContext(gm);
+		
+		if(myGraphEvolution.isEmpty()) {
+			SliderListener s = new SliderListener();
+			playbackSlider.setMaximum(0);
+			playbackSlider.addChangeListener(s);
+			playbackSlider.addMouseListener(s);
+			
+			
+			/// create the event player
+			eventThread = new EventPlayer(hiddenGraph, visibleGraph);
+			eventThread.addEventPlayerListener(this);
+		}
+		else {
+			SliderListener s = new SliderListener();
+			//playbackSlider.setMinimum((int)myGraphEvolution.getFirst().getTime());
+			playbackSlider.setMinimum(0);
+			playbackSlider.setMaximum((int)myGraphEvolution.getLast().getTime());
+			playbackSlider.addChangeListener(s);
+			playbackSlider.addMouseListener(s);
+			
+			/// create the event player
+			eventThread = new EventPlayer(hiddenGraph, visibleGraph, myGraphEvolution, playbackSlider);
+			eventThread.addEventPlayerListener(this);
+		}
+		for(LoadingListener l : loadingListeners) {
+			l.loadingProgress(7);
+		}
+		tabsPane.removeAll();
+		tabsPane.addTab(fullViewViewer.getName(),fullViewViewer);
+		tabsPane.addTab(collapsedDocumentViewViewer.getName(), collapsedDocumentViewViewer);
+		tabsPane.addTab(collapsedPeerViewViewer.getName(), collapsedPeerViewViewer);
+		tabsPane.addTab(collapsedPeerAndDocumentViewViewer.getName(), collapsedPeerAndDocumentViewViewer);
+		
+		for(LoadingListener l : loadingListeners) {
+			l.loadingComplete();
+		}
+
+		doRepaint();
+	}
+	
+	
+	//[start] Init Graph
+	/*public void startLogs() {
 		for(LoadingListener l : loadingListeners) {
 			l.loadingStarted(1, "Graphs");
 		}
@@ -707,15 +708,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 			l.loadingProgress(1);
 		}
 		
-		//[start] Build Log Event List
-		LogEventListBuilder logBuilder = new LogEventListBuilder(hiddenGraph);
-		for(LoadingListener l : loadingListeners) {
-			logBuilder.addLoadingListener(l);
-		}
-		myGraphEvolution = logBuilder.createLinkedList(openLogFile());
-		//[end] Build Log Event List
-		
-		layout = springLayoutBuilder(myGraphEvolution,DEFWIDTH,DEFHEIGHT,hiddenGraph);
+		layout = springLayoutBuilder(DEFWIDTH,DEFHEIGHT,hiddenGraph);
 		
 		//[start] Relaxer creation
 		Relaxer relaxer = new VisRunner((IterativeContext)layout);
@@ -729,7 +722,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		//[start] Full Visualization Viewer Init
 		fullViewViewer = visualizationViewerBuilder(layout, DEFWIDTH,DEFHEIGHT, gm);
 		fullViewViewer.addMouseListener(new GraphMouseListener(relaxer));
-		fullViewViewer.add(new MyGlassPane());
 		fullViewViewer.setName("Full View");
 		//add my own vertex shape & color fill transformers
 		initSpecialTransformers(fullViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
@@ -775,7 +767,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		initializeMouseContext(gm);
 		
 		//initializeLogList(myGraphEvolution);
-		playbackSlider.setMaximum((int)myGraphEvolution.getLast().getTime());
 		
 		tabsPane.removeAll();
 		tabsPane.addTab(fullViewViewer.getName(),fullViewViewer);
@@ -783,37 +774,13 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		tabsPane.addTab(collapsedPeerViewViewer.getName(), collapsedPeerViewViewer);
 		tabsPane.addTab(collapsedPeerAndDocumentViewViewer.getName(), collapsedPeerAndDocumentViewViewer);
 		
-		setGlassPane(new MyGlassPane());
-		getGlassPane().setVisible(true);
-		
-		/// create the event player
-		eventThread = new EventPlayer(myGraphEvolution,hiddenGraph,visibleGraph, playbackSlider);
-		eventThread.addEventPlayerListener(this);
-		
-		SliderListener s = new SliderListener();
-		playbackSlider.addChangeListener(s);
-		playbackSlider.addMouseListener(s);
-		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingComplete();
 		}
 		
-		fullViewViewer.repaint();
-		collapsedDocumentViewViewer.repaint();
-		collapsedPeerViewViewer.repaint();
-		collapsedPeerAndDocumentViewViewer.repaint();
-	}
+		doRepaint();
+	}*/
 	//[end] Init Graph
-	
-	//[start] overridden start method
-	@Override
-	public void start() {
-		validate();
-
-		
-		///----------run the spring layout algorithm with the full hidden graph for a bit -------
-	}
-	//[end] overridden start method
 	
 	//[end] Initialization
 	
@@ -826,7 +793,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	public static void main(String[] args) {
 
 		@SuppressWarnings("unused")
-		P2PApplet myapp = new P2PApplet(false);
+		P2PApplet myapp = new P2PApplet();
 	}
 	//[end] Main
 
@@ -838,26 +805,81 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		
 		
 		if(tabsPane.getSelectedComponent().getName().equals("Full View")) {
-			JMenuItem j = new JMenuItem("Full Layout 1");
-			menuItems.add(j);
+			JMenuItem frLayout = new JMenuItem("FR Layout");
+			frLayout.addActionListener(new FRLayoutListener(fullViewViewer));
+			
+			JMenuItem kkLayout = new JMenuItem("KK Layout");
+			kkLayout.addActionListener(new KKLayoutListener(fullViewViewer));
+			
+			JMenuItem isomLayout = new JMenuItem("ISOM Layout");
+			isomLayout.addActionListener(new ISOMLayoutListener(fullViewViewer));
+			
+			JMenuItem circleLayout = new JMenuItem("Circle Layout");
+			circleLayout.addActionListener(new CircleLayoutListener(fullViewViewer));
+			
+			JMenuItem springLayout = new JMenuItem("Spring Layout");
+			springLayout.addActionListener(new SpringLayoutListener(fullViewViewer));
+			
+			menuItems.add(circleLayout);
+			menuItems.add(frLayout);
+			menuItems.add(isomLayout);
+			menuItems.add(kkLayout);
+			menuItems.add(springLayout);
 		}
 		else if(tabsPane.getSelectedComponent().getName().equals("Collapsed Document View")) {
-			JMenuItem j = new JMenuItem("Collapsed Document Layout 1");
-			menuItems.add(j);
+			JMenuItem frLayout = new JMenuItem("FR Layout");
+			frLayout.addActionListener(new FRLayoutListener(collapsedDocumentViewViewer));
+			
+			JMenuItem kkLayout = new JMenuItem("KK Layout");
+			kkLayout.addActionListener(new KKLayoutListener(collapsedDocumentViewViewer));
+			
+			JMenuItem isomLayout = new JMenuItem("ISOM Layout");
+			isomLayout.addActionListener(new ISOMLayoutListener(collapsedDocumentViewViewer));
+			
+			JMenuItem circleLayout = new JMenuItem("Circle Layout");
+			circleLayout.addActionListener(new CircleLayoutListener(collapsedDocumentViewViewer));
+			
+			menuItems.add(circleLayout);
+			menuItems.add(frLayout);
+			menuItems.add(isomLayout);
+			menuItems.add(kkLayout);
 		}
 		else if(tabsPane.getSelectedComponent().getName().equals("Collapsed Peer View")) {
-			JMenuItem j = new JMenuItem("Collapsed Peer Layout 1");
-			JMenuItem j2 = new JMenuItem("Collapsed Peer Layout 2");
-			menuItems.add(j);
-			menuItems.add(j2);
+			JMenuItem frLayout = new JMenuItem("FR Layout");
+			frLayout.addActionListener(new FRLayoutListener(collapsedPeerViewViewer));
+			
+			
+			JMenuItem kkLayout = new JMenuItem("KK Layout");
+			kkLayout.addActionListener(new KKLayoutListener(collapsedPeerViewViewer));
+			
+			JMenuItem isomLayout = new JMenuItem("ISOM Layout");
+			isomLayout.addActionListener(new ISOMLayoutListener(collapsedPeerViewViewer));
+			
+			JMenuItem circleLayout = new JMenuItem("Circle Layout");
+			circleLayout.addActionListener(new CircleLayoutListener(collapsedPeerViewViewer));
+			
+			menuItems.add(circleLayout);
+			menuItems.add(frLayout);
+			menuItems.add(isomLayout);
+			menuItems.add(kkLayout);
 		}
 		else if(tabsPane.getSelectedComponent().getName().equals("Collapsed Peer and Document View")) {
-			JMenuItem j = new JMenuItem("Collapsed Peer and Document Layout 1");
-			JMenuItem j2 = new JMenuItem("Collapsed Peer and Document Layout 2");
-			JMenuItem j3 = new JMenuItem("Collapsed Peer and Document Layout 3");
-			menuItems.add(j);
-			menuItems.add(j2);
-			menuItems.add(j3);
+			JMenuItem frLayout = new JMenuItem("FR Layout");
+			frLayout.addActionListener(new FRLayoutListener(collapsedPeerAndDocumentViewViewer));
+			
+			JMenuItem kkLayout = new JMenuItem("KK Layout");
+			kkLayout.addActionListener(new KKLayoutListener(collapsedPeerAndDocumentViewViewer));
+			
+			JMenuItem isomLayout = new JMenuItem("ISOM Layout");
+			isomLayout.addActionListener(new ISOMLayoutListener(collapsedPeerAndDocumentViewViewer));
+			
+			JMenuItem circleLayout = new JMenuItem("Circle Layout");
+			circleLayout.addActionListener(new CircleLayoutListener(collapsedPeerAndDocumentViewViewer));
+			
+			menuItems.add(circleLayout);
+			menuItems.add(frLayout);
+			menuItems.add(isomLayout);
+			menuItems.add(kkLayout);
 		}
 		
 		return menuItems;
@@ -973,7 +995,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 					collapsedPeerAndDocumentViewViewer.getModel().setGraphLayout(layout);
 					collapsedPeerViewViewer.getModel().setGraphLayout(layout);
 					collapsedDocumentViewViewer.getModel().setGraphLayout(layout);
-					//fullViewViewer.repaint();
 					//	tie the "include functions" of the viewer to the visible graph
 					
 					
@@ -1037,7 +1058,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 					mouseContext.add(item);
 				}
 				mouseContext.setEnabled(true);
-	    		mouseContext.show(null, e.getXOnScreen(), e.getYOnScreen());
+	    		mouseContext.show(null, e.getXOnScreen(), e.getYOnScreen());	    		
 	    	}
 			else if(mouseContext.isVisible()) {
 				int size = mouseContext.getComponentCount();
@@ -1135,16 +1156,16 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 
 
 		@Override
-		public void mousePressed(MouseEvent arg0) {
-			if(((JSlider)(arg0.getSource())).isEnabled()){
+		public void mousePressed(MouseEvent e) {
+			if(((JSlider)(e.getSource())).isEnabled()){
 				prevState = eventThread.getPlayState();
 				eventThread.pause();
 			}
 		}
 
 		@Override
-		public void mouseReleased(MouseEvent arg0) {
-			if(((JSlider)(arg0.getSource())).isEnabled()){
+		public void mouseReleased(MouseEvent e) {
+			if(((JSlider)(e.getSource())).isEnabled()){
 				if(prevState == PlayState.FASTREVERSE) {
 					eventThread.fastReverse();
 				}
@@ -1165,46 +1186,133 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	}
 	//[end] Playback Slider
 	
-	//[start] Layout Context Listener
+	//[start] Layout Context Listeners
 	
-	class  LayoutContextListener implements ActionListener {
-		public void actionPerformed(ActionEvent ae) {
-			
+	//fullViewViewer.getModel().setGraphLayout(new AggregateLayout<P2PVertex, P2PConnection>(
+	//		new AggregateLayout<P2PVertex, P2PConnection>(fullViewViewer.getGraphLayout())));
+	
+	class  FRLayoutListener implements ActionListener {
+		VisualizationViewer<P2PVertex,P2PConnection> vv;
+		public FRLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
+			this.vv = vv;
+		}
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			vv.getModel().setGraphLayout(new FRLayout<P2PVertex, P2PConnection>(hiddenGraph, tabsPane.getSize()));
+			mouseContext.setVisible(false);
+			mouseContext.setEnabled(false);
+			int size = mouseContext.getComponentCount();
+			for(int i = size-1;i>4;i--) {
+				mouseContext.remove(i);
+			}
+		}
+	}
+	class  ISOMLayoutListener implements ActionListener {
+		VisualizationViewer<P2PVertex,P2PConnection> vv;
+		public ISOMLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
+			this.vv = vv;
+		}
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			vv.getModel().setGraphLayout(new ISOMLayout<P2PVertex, P2PConnection>(hiddenGraph));
+			mouseContext.setVisible(false);
+			mouseContext.setEnabled(false);
+			int size = mouseContext.getComponentCount();
+			for(int i = size-1;i>4;i--) {
+				mouseContext.remove(i);
+			}
+		}
+	}
+	class  KKLayoutListener implements ActionListener {
+		VisualizationViewer<P2PVertex,P2PConnection> vv;
+		public KKLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
+			this.vv = vv;
+		}
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			vv.getModel().setGraphLayout(new KKLayout<P2PVertex, P2PConnection>(hiddenGraph));
+			mouseContext.setVisible(false);
+			mouseContext.setEnabled(false);
+			int size = mouseContext.getComponentCount();
+			for(int i = size-1;i>4;i--) {
+				mouseContext.remove(i);
+			}
+		}
+	}
+	class  CircleLayoutListener implements ActionListener {
+		VisualizationViewer<P2PVertex,P2PConnection> vv;
+		public CircleLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
+			this.vv = vv;
+		}
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			vv.getModel().setGraphLayout(new CircleLayout<P2PVertex, P2PConnection>(hiddenGraph));
+			mouseContext.setVisible(false);
+			mouseContext.setEnabled(false);
+			int size = mouseContext.getComponentCount();
+			for(int i = size-1;i>4;i--) {
+				mouseContext.remove(i);
+			}
+		}
+	}
+	class  SpringLayoutListener implements ActionListener {
+		VisualizationViewer<P2PVertex,P2PConnection> vv;
+		public SpringLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
+			this.vv = vv;
+		}
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			vv.getModel().setGraphLayout(new SpringLayout<P2PVertex, P2PConnection>(hiddenGraph));
+			mouseContext.setVisible(false);
+			mouseContext.setEnabled(false);
+			int size = mouseContext.getComponentCount();
+			for(int i = size-1;i>4;i--) {
+				mouseContext.remove(i);
+			}
 		}
 	}
 	
-	//[end] Layout Context Listener
+	//[end] Layout Context Listeners
+	
+	//[start] Load Listener
+	class LoadListener implements ActionListener {
+	
+		public void actionPerformed(ActionEvent arg0) {
+			
+			pauseButton.doClick();
+			Thread loadingThread = new Thread(new Runnable() {
+				
+				@Override
+				public void run() {
+					if(myGraphEvolution != null) {
+						myGraphEvolution.clear();
+						eventThread.stopPlayback();
+						fastReverseButton.setEnabled(false);
+						reverseButton.setEnabled(false);
+						pauseButton.setEnabled(false);
+						forwardButton.setEnabled(false);
+						fastForwardButton.setEnabled(false);
+						playbackSlider.setEnabled(false);
+						playbackSlider.setValue(0);
+						tabsPane.setEnabled(false);
+						fastSpeedSlider.setEnabled(false);
+					}
+					P2PNetworkGraphLoader loader = new P2PNetworkGraphLoader();
+					loader.addLoadingListener(new LoadingBar());
+					if(loader.doLoad()) {
+						myGraphEvolution = loader.getLogList();
+						hiddenGraph = loader.getHiddenP2PNetworkGraph();
+						visibleGraph = loader.getVisibleP2PNetworkGraph();
+						startGraph();
+					}
+				}
+			});
+			loadingThread.start();
+		}
+	}
+	//[end] Load Listener
 	
 	//[end] Swing Event Listeners
 	
-	//[start] Glass panel for drawing the click to finalize
-	private class MyGlassPane extends JPanel {
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = 1L;
-		public MyGlassPane() {
-			setOpaque(false);
-		}
-		/**
-	     * Handling Paint
-	     */
-	    public void paint(Graphics g)
-	    {
-	    	Graphics2D g2d = (Graphics2D)g;
-	        super.paint(g);
-	        
-	        Component vv = this.getParent();
-	        
-	        int cx = (vv.getX()+vv.getWidth())/2;
-	        int cy = (vv.getY()+vv.getHeight())/2;
-	        
-            g2d.setFont(new Font("Arial", Font.BOLD, 35));
-            g2d.setColor(new Color(100,149,237,200));
-            g2d.rotate(Math.toRadians(-45),cx,cy);
-            g2d.drawString("Click to Finalize Layout", cx-cx/2,cy-cy/2);
-            
-	    }
-	}
-	//[end] Glass panel for drawing the click to finalize
+	
 }

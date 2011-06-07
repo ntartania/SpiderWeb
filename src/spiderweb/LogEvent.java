@@ -113,7 +113,11 @@ public class LogEvent implements Comparable<LogEvent>{
 	 */
 	public boolean hasParamTwo() {
 		return !(type.equals("online")||type.equals("offline"));
-	}	
+	}
+	
+	public static boolean typeHasParamTwo(String eventType) {
+		return !(eventType.equals("online")||eventType.equals("offline"));
+	}
 	
 	/**
 	 * get one of the parameters of the event

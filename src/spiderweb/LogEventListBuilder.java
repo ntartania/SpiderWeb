@@ -25,11 +25,21 @@ public class LogEventListBuilder  {
 		this.hiddenGraph = hiddenGraph;
 	}
 	
+	public LogEventListBuilder() {
+		this(new P2PNetworkGraph());
+	}
+	
 	public void addLoadingListener(LoadingListener loadingListener) {
 		loadingListeners.add(loadingListener);
 	}
 	//[end] Constructor and listener initializer
 
+	//[start] Getters
+	public P2PNetworkGraph getHiddenGraph() {
+		return hiddenGraph;
+	}
+	//[end] Getters
+	
 	//[start] List initializers
 	/**
 	 * 
@@ -91,7 +101,7 @@ public class LogEventListBuilder  {
 					P2PNetworkGraph.graphConstructionEvent(gev,hiddenGraph);
 				}
 				
-				createColouringEvents(gev,colouringEvents,queryPeers); //add in colouring events if needed
+				createColouringEvents(gev,colouringEvents,queryPeers, tempGraph); //add in colouring events if needed
 				createOfflineEvents(gev, peerMap); //create events for when a peer goes offline
 				logEvents.add(gev); //add this read log event to the list
 				createBackOnlineEvents(gev, peerMap, tempGraph);
@@ -169,7 +179,7 @@ public class LogEventListBuilder  {
 	 * @param colouringEvents	The list of Colouring Events for which to add to.
 	 * @param queryPeers	List of peers who are querying(for highlighting edges as the query propagates.
 	 */
-	private void createColouringEvents(LogEvent gev, List<LogEvent> colouringEvents, List<P2PVertex> queryPeers) {
+	private void createColouringEvents(LogEvent gev, List<LogEvent> colouringEvents, List<P2PVertex> queryPeers, P2PNetworkGraph tempGraph) {
 		String eventType = gev.getType();
 		if(eventType.equals("query") || eventType.equals("queryhit"))
 		{
@@ -183,7 +193,7 @@ public class LogEventListBuilder  {
 			P2PVertex queriedPeer = new PeerVertex(gev.getParam(1));
 			//[start] bold the edge between the peer which the query reached and the sender
 			for(P2PVertex querySender : queryPeers) {
-				if(hiddenGraph.findEdge(querySender, queriedPeer) != null) {
+				if(tempGraph.findEdge(querySender, queriedPeer) != null) {
 					LogEvent ev = new LogEvent(gev.getTime()+1,"queryedge",querySender.getKey(),queriedPeer.getKey());
 					
 					colouringEvents.add(ev);

@@ -2,7 +2,6 @@ package spiderweb;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -35,19 +34,36 @@ public class EventPlayer implements ActionListener{
 	private P2PNetworkGraph hiddenGraph;
 	private P2PNetworkGraph visibleGraph;
 	
-	private long myTimeNow = 0L;
+	private long myTimeNow;
 	
 	JSlider playbackSlider;
 	
-	public EventPlayer(LinkedList<LogEvent> eventlist, P2PNetworkGraph hiddenGraph, P2PNetworkGraph visibleGraph, JSlider playbackSlider){
+	private boolean playable; //for when a graph is loaded without any events
+	
+	public EventPlayer(P2PNetworkGraph hiddenGraph, P2PNetworkGraph visibleGraph, LinkedList<LogEvent> eventlist, JSlider playbackSlider){
 		this.hiddenGraph = hiddenGraph;
 		this.visibleGraph = visibleGraph;
 		this.playbackSlider = playbackSlider;
 		myEventList = eventlist;
 		current_index = 0; 
 		state = PlayState.FORWARD;
-		timeCounter = new TimeCounter(speed,0,eventlist.getFirst().getTime(),eventlist.getLast().getTime());
+		//timeCounter = new TimeCounter(speed,eventlist.getFirst().getTime(),eventlist.getFirst().getTime(),eventlist.getLast().getTime());
+		timeCounter = new TimeCounter(speed,0,0,eventlist.getLast().getTime());
 		my_listeners = new LinkedList<EventPlayerListener>();
+		myTimeNow = timeCounter.getLowerBound();
+		playable=true;
+	}
+	
+	public EventPlayer(P2PNetworkGraph hiddenGraph, P2PNetworkGraph visibleGraph){
+		this.hiddenGraph = hiddenGraph;
+		this.visibleGraph = visibleGraph;
+		this.playbackSlider = null;
+		myEventList = new LinkedList<LogEvent>();
+		current_index = 0; 
+		state = PlayState.PAUSE;
+		timeCounter = new TimeCounter(0,0,0,0);
+		my_listeners = new LinkedList<EventPlayerListener>();
+		playable = false;
 	}
 	
 	public void addEventPlayerListener(EventPlayerListener epl) {
@@ -63,10 +79,6 @@ public class EventPlayer implements ActionListener{
 				timeCounter.setIncrement(-speed*fastMultiplier);
 			}
 		}
-	}
-	
-	public void save(File file) {
-		
 	}
 	
 	public PlayState getPlayState() {
@@ -318,16 +330,6 @@ public class EventPlayer implements ActionListener{
 					current_index = myEventList.size()-1;
 					break;
 				}
-				//if the difference in time is more than 5 seconds ignore query events as they will not have any 
-				//importance since they all happen at once(both the query and unquery)
-				/*if((timeGoingTo-evt.getTime()) > 5000) { 
-					if(evt.isStructural()) {
-						events.add(evt);
-					} //else don't add it
-				}
-				else {
-					events.add(evt);
-				}*/
 				events.add(evt);
 				evt = myEventList.get(current_index);
 									
@@ -341,16 +343,6 @@ public class EventPlayer implements ActionListener{
 				if(current_index < 1) {
 					break;
 				}
-				//if the difference in time is more than 5 seconds ignore query events as they will not have any 
-				//importance since they all happen at once(both the query and unquery)
-				/*if((evt.getTime()-timeGoingTo) > 5000) { 
-					if(evt.isStructural()) {
-						events.add(evt);
-					} //else don't add it
-				}
-				else {
-					events.add(evt);
-				}*/
 				events.add(evt);
 				evt = myEventList.get(current_index-1);
 			}
@@ -432,31 +424,37 @@ public class EventPlayer implements ActionListener{
 
 	@Override
 	public void actionPerformed(ActionEvent arg0) {
-		if(state != PlayState.PAUSE) {
-			timeCounter.doIncrement();
+		if(playable) {
+			if(state != PlayState.PAUSE) {
+				timeCounter.doIncrement();
+			}
+			long nextTime = timeCounter.getTime();
+	
+			boolean isforward = nextTime>myTimeNow;
+			
+			
+			if(atAnEnd()) {
+				pause();
+			}
+			
+			List<LogEvent> events = getLogEventsUntil(nextTime);
+			
+			for( LogEvent evt :  events) {
+				handleLogEvent(evt,isforward);
+			}
+			myTimeNow = nextTime; //advance time
+			playbackSlider.setValue((int)myTimeNow);
+			if(!events.isEmpty()) {
+				for(EventPlayerListener epl : my_listeners) {
+					epl.doRepaint();
+				}// if anything happened, update visual
+			}
 		}
-		long nextTime = timeCounter.getTime();
-
-		boolean isforward = nextTime>myTimeNow;
-		
-		
-		if(atAnEnd()) {
-			pause();
-		}
-		
-		List<LogEvent> events = getLogEventsUntil(nextTime);
-		
-		for( LogEvent evt :  events) {
-			handleLogEvent(evt,isforward);
-		}
-		myTimeNow = nextTime; //advance time
-		playbackSlider.setValue((int)myTimeNow);
-		if(!events.isEmpty()) {
+		else { 
 			for(EventPlayerListener epl : my_listeners) {
 				epl.doRepaint();
-			}// if anything happened, update visual
+			}// since it isn't playable, re-draw the graph every scheduled time.
 		}
-		
 	}
 
 	public List<LogEvent> getSaveEvents() {
