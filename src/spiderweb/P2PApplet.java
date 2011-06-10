@@ -1,6 +1,11 @@
 package spiderweb;
 
 //[start] Imports
+import spiderweb.graph.*;
+import spiderweb.visualizer.*;
+import spiderweb.graph.savingandloading.*;
+import spiderweb.visualizer.eventplayer.*;
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -35,12 +40,12 @@ import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.plaf.ComponentUI;
 
 import org.apache.commons.collections15.Transformer;
 import org.apache.commons.collections15.functors.ConstantTransformer;
 
 import edu.uci.ics.jung.algorithms.layout.AbstractLayout;
+import edu.uci.ics.jung.algorithms.layout.BalloonLayout;
 import edu.uci.ics.jung.algorithms.layout.CircleLayout;
 import edu.uci.ics.jung.algorithms.layout.FRLayout;
 import edu.uci.ics.jung.algorithms.layout.FRLayout2;
@@ -48,10 +53,7 @@ import edu.uci.ics.jung.algorithms.layout.ISOMLayout;
 import edu.uci.ics.jung.algorithms.layout.KKLayout;
 import edu.uci.ics.jung.algorithms.layout.Layout;
 import edu.uci.ics.jung.algorithms.layout.SpringLayout;
-import edu.uci.ics.jung.algorithms.layout.StaticLayout;
-import edu.uci.ics.jung.algorithms.layout.util.Relaxer;
-import edu.uci.ics.jung.algorithms.layout.util.VisRunner;
-import edu.uci.ics.jung.algorithms.util.IterativeContext;
+import edu.uci.ics.jung.algorithms.layout.TreeLayout;
 import edu.uci.ics.jung.visualization.VisualizationViewer;
 import edu.uci.ics.jung.visualization.VisualizationViewer.GraphMouse;
 import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
@@ -66,8 +68,6 @@ import edu.uci.ics.jung.visualization.renderers.Renderer;
  * @author Matt
  */
 public class P2PApplet extends JApplet implements EventPlayerListener {
-	
-	private boolean loading = false;
 	//[start] Attributes
 	
 	//[start] Static Final Attributes
@@ -140,7 +140,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	 * Helper Method for setting up the spring layout.
 	 * @return The initialized spring layout.
 	 */
-	private SpringLayout<P2PVertex,P2PConnection> springLayoutBuilder(int width, int height, P2PNetworkGraph graph) {
+	/*private SpringLayout<P2PVertex,P2PConnection> springLayoutBuilder(int width, int height, P2PNetworkGraph graph) {
 		final int numSteps = 100;
 		for(LoadingListener l : loadingListeners) {
 			l.loadingChanged(numSteps, "Spring Layout");
@@ -166,7 +166,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 			}
 		}
 		return sp_layout;
-	}
+	}*/
 	//[end] Calculate the Spring Layout
 	
 	//[start] Create the visualization viewer
@@ -549,9 +549,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		
 		//[start] Tabs Pane
 		tabsPane = new JTabbedPane(JTabbedPane.TOP) {
-			/**
-			 * 
-			 */
+			
 			private static final long serialVersionUID = -4075340829665484983L;
 			//private int i=0;
 			@Override
@@ -598,8 +596,8 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		for(LoadingListener l : loadingListeners) {
 			l.loadingStarted(7,"Building Visualizer");
 		}
+		tabsPane.removeAll();
 		
-		//[start] Layout creation
 		//layout = springLayoutBuilder(DEFWIDTH,DEFHEIGHT,hiddenGraph);
 		layout = new FRLayout2<P2PVertex, P2PConnection>(hiddenGraph);
 		layout.setInitializer(new P2PVertexPlacer(layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
@@ -685,11 +683,11 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		
 		if(myGraphEvolution.isEmpty()) {
 			SliderListener s = new SliderListener();
-			synchronized (playbackSlider) {
-				playbackSlider.setMaximum(0);
-				playbackSlider.addChangeListener(s);
-				playbackSlider.addMouseListener(s);
-			}
+			
+			playbackSlider.setMaximum(0);
+			playbackSlider.addChangeListener(s);
+			playbackSlider.addMouseListener(s);
+			
 			/// create the event player
 			eventThread = new EventPlayer(hiddenGraph, visibleGraph);
 			eventThread.addEventPlayerListener(this);
@@ -697,12 +695,11 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		else {
 			SliderListener s = new SliderListener();
 			//playbackSlider.setMinimum((int)myGraphEvolution.getFirst().getTime());
-			synchronized (playbackSlider) {
-				playbackSlider.setMinimum(0);
-				playbackSlider.setMaximum((int)myGraphEvolution.getLast().getTime());
-				playbackSlider.addChangeListener(s);
-				playbackSlider.addMouseListener(s);
-			}
+			playbackSlider.setMinimum(0);
+			playbackSlider.setMaximum((int)myGraphEvolution.getLast().getTime());
+			playbackSlider.addChangeListener(s);
+			playbackSlider.addMouseListener(s);
+			
 			
 			/// create the event player
 			eventThread = new EventPlayer(hiddenGraph, visibleGraph, myGraphEvolution, playbackSlider);
@@ -712,21 +709,13 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 			l.loadingProgress(5);
 		}
 		
-		ComponentUI ui = tabsPane.getUI();
 		
-		synchronized(ui) {
-			tabsPane.setIgnoreRepaint(true);
-			System.out.println("Out 1");
-			tabsPane.removeAll();
-			System.out.println("Out 2");
-			tabsPane.addTab(fullViewViewer.getName(),fullViewViewer);
-			tabsPane.addTab(collapsedDocumentViewViewer.getName(), collapsedDocumentViewViewer);
-			tabsPane.addTab(collapsedPeerViewViewer.getName(), collapsedPeerViewViewer);
-			tabsPane.addTab(collapsedPeerAndDocumentViewViewer.getName(), collapsedPeerAndDocumentViewViewer);
-			tabsPane.setEnabled(true);
-			System.out.println("Out 3");
-			tabsPane.setIgnoreRepaint(false);
-		}
+		tabsPane.addTab(fullViewViewer.getName(),fullViewViewer);
+		tabsPane.addTab(collapsedDocumentViewViewer.getName(), collapsedDocumentViewViewer);
+		tabsPane.addTab(collapsedPeerViewViewer.getName(), collapsedPeerViewViewer);
+		tabsPane.addTab(collapsedPeerAndDocumentViewViewer.getName(), collapsedPeerAndDocumentViewViewer);
+		tabsPane.setEnabled(true);
+		tabsPane.setIgnoreRepaint(false);
 		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingComplete();
@@ -805,10 +794,18 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 			JMenuItem circleLayout = new JMenuItem("Circle Layout");
 			circleLayout.addActionListener(new CircleLayoutListener(collapsedDocumentViewViewer));
 			
+			JMenuItem balloonLayout = new JMenuItem("Balloon Layout");
+			balloonLayout.addActionListener(new BalloonLayoutListener(collapsedDocumentViewViewer));
+			
+			JMenuItem treeLayout = new JMenuItem("Tree Layout");
+			treeLayout.addActionListener(new TreeLayoutListener(collapsedDocumentViewViewer));
+			
+			menuItems.add(balloonLayout);
 			menuItems.add(circleLayout);
 			menuItems.add(frLayout);
 			menuItems.add(isomLayout);
 			menuItems.add(kkLayout);
+			menuItems.add(treeLayout);
 		}
 		else if(tabsPane.getSelectedComponent().getName().equals("Collapsed Peer View")) {
 			JMenuItem frLayout = new JMenuItem("FR Layout");
@@ -1171,6 +1168,52 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		}
 	}
 	
+	class  TreeLayoutListener implements ActionListener {
+		VisualizationViewer<P2PVertex,P2PConnection> vv;
+		public TreeLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
+			this.vv = vv;
+		} 
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			TreeLayout<P2PVertex, P2PConnection> graphLayout = 
+				new TreeLayout<P2PVertex, P2PConnection>(P2PNetworkGraph.makeTreeGraph(hiddenGraph)) {
+				
+				@Override
+				public void setSize(Dimension size) {
+					// The set size method was being called, and it raised an exception every time
+				}
+			};
+			vv.getModel().setGraphLayout(graphLayout);
+			mouseContext.setVisible(false);
+			mouseContext.setEnabled(false);
+			int size = mouseContext.getComponentCount();
+			for(int i = size-1;i>4;i--) {
+				mouseContext.remove(i);
+			}
+			
+		}
+	}
+	
+	class  BalloonLayoutListener implements ActionListener {
+		VisualizationViewer<P2PVertex,P2PConnection> vv;
+		public BalloonLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
+			this.vv = vv;
+		}
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			BalloonLayout<P2PVertex, P2PConnection> graphLayout = new BalloonLayout<P2PVertex, P2PConnection>(P2PNetworkGraph.makeTreeGraph(hiddenGraph));
+			graphLayout.setInitializer(new P2PVertexPlacer(layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
+			
+			vv.getModel().setGraphLayout(graphLayout);
+			mouseContext.setVisible(false);
+			mouseContext.setEnabled(false);
+			int size = mouseContext.getComponentCount();
+			for(int i = size-1;i>4;i--) {
+				mouseContext.remove(i);
+			}
+		}
+	}
+	
 	//[end] Layout Context Listeners
 	
 	//[start] Load Listener
@@ -1199,8 +1242,11 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 							playbackSlider.setValue(0);
 							tabsPane.setEnabled(false);
 							fastSpeedSlider.setEnabled(false);
+							
+							//When loading a new Graph, if the collapsed document view has a tree layout it crashes because of setsize()
+							AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(hiddenGraph);
+							collapsedDocumentViewViewer.getModel().setGraphLayout(graphLayout);
 						}
-						loading = true;
 						myGraphEvolution = loader.getLogList();
 						hiddenGraph = loader.getHiddenP2PNetworkGraph();
 						visibleGraph = loader.getVisibleP2PNetworkGraph();
