@@ -60,13 +60,20 @@ public class P2PNetworkGraphSaver {
 		});
 		saverThread.start();
 	}
+	
+	public static Document getGraphDocument(P2PNetworkGraph graph) {
+		P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(graph);
+		Document doc = saver.buildDoc();
+		
+		return doc;
+	}
 	//[end] Saver Method
 	
 	//[start] Document Builder Methods
 	private Document buildDoc() {
 		Element networkElement = new Element("network");
 		
-		if(graph != null) {
+		if(graph != null && graph.getVertexCount()!=0) {
 			//[start] Creating Graph Elements
 			
 			//[start] compile separate lists for peers, documents and peerdocuments

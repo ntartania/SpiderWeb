@@ -6,6 +6,8 @@ import spiderweb.visualizer.*;
 import spiderweb.graph.savingandloading.*;
 import spiderweb.visualizer.eventplayer.*;
 
+import spiderweb.networking.*;
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -19,6 +21,8 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
 import javax.swing.BorderFactory;
@@ -43,6 +47,7 @@ import javax.swing.event.ChangeListener;
 
 import org.apache.commons.collections15.Transformer;
 import org.apache.commons.collections15.functors.ConstantTransformer;
+import org.jdom.JDOMException;
 
 import edu.uci.ics.jung.algorithms.layout.AbstractLayout;
 import edu.uci.ics.jung.algorithms.layout.BalloonLayout;
@@ -67,7 +72,7 @@ import edu.uci.ics.jung.visualization.renderers.Renderer;
  * @author Alan
  * @author Matt
  */
-public class P2PApplet extends JApplet implements EventPlayerListener {
+public class P2PApplet extends JApplet implements EventPlayerListener, NetworkListener {
 	//[start] Attributes
 	
 	//[start] Static Final Attributes
@@ -99,6 +104,8 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	
 	private List<LoadingListener> loadingListeners;
 	
+	private HTTPClient networkClient;
+	
 	//[end] Private Variables
 	
 	//[start] Protected Variables
@@ -120,6 +127,9 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	
 	//[start] Constructor
 	public P2PApplet() {
+		
+		networkClient = new HTTPClient(this);
+		
 		loadingListeners = new LinkedList<LoadingListener>();
 		init();
 		start();
@@ -127,7 +137,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().add(this);
-
+		
 		frame.pack();
 		frame.setVisible(true);
 	}
@@ -233,14 +243,16 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 		//[start] File Menu
 		JMenu file = new JMenu("File");
 		//[start] Connect Entry
-		JMenuItem connect = new JMenuItem("Connect to...");
+		JMenuItem connect = new JMenuItem("Connect to..");
 		connect.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				pauseButton.doClick();
 				String option = JOptionPane.showInputDialog(null, "Enter a URL:", "Connect", JOptionPane.PLAIN_MESSAGE);
 				if(option != null ) {
 					if(option.startsWith("http://")){
-						
+						//networkClient.closeNetwork();
+						networkClient.startNetwork(option);
+						//client.addNetworkListener();
 					}
 					else {
 						JOptionPane.showMessageDialog(null, "Invalid URL", "Error", JOptionPane.ERROR_MESSAGE);
@@ -1261,5 +1273,59 @@ public class P2PApplet extends JApplet implements EventPlayerListener {
 	
 	//[end] Swing Event Listeners
 	
-	
+	//[start] Network Listeners
+	@Override
+	public synchronized void incomingLogEvents(InputStream inStream) {
+		try {
+			eventThread.pause();
+			LinkedList<LogEvent> events;
+			synchronized(hiddenGraph) {
+				events = P2PNetworkGraphLoader.buildLogs(inStream, hiddenGraph);
+			}
+			
+			
+			events.addLast(LogEvent.getEndEvent(events.getLast()));
+			eventThread.addEvents(events);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public synchronized void incomingGraph(InputStream inStream) {
+		
+		try {
+			P2PNetworkGraphLoader loader = P2PNetworkGraphLoader.buildGraph(inStream);
+			
+			if(myGraphEvolution != null) {
+				myGraphEvolution.clear();
+				eventThread.stopPlayback();
+				fastReverseButton.setEnabled(false);
+				reverseButton.setEnabled(false);
+				pauseButton.setEnabled(false);
+				forwardButton.setEnabled(false);
+				fastForwardButton.setEnabled(false);
+				playbackSlider.setEnabled(false);
+				playbackSlider.setValue(0);
+				tabsPane.setEnabled(false);
+				fastSpeedSlider.setEnabled(false);
+				
+				//When loading a new Graph, if the collapsed document view has a tree layout it crashes because of setsize()
+				AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(hiddenGraph);
+				collapsedDocumentViewViewer.getModel().setGraphLayout(graphLayout);
+			}
+			
+			myGraphEvolution = loader.getLogList();
+			hiddenGraph = loader.getHiddenP2PNetworkGraph();
+			visibleGraph = loader.getVisibleP2PNetworkGraph();
+			startGraph();
+		} catch (JDOMException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		
+	}
+	//[end] Network Listeners
 }

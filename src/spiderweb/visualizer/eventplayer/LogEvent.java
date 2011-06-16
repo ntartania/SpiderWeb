@@ -157,4 +157,12 @@ public class LogEvent implements Comparable<LogEvent>{
 		}
 		return 0; //Otherwise they may as well be equal
 	}
+	
+	
+	public static LogEvent getStartEvent() {
+		return new LogEvent("0:start:0:0");
+	}
+	public static LogEvent getEndEvent(LogEvent lastEventInList) {
+		return new LogEvent((lastEventInList.getTime()+100)+":end:0:0");
+	}
 }

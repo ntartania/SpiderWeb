@@ -27,7 +27,7 @@ public class EventPlayer implements ActionListener{
 	
 	private PlayState state;
 
-	private List<LogEvent> myEventList;
+	private LinkedList<LogEvent> myEventList;
 	
 	private List<EventPlayerListener> my_listeners;
 	
@@ -359,7 +359,7 @@ public class EventPlayer implements ActionListener{
 	private void handleLogEvent(LogEvent evt, boolean forward) {
 		
 		if (evt.isStructural()){ //if the event is to modify the structure of the graph
-			P2PNetworkGraph.graphEvent(evt,forward,visibleGraph,hiddenGraph);
+			visibleGraph.graphEvent(evt,forward,hiddenGraph);
 		} else { //other events: queries
 			String what = evt.getType();
 			int val1 = evt.getParam(1);
@@ -466,6 +466,13 @@ public class EventPlayer implements ActionListener{
 			events.add(i.next());
 		}
 		return events;
+	}
+	
+	public synchronized void addEvents(LinkedList<LogEvent> events) {
+		//current_index--;
+		myEventList.removeLast();
+		myEventList.addAll(events);
+		playbackSlider.setMaximum((int) myEventList.getLast().getTime());
 	}
 	
 	public long getCurrentTime() {

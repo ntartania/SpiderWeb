@@ -276,17 +276,17 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	 * @param gev	The Log event which needs to be handled.
 	 * @param g		The Graph to perform the event on.
 	 */
-	public static void graphConstructionEvent(LogEvent gev, P2PNetworkGraph g) {
+	public void graphConstructionEvent(LogEvent gev) {
 		try{
 		if (gev.getType().equals("online")){
-			g.addPeer(gev.getParam(1));
+			addPeer(gev.getParam(1));
 		} else if(gev.getType().equals("connect")){
-			g.connectPeers(gev.getParam(1), gev.getParam(2));
-			g.connectPeers(gev.getParam(2), gev.getParam(1));
+			connectPeers(gev.getParam(1), gev.getParam(2));
+			connectPeers(gev.getParam(2), gev.getParam(1));
 		} else if(gev.getType().equals("publish")){
-			g.addDocument(gev.getParam(2), gev.getParam(1));
+			addDocument(gev.getParam(2), gev.getParam(1));
 		} else if(gev.getType().equals("linkdocument")) {
-			g.connectDocuments(gev.getParam(1), gev.getParam(2));
+			connectDocuments(gev.getParam(1), gev.getParam(2));
 		}
 		}
 		catch(Exception e) {
@@ -302,51 +302,51 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	 * @param eventGraph		The Graph to perform the event on.
 	 * @param referenceGraph	The Graph to get edge numbers from.
 	 */
-	public static void graphEvent(LogEvent gev, boolean forward, P2PNetworkGraph eventGraph, P2PNetworkGraph referenceGraph) {
+	public void graphEvent(LogEvent gev, boolean forward, P2PNetworkGraph referenceGraph) {
 		
 		if(forward) {
 			if (gev.getType().equals("online")){
-				eventGraph.addPeer(gev.getParam(1));
+				addPeer(gev.getParam(1));
 			} else if (gev.getType().equals("offline")){
-				eventGraph.removePeer(gev.getParam(1));
+				removePeer(gev.getParam(1));
 			} else if(gev.getType().equals("connect")){
-				eventGraph.connectPeers(gev.getParam(1), gev.getParam(2), referenceGraph.findPeerConnection(gev.getParam(1), gev.getParam(2)).getKey());
-				eventGraph.connectPeers(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerConnection(gev.getParam(2), gev.getParam(1)).getKey());
+				connectPeers(gev.getParam(1), gev.getParam(2), referenceGraph.findPeerConnection(gev.getParam(1), gev.getParam(2)).getKey());
+				connectPeers(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerConnection(gev.getParam(2), gev.getParam(1)).getKey());
 			} else if(gev.getType().equals("disconnect")){
-				eventGraph.disconnectPeers(gev.getParam(1), gev.getParam(2));
-				eventGraph.disconnectPeers(gev.getParam(2), gev.getParam(1));
+				disconnectPeers(gev.getParam(1), gev.getParam(2));
+				disconnectPeers(gev.getParam(2), gev.getParam(1));
 			} else if(gev.getType().equals("publish")){				
-				eventGraph.addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
-				eventGraph.addPeerDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey(),
+				addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
+				addPeerDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey(),
 																				 referenceGraph.findDocToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
 			} else if(gev.getType().equals("depublish")){
-				eventGraph.removeDocument(gev.getParam(2), gev.getParam(1));
+				removeDocument(gev.getParam(2), gev.getParam(1));
 			} else if(gev.getType().equals("linkdocument")) {
-				eventGraph.connectDocuments(gev.getParam(1), gev.getParam(2),referenceGraph.findDocumentToDocumentConnection(gev.getParam(1), gev.getParam(2)).getKey());
+				connectDocuments(gev.getParam(1), gev.getParam(2),referenceGraph.findDocumentToDocumentConnection(gev.getParam(1), gev.getParam(2)).getKey());
 			} else if(gev.getType().equals("delinkdocument")) {
-				eventGraph.disconnectDocuments(gev.getParam(1), gev.getParam(2));
+				disconnectDocuments(gev.getParam(1), gev.getParam(2));
 			}
 		} else {
 			if (gev.getType().equals("online")){
-				eventGraph.removePeer(gev.getParam(1));
+				removePeer(gev.getParam(1));
 			} else if (gev.getType().equals("offline")){
-				eventGraph.addPeer(gev.getParam(1));
+				addPeer(gev.getParam(1));
 			} else if(gev.getType().equals("connect")){
-				eventGraph.disconnectPeers(gev.getParam(1), gev.getParam(2));
-				eventGraph.disconnectPeers(gev.getParam(2), gev.getParam(1));
+				disconnectPeers(gev.getParam(1), gev.getParam(2));
+				disconnectPeers(gev.getParam(2), gev.getParam(1));
 			} else if(gev.getType().equals("disconnect")){
-				eventGraph.connectPeers(gev.getParam(1), gev.getParam(2), referenceGraph.findPeerConnection(gev.getParam(1), gev.getParam(2)).getKey());
-				eventGraph.connectPeers(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerConnection(gev.getParam(2), gev.getParam(1)).getKey());
+				connectPeers(gev.getParam(1), gev.getParam(2), referenceGraph.findPeerConnection(gev.getParam(1), gev.getParam(2)).getKey());
+				connectPeers(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerConnection(gev.getParam(2), gev.getParam(1)).getKey());
 			} else if(gev.getType().equals("publish")){
-				eventGraph.removeDocument(gev.getParam(2), gev.getParam(1));
+				removeDocument(gev.getParam(2), gev.getParam(1));
 			} else if(gev.getType().equals("depublish")){
-				eventGraph.addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
-				eventGraph.addPeerDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey(),
+				addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
+				addPeerDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey(),
 																				 referenceGraph.findDocToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
 			} else if(gev.getType().equals("linkdocument")) {
-				eventGraph.disconnectDocuments(gev.getParam(1), gev.getParam(2));
+				disconnectDocuments(gev.getParam(1), gev.getParam(2));
 			} else if(gev.getType().equals("delinkdocument")) {
-				eventGraph.connectDocuments(gev.getParam(1), gev.getParam(2),referenceGraph.findDocumentToDocumentConnection(gev.getParam(1), gev.getParam(2)).getKey());
+				connectDocuments(gev.getParam(1), gev.getParam(2),referenceGraph.findDocumentToDocumentConnection(gev.getParam(1), gev.getParam(2)).getKey());
 			}
 		}
 	}

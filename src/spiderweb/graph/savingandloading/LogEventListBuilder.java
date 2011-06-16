@@ -19,7 +19,7 @@ public class LogEventListBuilder  {
 	//[start] private variables
 	private P2PNetworkGraph hiddenGraph;
 	private List<LoadingListener> loadingListeners;
-	private List<LogEvent> logEvents;
+	private LinkedList<LogEvent> logEvents;
 	//[end] private variables
 	
 	//[start] Constructor and listener initializer
@@ -43,34 +43,10 @@ public class LogEventListBuilder  {
 	}
 	//[end] Getters
 	
-	//[start] List initializers
-	/**
-	 * 
-	 * @param logFile The file for which to read from 
-	 * @return The created linked list of log events
-	 */
-	public LinkedList<LogEvent> createLinkedList(BufferedReader logFile) {
-		logEvents = new LinkedList<LogEvent>();
-		createList(logFile);
-		
-		return (LinkedList<LogEvent>) logEvents;
-	}
-	
-	/**
-	 * 
-	 * @param logFile The file for which to read from 
-	 * @return The created array list of log events
-	 */
-	public ArrayList<LogEvent> createArrayList(BufferedReader logFile) {
-		logEvents = new ArrayList<LogEvent>();
-		createList(logFile);
-		
-		return (ArrayList<LogEvent>) logEvents;
-	}
-	//[end] List initializers
 	
 	//[start] List Creator
-	private void createList(BufferedReader logFile) {
+	public LinkedList<LogEvent> createList(BufferedReader logFile) {
+		logEvents = new LinkedList<LogEvent>();
 		try {
 			//[start] Create local variables for the creation of the list
 			P2PNetworkGraph tempGraph = new P2PNetworkGraph();
@@ -88,7 +64,7 @@ public class LogEventListBuilder  {
 			}
 			//[end] Notify listeners that the log events have begun loading
 			//[start] Loop reading the file and creating the list
-			logEvents.add(new LogEvent("0:start:0:0")); //a start event to know when to stop playback of a reversing graph
+			logEvents.add(LogEvent.getStartEvent()); //a start event to know when to stop playback of a reversing graph
 			while ((str = logFile.readLine()) != null) //reading lines log file
 			{
 				//[start] Increment the line number and notify the loading listeners that we are lineCount number of lines through
@@ -101,7 +77,7 @@ public class LogEventListBuilder  {
 				LogEvent gev = new LogEvent(str);//create the log event
 				
 				if (gev.isConstructing()){ //construct the hiddenGraph as we go
-					P2PNetworkGraph.graphConstructionEvent(gev,hiddenGraph);
+					hiddenGraph.graphConstructionEvent(gev);
 				}
 				
 				createColouringEvents(gev,colouringEvents,queryPeers, tempGraph); //add in colouring events if needed
@@ -111,18 +87,19 @@ public class LogEventListBuilder  {
 
 				// Update the temporary graph afterwards so it can be used as a reference
 				if (gev.isStructural()) { //construct the tempGraph which has the current connections including disconnects as a reference.
-					P2PNetworkGraph.graphEvent(gev, true, tempGraph, hiddenGraph);
+					tempGraph.graphEvent(gev, true, hiddenGraph);
 				}
 				
 			}//end while
 			for(LogEvent leftOver : colouringEvents) {
 				logEvents.add(leftOver); //if any colouring events are left over add them into the list
 			}
-			logEvents.add(new LogEvent((logEvents.get(logEvents.size()-1).getTime()+100)+":end:0:0")); //add an end log to know to stop the playback of the graph 100 ms after 
+			logEvents.add(LogEvent.getEndEvent(logEvents.get(logEvents.size()-1))); //add an end log to know to stop the playback of the graph 100 ms after 
 			//[end] Loop reading the file and creating the list
 		} catch(IOException e) {
 			e.printStackTrace();
 		}
+		return (LinkedList<LogEvent>) logEvents;
 	}
 	//[end] List Creator
 	
