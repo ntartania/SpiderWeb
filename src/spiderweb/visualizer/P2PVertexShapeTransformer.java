@@ -12,17 +12,9 @@ import spiderweb.graph.PeerVertex;
 import edu.uci.ics.jung.visualization.decorators.AbstractVertexShapeTransformer;
 
 /**
- * A "transformer" that maps vertices to shapes.
- * 
- * There will be two types of vertices, peers and documents.
- * Peers are large and round (size PEER_SIZE = 15), documents are smaller (size DOC_SIZE=6) and rectangular.
- * Peers have numbers less than DOC_MIN. Documents have numbers above DOC_MIN.
- * 
- * This class also uses P2PVertexSizeFunction to assign sizes to the vertices.
- * 
- * @author adavoust
- *
- * @param <V>
+ * A "transformer" that maps vertices to shapes. There will be two types of vertices, peers and documents. Peers are large and round (size PEER_SIZE = 15), documents are smaller (size DOC_SIZE=6) and rectangular. Peers have numbers less than DOC_MIN. Documents have numbers above DOC_MIN. This class also uses P2PVertexSizeFunction to assign sizes to the vertices.
+ * @author  adavoust
+ * @param  <V >
  */
 public class P2PVertexShapeTransformer extends AbstractVertexShapeTransformer<P2PVertex> 
 		implements Transformer<P2PVertex,Shape>
@@ -31,8 +23,20 @@ public class P2PVertexShapeTransformer extends AbstractVertexShapeTransformer<P2
 	public static final int PEER_SIZE = 25;
 	public static final int PEER_DOC_SIZE = 15;
 	
+	/**
+	 * @uml.property  name="peerShape"
+	 * @uml.associationEnd  
+	 */
 	private VertexShapeType peerShape;
+	/**
+	 * @uml.property  name="documentShape"
+	 * @uml.associationEnd  
+	 */
 	private VertexShapeType documentShape;
+	/**
+	 * @uml.property  name="peerDocumentShape"
+	 * @uml.associationEnd  
+	 */
 	private VertexShapeType peerDocumentShape;
 	
 	    @SuppressWarnings({ "rawtypes", "unchecked" })

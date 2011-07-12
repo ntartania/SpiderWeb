@@ -69,8 +69,8 @@ import edu.uci.ics.jung.visualization.renderers.Renderer;
 
 /**
  * an applet that will display a graph using a spring layout, and as the graph changes the layout is updated.
- * @author Alan
- * @author Matt
+ * @author  Alan
+ * @author  Matt
  */
 public class P2PApplet extends JApplet implements EventPlayerListener, NetworkListener {
 	//[start] Attributes
@@ -99,11 +99,23 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 
 	//a hidden graph that contains all the nodes that will ever be added... 
 	//in order to calculate the positions of all the nodes
+	/**
+	 * @uml.property  name="hiddenGraph"
+	 * @uml.associationEnd  
+	 */
 	private P2PNetworkGraph hiddenGraph; 
+	/**
+	 * @uml.property  name="visibleGraph"
+	 * @uml.associationEnd  
+	 */
 	private P2PNetworkGraph visibleGraph = null;
 	
 	private List<LoadingListener> loadingListeners;
 	
+	/**
+	 * @uml.property  name="networkClient"
+	 * @uml.associationEnd  
+	 */
 	private HTTPClient networkClient;
 	
 	//[end] Private Variables
@@ -120,6 +132,10 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 	protected JSlider playbackSlider;
 	protected JPopupMenu mouseContext;
 
+	/**
+	 * @uml.property  name="eventThread"
+	 * @uml.associationEnd  
+	 */
 	protected EventPlayer eventThread;
 	//[end] Protected Variables
 	
@@ -198,6 +214,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 		viewer.getRenderer().getVertexLabelRenderer().setPosition(Renderer.VertexLabel.Position.CNTR);
 		//the vertex labeler will use the tostring method which is fine, the P2PVertex class has an appropriate toString() method implementation
 		viewer.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<P2PVertex>());
+		//viewer.getRenderContext().setEdgeLabelTransformer(new ToStringLabeller<P2PConnection>());
 		viewer.getRenderContext().setVertexFillPaintTransformer(new P2PVertexFillPaintTransformer(viewer.getPickedVertexState()));
 		// P2PVertex objects also now have multiple states : we can represent which nodes are documents, picked, querying, queried, etc.
 		
@@ -1035,8 +1052,15 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 	//[end] Speed Slider
 	
 	//[start] Playback Slider
+	/**
+	 * @author  Matty
+	 */
 	class SliderListener extends MouseAdapter implements ChangeListener {
 
+		/**
+		 * @uml.property  name="prevState"
+		 * @uml.associationEnd  
+		 */
 		PlayState prevState = PlayState.PAUSE;
 		
 		@Override
@@ -1280,12 +1304,13 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 			eventThread.pause();
 			LinkedList<LogEvent> events;
 			synchronized(hiddenGraph) {
-				events = P2PNetworkGraphLoader.buildLogs(inStream, hiddenGraph);
+				events = P2PNetworkGraphLoader.buildLogs(inStream, networkClient, hiddenGraph);
 			}
 			
-			
+			networkClient.setLatestTime(events.getLast().getTime());
 			events.addLast(LogEvent.getEndEvent(events.getLast()));
 			eventThread.addEvents(events);
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -1295,7 +1320,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 	public synchronized void incomingGraph(InputStream inStream) {
 		
 		try {
-			P2PNetworkGraphLoader loader = P2PNetworkGraphLoader.buildGraph(inStream);
+			P2PNetworkGraphLoader loader = P2PNetworkGraphLoader.buildGraph(inStream, networkClient);
 			
 			if(myGraphEvolution != null) {
 				myGraphEvolution.clear();

@@ -1,6 +1,9 @@
 package spiderweb.graph;
 
-public class P2PConnection implements Comparable<P2PConnection> {
+/**
+ * @author  Matty
+ */
+public class P2PConnection/* implements Comparable<P2PConnection> */{
 
 	public static final int P2P = 0;
 	public static final int P2DOC = 10;
@@ -12,6 +15,9 @@ public class P2PConnection implements Comparable<P2PConnection> {
 	public static final int MATCHING_DOC = 11;
 	private int mytypeandstate;
 	//private P2PVertex peer;
+	/**
+	 * @uml.property  name="key"
+	 */
 	private Integer key;
 	
 	//not sure how useful this will be
@@ -29,6 +35,10 @@ public class P2PConnection implements Comparable<P2PConnection> {
 		this.key = key;
 	}
 	
+	/**
+	 * @return
+	 * @uml.property  name="key"
+	 */
 	public Integer getKey(){
 		return key;
 	}
@@ -99,12 +109,12 @@ public class P2PConnection implements Comparable<P2PConnection> {
 	}
 	
 	@Override
-	public int compareTo(P2PConnection other) {
+	/*public int compareTo(P2PConnection other) {
 		if(other instanceof P2PConnection)
 			return (key.compareTo(((P2PConnection)other).getKey()));
 		else 
 		return 0; // there's a problem anyway : can only compare two P2PConnection objects
-	}
+	}*/
 
 	public String toString(){
 		return "edge "+key.toString();

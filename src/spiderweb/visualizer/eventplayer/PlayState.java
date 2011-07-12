@@ -1,13 +1,33 @@
 package spiderweb.visualizer.eventplayer;
 
 /**
- * 
+ * @author   Matty
  */
 public enum PlayState {
+	/**
+	 * @uml.property  name="fASTREVERSE"
+	 * @uml.associationEnd  
+	 */
 	FASTREVERSE("Fast Reverse"), 
+	/**
+	 * @uml.property  name="rEVERSE"
+	 * @uml.associationEnd  
+	 */
 	REVERSE("Reverse"), 
+	/**
+	 * @uml.property  name="pAUSE"
+	 * @uml.associationEnd  
+	 */
 	PAUSE("Pause"), 
+	/**
+	 * @uml.property  name="fORWARD"
+	 * @uml.associationEnd  
+	 */
 	FORWARD("Forward"), 
+	/**
+	 * @uml.property  name="fASTFORWARD"
+	 * @uml.associationEnd  
+	 */
 	FASTFORWARD("Fast Forward");
 	
 	/**

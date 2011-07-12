@@ -42,6 +42,10 @@ public class DocumentVertex extends P2PVertex {
 	//[end] Constructors
 	
 	//[start] Getters and Setters
+	/**
+	 * Gets Document's number as an Integer.
+	 * @return The Integer of the Document Number.
+	 */
 	public Integer getDocumentNumber() {
 		return key % 1000;
 	}

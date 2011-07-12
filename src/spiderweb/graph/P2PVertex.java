@@ -7,19 +7,21 @@
 package spiderweb.graph;
 
 /**
- * <p>A class for a vertex in the P2P network visualization.</p>
- * <ul>
- * <li>A vertex has a label which is drawn over the vertex on the graph.</li>
- * <li>A vertex has a key which is its identifier, <code>equals(Object other)</code> compares the key value.</li>
- * </ul>
- * @author Matthew Smith
- * @author Alan Davoust
- * @version May 12, 2011
+ * <p>A class for a vertex in the P2P network visualization.</p> <ul> <li>A vertex has a label which is drawn over the vertex on the graph.</li> <li>A vertex has a key which is its identifier, <code>equals(Object other)</code> compares the key value.</li> </ul>
+ * @author  Matthew Smith
+ * @author  Alan Davoust
+ * @version  May 12, 2011
  */
 public abstract class P2PVertex implements Comparable<P2PVertex> {
 	
 	//[start] Private Attributes
+	/**
+	 * @uml.property  name="label"
+	 */
 	protected Integer label; //the label will be drawn over the vertex on the graph
+	/**
+	 * @uml.property  name="key"
+	 */
 	protected Integer key; //the identifier which defines this vertex
 	//[end] Private Attributes	
 	
@@ -46,7 +48,8 @@ public abstract class P2PVertex implements Comparable<P2PVertex> {
 	//[start] Getters and Setters
 	/**
 	 * Gets the label for the vertex.
-	 * @return Returns the label of this vertex.
+	 * @return  Returns the label of this vertex.
+	 * @uml.property  name="label"
 	 */
 	public Integer getLabel(){
 		return label;
@@ -54,7 +57,8 @@ public abstract class P2PVertex implements Comparable<P2PVertex> {
 	
 	/**
 	 * Gets the key for the vertex.
-	 * @return Returns the key(identifier) of this vertex.
+	 * @return  Returns the key(identifier) of this vertex.
+	 * @uml.property  name="key"
 	 */
 	public Integer getKey(){
 		return key;

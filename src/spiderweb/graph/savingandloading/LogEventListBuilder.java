@@ -14,9 +14,16 @@ import java.util.LinkedList;
 import java.util.List;
 //[end] Imports
 
+/**
+ * @author  Matty
+ */
 public class LogEventListBuilder  {
 	
 	//[start] private variables
+	/**
+	 * @uml.property  name="hiddenGraph"
+	 * @uml.associationEnd  
+	 */
 	private P2PNetworkGraph hiddenGraph;
 	private List<LoadingListener> loadingListeners;
 	private LinkedList<LogEvent> logEvents;
@@ -38,6 +45,10 @@ public class LogEventListBuilder  {
 	//[end] Constructor and listener initializer
 
 	//[start] Getters
+	/**
+	 * @return
+	 * @uml.property  name="hiddenGraph"
+	 */
 	public P2PNetworkGraph getHiddenGraph() {
 		return hiddenGraph;
 	}

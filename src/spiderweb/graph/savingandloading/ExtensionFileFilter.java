@@ -8,10 +8,12 @@ import java.io.File;
 import javax.swing.filechooser.FileFilter;
 
 /**
- * @author java2s.com
- *
+ * @author  java2s.com
  */
 class ExtensionFileFilter extends FileFilter {
+	/**
+	 * @uml.property  name="description"
+	 */
 	String description;
 
 	String extensions[];
@@ -36,6 +38,10 @@ class ExtensionFileFilter extends FileFilter {
 		}
 	}
 
+	/**
+	 * @return
+	 * @uml.property  name="description"
+	 */
 	public String getDescription() {
 		return description;
 	}

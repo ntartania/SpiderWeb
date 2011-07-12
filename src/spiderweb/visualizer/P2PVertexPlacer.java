@@ -13,14 +13,16 @@ import spiderweb.graph.PeerVertex;
 import edu.uci.ics.jung.algorithms.layout.Layout;
 
 /**
- * this vertex placer is used in the spring layout to initialize the position of a new node in the graph when calculating the layout.
- * Peers should start in random positions, but docs should start next to (here at the exact same location as) the peer that publishes the doc 
- * @author alan
- *
+ * this vertex placer is used in the spring layout to initialize the position of a new node in the graph when calculating the layout. Peers should start in random positions, but docs should start next to (here at the exact same location as) the peer that publishes the doc 
+ * @author  alan
  */
 public class P2PVertexPlacer implements Transformer<P2PVertex, Point2D> {
 
 	private Layout<P2PVertex,P2PConnection> existinglayout;
+	/**
+	 * @uml.property  name="rt"
+	 * @uml.associationEnd  
+	 */
 	private RandomLocationTransformer<P2PVertex> rt;
 	
 	public P2PVertexPlacer(Layout<P2PVertex,P2PConnection> l, Dimension d){

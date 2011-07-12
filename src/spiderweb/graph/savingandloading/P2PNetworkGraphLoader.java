@@ -17,13 +17,28 @@ import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
 
 import spiderweb.graph.*;
+import spiderweb.networking.HTTPClient;
 import spiderweb.visualizer.eventplayer.LogEvent;
 
 import edu.uci.ics.jung.graph.util.Pair;
 
+/**
+ * @author  Matty
+ */
 public class P2PNetworkGraphLoader {
+	/**
+	 * @uml.property  name="logList"
+	 */
 	private LinkedList<LogEvent> logList;
+	/**
+	 * @uml.property  name="hiddenGraph"
+	 * @uml.associationEnd  
+	 */
 	private P2PNetworkGraph hiddenGraph;
+	/**
+	 * @uml.property  name="visibleGraph"
+	 * @uml.associationEnd  
+	 */
 	private P2PNetworkGraph visibleGraph;
 	private List<LoadingListener> loadingListeners;
 
@@ -344,6 +359,10 @@ public class P2PNetworkGraphLoader {
 	//[end] Graph Builder
 
 	//[start] Getters
+	/**
+	 * @return
+	 * @uml.property  name="logList"
+	 */
 	public LinkedList<LogEvent> getLogList() {
 		return logList;
 	}
@@ -380,10 +399,12 @@ public class P2PNetworkGraphLoader {
 	}
 
 
-	public static P2PNetworkGraphLoader buildGraph(InputStream inStream) throws JDOMException, IOException {
+	public static P2PNetworkGraphLoader buildGraph(InputStream inStream, HTTPClient client) throws JDOMException, IOException {
 
 		SAXBuilder parser = new SAXBuilder();
 		Document doc = parser.build(inStream);
+		
+		client.setLatestTime(doc.getRootElement().getAttribute("time").getLongValue());
 
 		P2PNetworkGraphLoader loader = new P2PNetworkGraphLoader();
 		loader.logList.addFirst(LogEvent.getStartEvent());
@@ -394,10 +415,13 @@ public class P2PNetworkGraphLoader {
 	}
 
 
-	public static LinkedList<LogEvent> buildLogs(InputStream inStream, P2PNetworkGraph hiddenGraph) throws JDOMException, IOException {
+	public static LinkedList<LogEvent> buildLogs(InputStream inStream, HTTPClient client, P2PNetworkGraph hiddenGraph) throws JDOMException, IOException {
 
 		SAXBuilder parser = new SAXBuilder();
 		Document doc = parser.build(inStream);
+		
+		client.setLatestTime(doc.getRootElement().getAttribute("time").getLongValue());
+		
 		P2PNetworkGraphLoader loader = new P2PNetworkGraphLoader();
 		
 		loader.hiddenGraph = hiddenGraph;

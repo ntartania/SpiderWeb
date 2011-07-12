@@ -1,8 +1,5 @@
 package spiderweb.graph.savingandloading;
 
-import spiderweb.graph.*;
-import spiderweb.visualizer.eventplayer.LogEvent;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.util.LinkedList;
@@ -17,11 +14,21 @@ import org.jdom.Element;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
+import spiderweb.graph.*;
+import spiderweb.visualizer.eventplayer.LogEvent;
+
 import edu.uci.ics.jung.graph.util.Pair;
 
+/**
+ * @author  Matty
+ */
 public class P2PNetworkGraphSaver {
 	private long currentTime;
 	private List<LogEvent> logList;
+	/**
+	 * @uml.property  name="graph"
+	 * @uml.associationEnd  
+	 */
 	private P2PNetworkGraph graph;
 	private List<LoadingListener> progressListeners;
 	
@@ -61,11 +68,20 @@ public class P2PNetworkGraphSaver {
 		saverThread.start();
 	}
 	
-	public static Document getGraphDocument(P2PNetworkGraph graph) {
+	public static String saveGraphForWeb(P2PNetworkGraph graph, long simulationTime) {
 		P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(graph);
 		Document doc = saver.buildDoc();
+		doc.getRootElement().setAttribute("time",Long.toString(simulationTime));
 		
-		return doc;
+		return doc.toString();
+	}
+	
+	public static String saveEventsForWeb(LinkedList<LogEvent> events, long simulationTime) {
+		P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(events,simulationTime);
+		Document doc = saver.buildDoc();
+		doc.getRootElement().setAttribute("time",Long.toString(simulationTime));
+		
+		return doc.toString();
 	}
 	//[end] Saver Method
 	

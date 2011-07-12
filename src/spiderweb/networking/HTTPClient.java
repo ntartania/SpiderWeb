@@ -11,6 +11,9 @@ import java.util.LinkedList;
 import javax.swing.JOptionPane;
 import javax.swing.Timer;
 
+/**
+ * @author  Matty
+ */
 public class HTTPClient implements ActionListener{
 	//[start] Attributes
 	private static int readTimeOut = 120000;
@@ -46,15 +49,26 @@ public class HTTPClient implements ActionListener{
 			getGraph();
 			connected = true;
 		} catch (Exception e) {
-			connected=false;
-			e.printStackTrace();
+			connected = false;
+			JOptionPane.showMessageDialog(null, "Could not open connection.", "Error", JOptionPane.ERROR_MESSAGE);
+			//e.printStackTrace();
 		}
-		networkScheduler.start();
+		if(connected) {
+			networkScheduler.start();
+		}
 	}
 	
 	public void closeNetwork() {
 		connected = false;
 		networkScheduler.stop();
+	}
+	
+	/**
+	 * @param latestTime
+	 * @uml.property  name="latestTime"
+	 */
+	public void setLatestTime(long latestTime) {
+		this.latestTime = latestTime;
 	}
 
 	//[start] Listener Methods	
@@ -78,18 +92,13 @@ public class HTTPClient implements ActionListener{
 
 	//[start] HTTP Methods
 	private InputStream connect(String url) throws IOException {
-		try {
-			URLConnection conn = new URL(serverURL + url).openConnection();
-			conn.setConnectTimeout(connectTimeOut);
-			conn.setReadTimeout(readTimeOut);
-			//conn.setRequestProperty("User-Agent", USER_AGENT);
-			InputStream in = conn.getInputStream();
-			return in;
-		} catch (IOException e) {
-			JOptionPane.showMessageDialog(null, "Could not open connection.", "Error", JOptionPane.ERROR_MESSAGE);
-			e.printStackTrace();
-		}
-		return null;
+		
+		URLConnection conn = new URL(serverURL + url).openConnection();
+		conn.setConnectTimeout(connectTimeOut);
+		conn.setReadTimeout(readTimeOut);
+		//conn.setRequestProperty("User-Agent", USER_AGENT);
+		InputStream in = conn.getInputStream();
+		return in;
 	}
 
 	//[start] HTTP Getters

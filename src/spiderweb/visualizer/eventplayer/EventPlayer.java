@@ -12,19 +12,25 @@ import javax.swing.JSlider;
 import javax.swing.Timer;
 
 /**
- * an internal class extending thread, that can play the sequence of events from the log file in real time
- * or fast forward.
- * @author alan
- *
+ * an internal class extending thread, that can play the sequence of events from the log file in real time or fast forward.
+ * @author  alan
  */
 public class EventPlayer implements ActionListener{
 	
 	private Timer schedule;
+	/**
+	 * @uml.property  name="timeCounter"
+	 * @uml.associationEnd  
+	 */
 	private TimeCounter timeCounter;
 	
 	private static final int speed = 33; // 33 millisec between events while playing regularly
 	private int fastMultiplier = 10;
 	
+	/**
+	 * @uml.property  name="state"
+	 * @uml.associationEnd  
+	 */
 	private PlayState state;
 
 	private LinkedList<LogEvent> myEventList;
@@ -33,7 +39,15 @@ public class EventPlayer implements ActionListener{
 	
 	private int current_index;
 	
+	/**
+	 * @uml.property  name="hiddenGraph"
+	 * @uml.associationEnd  
+	 */
 	private P2PNetworkGraph hiddenGraph;
+	/**
+	 * @uml.property  name="visibleGraph"
+	 * @uml.associationEnd  
+	 */
 	private P2PNetworkGraph visibleGraph;
 	
 	private long myTimeNow;
@@ -429,15 +443,13 @@ public class EventPlayer implements ActionListener{
 		if(playable) {
 			if(state != PlayState.PAUSE) {
 				timeCounter.doIncrement();
+				if(atAnEnd()) {
+					pause();
+				}
 			}
 			long nextTime = timeCounter.getTime();
 	
 			boolean isforward = nextTime>myTimeNow;
-			
-			
-			if(atAnEnd()) {
-				pause();
-			}
 			
 			List<LogEvent> events = getLogEventsUntil(nextTime);
 			
@@ -473,6 +485,7 @@ public class EventPlayer implements ActionListener{
 		myEventList.removeLast();
 		myEventList.addAll(events);
 		playbackSlider.setMaximum((int) myEventList.getLast().getTime());
+		timeCounter.setUpperBound(myEventList.getLast().getTime());
 	}
 	
 	public long getCurrentTime() {
