@@ -25,10 +25,6 @@ import edu.uci.ics.jung.graph.util.Pair;
 public class P2PNetworkGraphSaver {
 	private long currentTime;
 	private List<LogEvent> logList;
-	/**
-	 * @uml.property  name="graph"
-	 * @uml.associationEnd  
-	 */
 	private P2PNetworkGraph graph;
 	private List<LoadingListener> progressListeners;
 	

@@ -99,23 +99,11 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 
 	//a hidden graph that contains all the nodes that will ever be added... 
 	//in order to calculate the positions of all the nodes
-	/**
-	 * @uml.property  name="hiddenGraph"
-	 * @uml.associationEnd  
-	 */
 	private P2PNetworkGraph hiddenGraph; 
-	/**
-	 * @uml.property  name="visibleGraph"
-	 * @uml.associationEnd  
-	 */
 	private P2PNetworkGraph visibleGraph = null;
 	
 	private List<LoadingListener> loadingListeners;
 	
-	/**
-	 * @uml.property  name="networkClient"
-	 * @uml.associationEnd  
-	 */
 	private HTTPClient networkClient;
 	
 	//[end] Private Variables
@@ -132,10 +120,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 	protected JSlider playbackSlider;
 	protected JPopupMenu mouseContext;
 
-	/**
-	 * @uml.property  name="eventThread"
-	 * @uml.associationEnd  
-	 */
 	protected EventPlayer eventThread;
 	//[end] Protected Variables
 	
@@ -1057,10 +1041,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 	 */
 	class SliderListener extends MouseAdapter implements ChangeListener {
 
-		/**
-		 * @uml.property  name="prevState"
-		 * @uml.associationEnd  
-		 */
 		PlayState prevState = PlayState.PAUSE;
 		
 		@Override

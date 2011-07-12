@@ -8,22 +8,10 @@ import java.awt.event.ActionListener;
  */
 public class TimeCounter implements ActionListener {
 	
-	/**
-	 * @uml.property  name="lowerBound"
-	 */
 	private long lowerBound;
-	/**
-	 * @uml.property  name="upperBound"
-	 */
 	private long upperBound; 
 	
-	/**
-	 * @uml.property  name="time"
-	 */
 	private long time;
-	/**
-	 * @uml.property  name="increment"
-	 */
 	private long increment;
 	
 	/** 
@@ -87,7 +75,6 @@ public class TimeCounter implements ActionListener {
 	
 	/**
 	 * @return
-	 * @uml.property  name="time"
 	 */
 	public long getTime() {
 		return time;
@@ -95,7 +82,6 @@ public class TimeCounter implements ActionListener {
 	
 	/**
 	 * @param time
-	 * @uml.property  name="time"
 	 */
 	public synchronized void setTime(long time) {
 		this.time = time;
@@ -103,7 +89,6 @@ public class TimeCounter implements ActionListener {
 	
 	/**
 	 * @return
-	 * @uml.property  name="increment"
 	 */
 	public long getIncrement() {
 		return increment;
@@ -111,7 +96,6 @@ public class TimeCounter implements ActionListener {
 	
 	/**
 	 * @return
-	 * @uml.property  name="lowerBound"
 	 */
 	public long getLowerBound() {
 		return lowerBound;
@@ -119,7 +103,6 @@ public class TimeCounter implements ActionListener {
 	
 	/**
 	 * @return
-	 * @uml.property  name="upperBound"
 	 */
 	public long getUpperBound() {
 		return upperBound;
@@ -127,7 +110,6 @@ public class TimeCounter implements ActionListener {
 	
 	/**
 	 * @param increment
-	 * @uml.property  name="increment"
 	 */
 	public void setIncrement(long increment) {
 		this.increment = increment;
@@ -135,14 +117,12 @@ public class TimeCounter implements ActionListener {
 	
 	/**
 	 * @param bound
-	 * @uml.property  name="lowerBound"
 	 */
 	public void setLowerBound(long bound) {
 		lowerBound = bound;
 	}
 	/**
 	 * @param bound
-	 * @uml.property  name="upperBound"
 	 */
 	public void setUpperBound(long bound) {
 		upperBound = bound;

@@ -15,13 +15,8 @@ package spiderweb.graph;
 public abstract class P2PVertex implements Comparable<P2PVertex> {
 	
 	//[start] Private Attributes
-	/**
-	 * @uml.property  name="label"
-	 */
+
 	protected Integer label; //the label will be drawn over the vertex on the graph
-	/**
-	 * @uml.property  name="key"
-	 */
 	protected Integer key; //the identifier which defines this vertex
 	//[end] Private Attributes	
 	
@@ -49,7 +44,6 @@ public abstract class P2PVertex implements Comparable<P2PVertex> {
 	/**
 	 * Gets the label for the vertex.
 	 * @return  Returns the label of this vertex.
-	 * @uml.property  name="label"
 	 */
 	public Integer getLabel(){
 		return label;
@@ -58,7 +52,6 @@ public abstract class P2PVertex implements Comparable<P2PVertex> {
 	/**
 	 * Gets the key for the vertex.
 	 * @return  Returns the key(identifier) of this vertex.
-	 * @uml.property  name="key"
 	 */
 	public Integer getKey(){
 		return key;

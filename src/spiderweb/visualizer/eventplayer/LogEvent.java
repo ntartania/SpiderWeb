@@ -27,13 +27,7 @@ public class LogEvent implements Comparable<LogEvent>{
 	 * unqueryreachespeer
 	 */
 
-	/**
-	 * @uml.property  name="time"
-	 */
 	private long time=0;
-	/**
-	 * @uml.property  name="type"
-	 */
 	private String type="default"; //publish, join, connect...
 	private int param1=0;
 	private int param2=0;
@@ -104,17 +98,10 @@ public class LogEvent implements Comparable<LogEvent>{
 		return (type.equals("connect")||type.equals("publish")||type.equals("disconnect")||type.equals("remove"));
 	}
 	
-	/**
-	 * @return
-	 * @uml.property  name="time"
-	 */
 	public long getTime(){
 		return time;
 	}
-	/**
-	 * @return
-	 * @uml.property  name="type"
-	 */
+
 	public String getType(){
 		return type;
 	}

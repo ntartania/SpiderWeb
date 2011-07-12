@@ -26,19 +26,9 @@ import edu.uci.ics.jung.graph.util.Pair;
  * @author  Matty
  */
 public class P2PNetworkGraphLoader {
-	/**
-	 * @uml.property  name="logList"
-	 */
+	
 	private LinkedList<LogEvent> logList;
-	/**
-	 * @uml.property  name="hiddenGraph"
-	 * @uml.associationEnd  
-	 */
 	private P2PNetworkGraph hiddenGraph;
-	/**
-	 * @uml.property  name="visibleGraph"
-	 * @uml.associationEnd  
-	 */
 	private P2PNetworkGraph visibleGraph;
 	private List<LoadingListener> loadingListeners;
 
@@ -361,7 +351,6 @@ public class P2PNetworkGraphLoader {
 	//[start] Getters
 	/**
 	 * @return
-	 * @uml.property  name="logList"
 	 */
 	public LinkedList<LogEvent> getLogList() {
 		return logList;

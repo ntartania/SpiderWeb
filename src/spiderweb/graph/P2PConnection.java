@@ -15,9 +15,6 @@ public class P2PConnection/* implements Comparable<P2PConnection> */{
 	public static final int MATCHING_DOC = 11;
 	private int mytypeandstate;
 	//private P2PVertex peer;
-	/**
-	 * @uml.property  name="key"
-	 */
 	private Integer key;
 	
 	//not sure how useful this will be
@@ -37,7 +34,6 @@ public class P2PConnection/* implements Comparable<P2PConnection> */{
 	
 	/**
 	 * @return
-	 * @uml.property  name="key"
 	 */
 	public Integer getKey(){
 		return key;

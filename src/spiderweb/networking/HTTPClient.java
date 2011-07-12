@@ -65,7 +65,6 @@ public class HTTPClient implements ActionListener{
 	
 	/**
 	 * @param latestTime
-	 * @uml.property  name="latestTime"
 	 */
 	public void setLatestTime(long latestTime) {
 		this.latestTime = latestTime;

@@ -23,20 +23,8 @@ public class P2PVertexShapeTransformer extends AbstractVertexShapeTransformer<P2
 	public static final int PEER_SIZE = 25;
 	public static final int PEER_DOC_SIZE = 15;
 	
-	/**
-	 * @uml.property  name="peerShape"
-	 * @uml.associationEnd  
-	 */
 	private VertexShapeType peerShape;
-	/**
-	 * @uml.property  name="documentShape"
-	 * @uml.associationEnd  
-	 */
 	private VertexShapeType documentShape;
-	/**
-	 * @uml.property  name="peerDocumentShape"
-	 * @uml.associationEnd  
-	 */
 	private VertexShapeType peerDocumentShape;
 	
 	    @SuppressWarnings({ "rawtypes", "unchecked" })

@@ -18,19 +18,11 @@ import javax.swing.Timer;
 public class EventPlayer implements ActionListener{
 	
 	private Timer schedule;
-	/**
-	 * @uml.property  name="timeCounter"
-	 * @uml.associationEnd  
-	 */
 	private TimeCounter timeCounter;
 	
 	private static final int speed = 33; // 33 millisec between events while playing regularly
 	private int fastMultiplier = 10;
 	
-	/**
-	 * @uml.property  name="state"
-	 * @uml.associationEnd  
-	 */
 	private PlayState state;
 
 	private LinkedList<LogEvent> myEventList;
@@ -39,15 +31,8 @@ public class EventPlayer implements ActionListener{
 	
 	private int current_index;
 	
-	/**
-	 * @uml.property  name="hiddenGraph"
-	 * @uml.associationEnd  
-	 */
+
 	private P2PNetworkGraph hiddenGraph;
-	/**
-	 * @uml.property  name="visibleGraph"
-	 * @uml.associationEnd  
-	 */
 	private P2PNetworkGraph visibleGraph;
 	
 	private long myTimeNow;

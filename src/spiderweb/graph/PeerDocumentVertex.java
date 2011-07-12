@@ -14,9 +14,6 @@ public class PeerDocumentVertex extends P2PVertex {
 	
 	//[start] Private Attributes
 	private int peer; // The peer number of the peer who published this document.
-	/**
-	 * @uml.property  name="queryHit"
-	 */
 	private boolean queryHit; // for state changing when a this document matches a query.
 	//[end] Private Attributes
 	
@@ -53,7 +50,6 @@ public class PeerDocumentVertex extends P2PVertex {
 	/**
 	 * Sets the document to be a query hit or not for drawing purposes.
 	 * @param isQueryHit  	<code>true</code> when a query reached the publisher of this document and it matches this document.
-	 * @uml.property  name="queryHit"
 	 */
 	public void setQueryHit(boolean isQueryHit) {
 		queryHit = isQueryHit;
@@ -62,7 +58,6 @@ public class PeerDocumentVertex extends P2PVertex {
 	/**
 	 * Checks if the document was hit by a query.
 	 * @return  	<code>true</code> when the document matches a query which hit the publisher.
-	 * @uml.property  name="queryHit"
 	 */
 	public boolean isQueryHit() {
 		return queryHit;

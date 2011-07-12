@@ -19,10 +19,7 @@ import edu.uci.ics.jung.algorithms.layout.Layout;
 public class P2PVertexPlacer implements Transformer<P2PVertex, Point2D> {
 
 	private Layout<P2PVertex,P2PConnection> existinglayout;
-	/**
-	 * @uml.property  name="rt"
-	 * @uml.associationEnd  
-	 */
+
 	private RandomLocationTransformer<P2PVertex> rt;
 	
 	public P2PVertexPlacer(Layout<P2PVertex,P2PConnection> l, Dimension d){
