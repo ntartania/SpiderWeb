@@ -42,10 +42,11 @@ public class LogEvent implements Comparable<LogEvent>{
 	public LogEvent(String str){
 		// possible lines :
 		//timemillisec [online |offline] peernumber
-		//timemillisec publish peernumber documentnumber
+		//timemillisec [publish | remove] peernumber documentnumber
 		//timemillisec query peernumber querynumber
 		//timemillisec queryhit peernumber docnumber
-		//timemillisec connect peer1 peer2
+		//timemillisec [connect | disconnect] peer1 peer2
+		//timemillisec linkdocument doc1 doc2
 
 		str.trim();
 		//tokenize line.

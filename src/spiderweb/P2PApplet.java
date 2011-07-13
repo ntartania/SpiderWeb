@@ -99,8 +99,8 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 
 	//a hidden graph that contains all the nodes that will ever be added... 
 	//in order to calculate the positions of all the nodes
-	private P2PNetworkGraph hiddenGraph; 
-	private P2PNetworkGraph visibleGraph = null;
+	private P2PNetworkGraph fullGraph; 
+	private P2PNetworkGraph dynamicGraph = null;
 	
 	private List<LoadingListener> loadingListeners;
 	
@@ -273,14 +273,17 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 						"Save", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
 				
 				if(option == JOptionPane.YES_OPTION) {
-					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(visibleGraph,eventThread.getSaveEvents(), eventThread.getCurrentTime());
+					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(dynamicGraph,eventThread.getSaveEvents(), eventThread.getCurrentTime());
 					saver.addLoadingListener(new LoadingBar());
 					saver.doSave();
 				}
 				else if(option == JOptionPane.NO_OPTION) {
-					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(visibleGraph);
+					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(dynamicGraph);
 					saver.addLoadingListener(new LoadingBar());
 					saver.doSave();
+				}
+				else { //testing web saver
+					P2PNetworkGraphSaver.saveGraphForWeb(dynamicGraph,eventThread.getCurrentTime());
 				}
 				//else cancel option, don't do anything
 			}	
@@ -301,7 +304,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 						JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
 				
 				if(option == JOptionPane.OK_OPTION) {
-					//GraphSaverAndLoader.save(visibleGraph);
+					//GraphSaverAndLoader.save(dynamicGraph);
 					System.exit(0);
 				}
 				else if(option == JOptionPane.NO_OPTION) {
@@ -611,8 +614,8 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 		}
 		tabsPane.removeAll();
 		
-		//layout = springLayoutBuilder(DEFWIDTH,DEFHEIGHT,hiddenGraph);
-		layout = new FRLayout2<P2PVertex, P2PConnection>(hiddenGraph);
+		//layout = springLayoutBuilder(DEFWIDTH,DEFHEIGHT,fullGraph);
+		layout = new FRLayout2<P2PVertex, P2PConnection>(fullGraph);
 		layout.setInitializer(new P2PVertexPlacer(layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
 		
 		for(LoadingListener l : loadingListeners) {
@@ -633,8 +636,8 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 								EdgeShapeType.LINE,
 								EdgeShapeType.LINE);
 		
-		fullViewViewer.getRenderContext().setVertexIncludePredicate(new VertexIsInTheOtherGraphPredicate(visibleGraph));
-		fullViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
+		fullViewViewer.getRenderContext().setVertexIncludePredicate(new VertexIsInTheOtherGraphPredicate(dynamicGraph));
+		fullViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(dynamicGraph));
 		//[end] Full Visualization Viewer Init
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(1);
@@ -652,8 +655,8 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 		collapsedDocumentViewViewer.getRenderContext().setEdgeShapeTransformer(new P2PEdgeShapeTransformer(EdgeShapeType.QUAD_CURVE,
 				EdgeShapeType.CUBIC_CURVE,EdgeShapeType.LINE,EdgeShapeType.LINE)); //stroke width
 		
-		collapsedDocumentViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(visibleGraph,PeerVertex.class));
-		collapsedDocumentViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
+		collapsedDocumentViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(dynamicGraph,PeerVertex.class));
+		collapsedDocumentViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(dynamicGraph));
 		//[end] Collapsed Document Visualization Viewer Init
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(2);
@@ -668,8 +671,8 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 								EdgeShapeType.LINE,
 								EdgeShapeType.LINE);
 		
-		collapsedPeerViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(visibleGraph, DocumentVertex.class));
-		collapsedPeerViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
+		collapsedPeerViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(dynamicGraph, DocumentVertex.class));
+		collapsedPeerViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(dynamicGraph));
 		//[end] Collapsed Peer Visualization Viewer Init
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(3);
@@ -684,8 +687,8 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 								EdgeShapeType.LINE,
 								EdgeShapeType.LINE);
 		
-		collapsedPeerAndDocumentViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(visibleGraph,PeerDocumentVertex.class));
-		collapsedPeerAndDocumentViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(visibleGraph));
+		collapsedPeerAndDocumentViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(dynamicGraph,PeerDocumentVertex.class));
+		collapsedPeerAndDocumentViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(dynamicGraph));
 		//[end] Collapsed Peer AndDocument Visualization Viewer Init
 		
 		for(LoadingListener l : loadingListeners) {
@@ -702,7 +705,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 			playbackSlider.addMouseListener(s);
 			
 			/// create the event player
-			eventThread = new EventPlayer(hiddenGraph, visibleGraph);
+			eventThread = new EventPlayer(fullGraph, dynamicGraph);
 			eventThread.addEventPlayerListener(this);
 		}
 		else {
@@ -715,7 +718,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 			
 			
 			/// create the event player
-			eventThread = new EventPlayer(hiddenGraph, visibleGraph, myGraphEvolution, playbackSlider);
+			eventThread = new EventPlayer(fullGraph, dynamicGraph, myGraphEvolution, playbackSlider);
 			eventThread.addEventPlayerListener(this);
 		}
 		for(LoadingListener l : loadingListeners) {
@@ -1100,7 +1103,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 		}
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new FRLayout<P2PVertex, P2PConnection>(hiddenGraph, vv.getSize());
+			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new FRLayout<P2PVertex, P2PConnection>(fullGraph, vv.getSize());
 			vv.getModel().setGraphLayout(graphLayout);
 			mouseContext.setVisible(false);
 			mouseContext.setEnabled(false);
@@ -1118,7 +1121,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 		}
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new ISOMLayout<P2PVertex, P2PConnection>(hiddenGraph);
+			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new ISOMLayout<P2PVertex, P2PConnection>(fullGraph);
 			vv.getModel().setGraphLayout(graphLayout);
 			mouseContext.setVisible(false);
 			mouseContext.setEnabled(false);
@@ -1136,7 +1139,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 		}
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new KKLayout<P2PVertex, P2PConnection>(hiddenGraph);
+			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new KKLayout<P2PVertex, P2PConnection>(fullGraph);
 			vv.getModel().setGraphLayout(graphLayout);
 			mouseContext.setVisible(false);
 			mouseContext.setEnabled(false);
@@ -1154,7 +1157,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 		}
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(hiddenGraph);
+			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(fullGraph);
 			vv.getModel().setGraphLayout(graphLayout);
 			mouseContext.setVisible(false);
 			mouseContext.setEnabled(false);
@@ -1172,7 +1175,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 		}
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new SpringLayout<P2PVertex, P2PConnection>(hiddenGraph);
+			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new SpringLayout<P2PVertex, P2PConnection>(fullGraph);
 			vv.getModel().setGraphLayout(graphLayout);
 			mouseContext.setVisible(false);
 			mouseContext.setEnabled(false);
@@ -1192,7 +1195,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			TreeLayout<P2PVertex, P2PConnection> graphLayout = 
-				new TreeLayout<P2PVertex, P2PConnection>(P2PNetworkGraph.makeTreeGraph(hiddenGraph)) {
+				new TreeLayout<P2PVertex, P2PConnection>(P2PNetworkGraph.makeTreeGraph(fullGraph)) {
 				
 				@Override
 				public void setSize(Dimension size) {
@@ -1217,7 +1220,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 		}
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			BalloonLayout<P2PVertex, P2PConnection> graphLayout = new BalloonLayout<P2PVertex, P2PConnection>(P2PNetworkGraph.makeTreeGraph(hiddenGraph));
+			BalloonLayout<P2PVertex, P2PConnection> graphLayout = new BalloonLayout<P2PVertex, P2PConnection>(P2PNetworkGraph.makeTreeGraph(fullGraph));
 			graphLayout.setInitializer(new P2PVertexPlacer(layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
 			
 			vv.getModel().setGraphLayout(graphLayout);
@@ -1260,12 +1263,12 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 							fastSpeedSlider.setEnabled(false);
 							
 							//When loading a new Graph, if the collapsed document view has a tree layout it crashes because of setsize()
-							AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(hiddenGraph);
+							AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(fullGraph);
 							collapsedDocumentViewViewer.getModel().setGraphLayout(graphLayout);
 						}
 						myGraphEvolution = loader.getLogList();
-						hiddenGraph = loader.getHiddenP2PNetworkGraph();
-						visibleGraph = loader.getVisibleP2PNetworkGraph();
+						fullGraph = loader.getHiddenP2PNetworkGraph();
+						dynamicGraph = loader.getVisibleP2PNetworkGraph();
 						startGraph();
 					}
 				}
@@ -1283,8 +1286,8 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 		try {
 			eventThread.pause();
 			LinkedList<LogEvent> events;
-			synchronized(hiddenGraph) {
-				events = P2PNetworkGraphLoader.buildLogs(inStream, networkClient, hiddenGraph);
+			synchronized(fullGraph) {
+				events = P2PNetworkGraphLoader.buildLogs(inStream, networkClient, fullGraph);
 			}
 			
 			networkClient.setLatestTime(events.getLast().getTime());
@@ -1316,13 +1319,13 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 				fastSpeedSlider.setEnabled(false);
 				
 				//When loading a new Graph, if the collapsed document view has a tree layout it crashes because of setsize()
-				AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(hiddenGraph);
+				AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(fullGraph);
 				collapsedDocumentViewViewer.getModel().setGraphLayout(graphLayout);
 			}
 			
 			myGraphEvolution = loader.getLogList();
-			hiddenGraph = loader.getHiddenP2PNetworkGraph();
-			visibleGraph = loader.getVisibleP2PNetworkGraph();
+			fullGraph = loader.getHiddenP2PNetworkGraph();
+			dynamicGraph = loader.getVisibleP2PNetworkGraph();
 			startGraph();
 		} catch (JDOMException e) {
 			e.printStackTrace();

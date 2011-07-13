@@ -68,8 +68,12 @@ public class P2PNetworkGraphSaver {
 		P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(graph);
 		Document doc = saver.buildDoc();
 		doc.getRootElement().setAttribute("time",Long.toString(simulationTime));
-		
-		return doc.toString();
+		XMLOutputter outputter = new XMLOutputter();
+	    try {
+	    	return outputter.outputString(doc);   
+	    }
+	    catch (Exception e) {e.printStackTrace();}
+		return "";
 	}
 	
 	public static String saveEventsForWeb(LinkedList<LogEvent> events, long simulationTime) {
