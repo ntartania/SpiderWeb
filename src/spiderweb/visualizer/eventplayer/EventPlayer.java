@@ -32,8 +32,8 @@ public class EventPlayer implements ActionListener{
 	private int current_index;
 	
 
-	private P2PNetworkGraph hiddenGraph;
-	private P2PNetworkGraph visibleGraph;
+	private P2PNetworkGraph fullGraph;
+	private P2PNetworkGraph dynamicGraph;
 	
 	private long myTimeNow;
 	
@@ -41,9 +41,9 @@ public class EventPlayer implements ActionListener{
 	
 	private boolean playable; //for when a graph is loaded without any events
 	
-	public EventPlayer(P2PNetworkGraph hiddenGraph, P2PNetworkGraph visibleGraph, LinkedList<LogEvent> eventlist, JSlider playbackSlider){
-		this.hiddenGraph = hiddenGraph;
-		this.visibleGraph = visibleGraph;
+	public EventPlayer(P2PNetworkGraph fullGraph, P2PNetworkGraph dynamicGraph, LinkedList<LogEvent> eventlist, JSlider playbackSlider){
+		this.fullGraph = fullGraph;
+		this.dynamicGraph = dynamicGraph;
 		this.playbackSlider = playbackSlider;
 		myEventList = eventlist;
 		current_index = 0; 
@@ -55,9 +55,9 @@ public class EventPlayer implements ActionListener{
 		playable=true;
 	}
 	
-	public EventPlayer(P2PNetworkGraph hiddenGraph, P2PNetworkGraph visibleGraph){
-		this.hiddenGraph = hiddenGraph;
-		this.visibleGraph = visibleGraph;
+	public EventPlayer(P2PNetworkGraph fullGraph, P2PNetworkGraph dynamicGraph){
+		this.fullGraph = fullGraph;
+		this.dynamicGraph = dynamicGraph;
 		this.playbackSlider = null;
 		myEventList = new LinkedList<LogEvent>();
 		current_index = 0; 
@@ -247,20 +247,20 @@ public class EventPlayer implements ActionListener{
 	 * @param q
 	 */
 	public void doQuery(int peer, int queryMessageID){
-		hiddenGraph.getPeer(peer).query(queryMessageID);
+		fullGraph.getPeer(peer).query(queryMessageID);
 	}
 	
 	public void undoQuery(int peer, int queryMessageID){
-		hiddenGraph.getPeer(peer).endQuery(queryMessageID);
+		fullGraph.getPeer(peer).endQuery(queryMessageID);
 	}
 	
 	
 	public void doQueryEdge(int peerFrom, int peerTo) {
-		hiddenGraph.findPeerConnection(peerFrom, peerTo).query();
+		fullGraph.findPeerConnection(peerFrom, peerTo).query();
 	}
 	
 	public void undoQueryEdge(int peerFrom, int peerTo) {
-		hiddenGraph.findPeerConnection(peerFrom, peerTo).backToNormal();
+		fullGraph.findPeerConnection(peerFrom, peerTo).backToNormal();
 	}
 	
 	/**
@@ -269,14 +269,14 @@ public class EventPlayer implements ActionListener{
 	 * @param q
 	 */
 	public void doQueryReachesPeer(int peer, int queryMessageID){
-		hiddenGraph.getPeer(peer).receiveQuery(queryMessageID);
+		fullGraph.getPeer(peer).receiveQuery(queryMessageID);
 	}
 	/**
 	 * Visualize a query reaches peer event (bold edges)
 	 * @param peer
 	 */
 	public void undoQueryReachesPeer(int peer, int queryMessageID){
-		hiddenGraph.getPeer(peer).endReceivedQuery(queryMessageID);
+		fullGraph.getPeer(peer).endReceivedQuery(queryMessageID);
 	}
 
 	/**
@@ -285,7 +285,7 @@ public class EventPlayer implements ActionListener{
 	 * @param q
 	 */
 	public void doQueryHit(int peerNumber, int documentNumber) {
-		hiddenGraph.getPeerDocument(peerNumber, documentNumber).setQueryHit(true);
+		fullGraph.getPeerDocument(peerNumber, documentNumber).setQueryHit(true);
 	}
 	
 	/**
@@ -294,7 +294,7 @@ public class EventPlayer implements ActionListener{
 	 * @param q
 	 */
 	public void undoQueryHit(int peerNumber, int documentNumber) {
-		hiddenGraph.getPeerDocument(peerNumber, documentNumber).setQueryHit(false);
+		fullGraph.getPeerDocument(peerNumber, documentNumber).setQueryHit(false);
 	}
 	//[end]
 
@@ -358,7 +358,7 @@ public class EventPlayer implements ActionListener{
 	private void handleLogEvent(LogEvent evt, boolean forward) {
 		
 		if (evt.isStructural()){ //if the event is to modify the structure of the graph
-			visibleGraph.graphEvent(evt,forward,hiddenGraph);
+			dynamicGraph.graphEvent(evt,forward,fullGraph);
 		} else { //other events: queries
 			String what = evt.getType();
 			int val1 = evt.getParam(1);
