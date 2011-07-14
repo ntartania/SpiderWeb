@@ -1,7 +1,5 @@
 package spiderweb.graph;
 
-import spiderweb.visualizer.eventplayer.LogEvent;
-
 import java.util.Collection;
 import java.util.Set;
 import java.util.TreeSet;
@@ -175,6 +173,14 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 		return (PeerDocumentVertex)getVertexInGraph(new PeerDocumentVertex(publisherNumber,documentNumber));
 	}
 	
+	public boolean isPeerOnline(int peerNumber) {
+		return getPeer(peerNumber) != null;
+	}
+	
+	public boolean isDocumentPublished(int documentNumber) {
+		return getDocument(documentNumber) != null;
+	}
+	
 	/**
 	 * Returns an edge that connects the vertex which the peer number peerFrom represents to the vertex which peer number peerTo represents.
 	 * @param peerFrom	Peer that the edge emerges from (vertex 1)
@@ -186,6 +192,10 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 		return connection;
 	}
 	
+	public boolean arePeersConnected(int peer1, int peer2) {
+		return (findPeerConnection(peer1, peer2) != null) && (findPeerConnection(peer2, peer1) != null);
+	}
+	
 	/**
 	 * Returns an edge that connects the two Document vertices which the numbers represent.
 	 * @param peerFrom	Document that the edge emerges from (vertex 1)
@@ -195,6 +205,10 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	public P2PConnection findDocumentToDocumentConnection(int docFrom, int docTo){
 		P2PConnection connection = findEdge(new DocumentVertex(docFrom), new DocumentVertex(docTo));
 		return connection;
+	}
+	
+	public boolean areDocumentsConnected(int docFrom, int docTo) {
+		return (findDocumentToDocumentConnection(docFrom, docTo) != null);
 	}
 	
 	/**
@@ -299,7 +313,6 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	 * Handles the Log Events which affect the structure of the graph.
 	 * @param gev				The Log event which needs to be handled.
 	 * @param forward			<code>true</code> if play-back is playing forward.
-	 * @param eventGraph		The Graph to perform the event on.
 	 * @param referenceGraph	The Graph to get edge numbers from.
 	 */
 	public void graphEvent(LogEvent gev, boolean forward, P2PNetworkGraph referenceGraph) {
@@ -350,6 +363,96 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 			}
 		}
 	}
+	
+	/**
+	 * Handles the Log Events which affect the structure of the graph.
+	 * Primarily used for online as the edges are keyed similar to how edges are keyed when a graph is constructed.
+	 * @param gev				The Log event which needs to be handled.
+	 */
+	public void robustGraphEvent(LogEvent gev) {
+	
+		if (gev.getType().equals("online")){
+			int peerNumber = gev.getParam(1);
+			//check to make sure peer is not online already
+			if(!isPeerOnline(peerNumber)) {
+				addPeer(peerNumber);
+			}
+		} else if (gev.getType().equals("offline")){
+			int peerNumber = gev.getParam(1);
+			//check to make sure peer is online
+			if(isPeerOnline(peerNumber)) {
+				removePeer(peerNumber);
+			}
+		} else if(gev.getType().equals("connect")){
+			int peer1 = gev.getParam(1);
+			int peer2 = gev.getParam(2);
+			//check peers are online and that they are not already connected
+			//if peer is not online, come online
+			if(!isPeerOnline(peer1)) {
+				addPeer(peer1);
+			}
+			if(!isPeerOnline(peer2)) {
+				addPeer(peer2);
+			}
+			if(!arePeersConnected(peer1, peer2)) {
+				connectPeers(peer1, peer2);
+				connectPeers(peer2, peer1);
+			}
+		} else if(gev.getType().equals("disconnect")){
+			int peer1 = gev.getParam(1);
+			int peer2 = gev.getParam(2);
+			//check peers are online and that they are already connected
+			//if peer is not online, come online
+			if(!isPeerOnline(peer1)) {
+				addPeer(peer1);
+			}
+			if(!isPeerOnline(peer2)) {
+				addPeer(peer2);
+			}
+			if(arePeersConnected(peer1, peer2)) {
+				disconnectPeers(peer1, peer2);
+				disconnectPeers(peer2, peer1);
+			}
+		} else if(gev.getType().equals("publish")){		
+			int peer = gev.getParam(1);
+			int document = gev.getParam(2);
+			//check peer is online, check peer has not already published document
+			//if peer is not online, come online
+			if(!isPeerOnline(peer)) {
+				addPeer(peer);
+			}
+			if(!isDocumentPublished(document)) {
+				addDocument(document, peer);
+			}
+		} else if(gev.getType().equals("depublish")){
+			int peer = gev.getParam(1);
+			int document = gev.getParam(2);
+			//check peer is online, check peer has published document
+			//if peer is not online, come online
+			if(!isPeerOnline(peer)) {
+				addPeer(peer);
+			}
+			if(isDocumentPublished(document)) {
+				removeDocument(document, peer);
+			}
+		} else if(gev.getType().equals("linkdocument")) {
+			int doc1 = gev.getParam(1);
+			int doc2 = gev.getParam(2);
+			//check documents are both published
+			if(isDocumentPublished(doc1) && isDocumentPublished(doc2)) {
+				connectDocuments(doc1, doc2);
+			}
+		} else if(gev.getType().equals("delinkdocument")) {
+			int doc1 = gev.getParam(1);
+			int doc2 = gev.getParam(2);
+			//check documents are both published
+			if(isDocumentPublished(doc1) && isDocumentPublished(doc2)) {
+				disconnectDocuments(doc1, doc2);
+			}
+			
+		}
+	}
+	
 	/*
 	@Override
 	public P2PNetworkGraph clone() {

@@ -18,7 +18,7 @@ import org.jdom.input.SAXBuilder;
 
 import spiderweb.graph.*;
 import spiderweb.networking.HTTPClient;
-import spiderweb.visualizer.eventplayer.LogEvent;
+import spiderweb.graph.LogEvent;
 
 import edu.uci.ics.jung.graph.util.Pair;
 

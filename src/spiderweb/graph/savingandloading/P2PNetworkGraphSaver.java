@@ -15,7 +15,6 @@ import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
 import spiderweb.graph.*;
-import spiderweb.visualizer.eventplayer.LogEvent;
 
 import edu.uci.ics.jung.graph.util.Pair;
 

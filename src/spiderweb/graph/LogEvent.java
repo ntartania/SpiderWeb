@@ -1,4 +1,4 @@
-package spiderweb.visualizer.eventplayer;
+package spiderweb.graph;
 
 /**
  * a simple class to encapsulate events to the graph as read from the processed log file. 
@@ -13,9 +13,11 @@ public class LogEvent implements Comparable<LogEvent>{
 	 * online
 	 * offline
 	 * publish
-	 * depublish
+	 * remove
 	 * connect
 	 * disconnect
+	 * linkdocument
+	 * delinkdocument
 	 * 
 	 * query
 	 * unquery
@@ -50,7 +52,7 @@ public class LogEvent implements Comparable<LogEvent>{
 
 		str.trim();
 		//tokenize line.
-		String [] words = str.split(":");
+		String [] words = str.split("[:]+");
 	
 		time = Long.parseLong(words[0]);
 		type = words[1];
@@ -93,10 +95,14 @@ public class LogEvent implements Comparable<LogEvent>{
 	}
 	/**events that modify the graph*/ 
 	public boolean isStructural(){
-		return (isConstructing()||type.equals("offline")||type.equals("disconnect")||type.equals("depublish")||type.equals("remove")||type.equals("delinkdocument"));
+		return (isConstructing()||type.equals("offline")||type.equals("disconnect")||type.equals("remove")||type.equals("delinkdocument"));
 	}
 	public boolean isImportantToPeer() {
 		return (type.equals("connect")||type.equals("publish")||type.equals("disconnect")||type.equals("remove"));
+	}
+	
+	public boolean isColouringEvent() {
+		return !isStructural();
 	}
 	
 	public long getTime(){

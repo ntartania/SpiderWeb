@@ -2,7 +2,7 @@ package spiderweb.graph.savingandloading;
 
 //[start] Imports
 import spiderweb.graph.*;
-import spiderweb.visualizer.eventplayer.LogEvent;
+import spiderweb.graph.LogEvent;
 
 import java.io.BufferedReader;
 import java.io.IOException;

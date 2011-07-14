@@ -1,7 +1,5 @@
 package spiderweb.visualizer.eventplayer;
 
-import spiderweb.graph.P2PNetworkGraph;
-
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.LinkedList;
@@ -10,6 +8,9 @@ import java.util.ListIterator;
 
 import javax.swing.JSlider;
 import javax.swing.Timer;
+
+import spiderweb.graph.LogEvent;
+import spiderweb.graph.P2PNetworkGraph;
 
 /**
  * an internal class extending thread, that can play the sequence of events from the log file in real time or fast forward.
