@@ -144,7 +144,7 @@ public class LogEvent implements Comparable<LogEvent>{
 	
 	@Override
 	public String toString() {
-		return(time+":"+type+":"+param1+":"+param2+"\n");
+		return(time+":"+type+":"+param1+":"+param2);
 	}
 	
 	@Override

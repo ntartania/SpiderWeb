@@ -80,7 +80,12 @@ public class P2PNetworkGraphSaver {
 		Document doc = saver.buildDoc();
 		doc.getRootElement().setAttribute("time",Long.toString(simulationTime));
 		
-		return doc.toString();
+		XMLOutputter outputter = new XMLOutputter();
+	    try {
+	    	return outputter.outputString(doc);   
+	    }
+	    catch (Exception e) {e.printStackTrace();}
+		return "";
 	}
 	//[end] Saver Method
 	

@@ -108,14 +108,14 @@ public class HTTPClient implements ActionListener{
 	}
 
 	private void getLogEvents() throws IOException, Exception {
-		/*String url = "/getLogEvents?";
+		String url = "/getLogEvents?";
 		url = addTimeOfLastResponse(url);		
 		
 		InputStream inStream = connect(url);
 		
 		//LinkedList<LogEvent> events = P2PNetworkGraphLoader.buildLogs(in);
 		notifyIncomingLogEvents(inStream);
-*/
+
 	}
 	//[end] HTTP Getters
 

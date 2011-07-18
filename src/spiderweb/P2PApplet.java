@@ -283,7 +283,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 					saver.doSave();
 				}
 				else { //testing web saver
-					P2PNetworkGraphSaver.saveGraphForWeb(dynamicGraph,eventThread.getCurrentTime());
+					System.out.print(P2PNetworkGraphSaver.saveEventsForWeb(myGraphEvolution, eventThread.getCurrentTime()));
 				}
 				//else cancel option, don't do anything
 			}	

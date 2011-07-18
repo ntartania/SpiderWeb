@@ -424,7 +424,7 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 			if(!isDocumentPublished(document)) {
 				addDocument(document, peer);
 			}
-		} else if(gev.getType().equals("depublish")){
+		} else if(gev.getType().equals("remove")){
 			int peer = gev.getParam(1);
 			int document = gev.getParam(2);
 			//check peer is online, check peer has published document
@@ -449,7 +449,6 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 			if(isDocumentPublished(doc1) && isDocumentPublished(doc2)) {
 				disconnectDocuments(doc1, doc2);
 			}
-			
 		}
 	}
 	
