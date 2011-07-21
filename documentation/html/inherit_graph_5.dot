@@ -1,0 +1,9 @@
+digraph G
+{
+  edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
+  node [fontname="Helvetica",fontsize="10",shape=record];
+  rankdir=LR;
+  Node1 [label="spiderweb.graph.savingandloading.LoadingListener",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$interfacespiderweb_1_1graph_1_1savingandloading_1_1_loading_listener.html"];
+  Node1 -> Node2 [dir=back,color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node2 [label="spiderweb.graph.savingandloading.LoadingBar",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$classspiderweb_1_1graph_1_1savingandloading_1_1_loading_bar.html"];
+}
