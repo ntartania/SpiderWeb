@@ -1,3 +1,12 @@
+/*
+ * File:         LogEventListBuilder.java
+ * Project:		 Spiderweb Network Graph Visualizer
+ * Created:      01/06/2011
+ * Last Changed: Date: 21/07/2011 
+ * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * 
+ * This code was produced at Carleton University 2011
+ */
 package spiderweb.graph.savingandloading;
 
 //[start] Imports
@@ -15,7 +24,11 @@ import java.util.List;
 //[end] Imports
 
 /**
- * @author  Matty
+ * The LogEventListBuilder class is used for loading graphs from a text(.txt) file.
+ * It is used by the P2PNetworkGraphLoader to load graphs from text files.
+ * 
+ * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * @version Date: 21/07/2011 
  */
 public class LogEventListBuilder  {
 	
@@ -48,7 +61,6 @@ public class LogEventListBuilder  {
 		return hiddenGraph;
 	}
 	//[end] Getters
-	
 	
 	//[start] List Creator
 	public LinkedList<LogEvent> createList(BufferedReader logFile) {
@@ -147,7 +159,7 @@ public class LogEventListBuilder  {
 				if(opposite.getClass().equals(PeerDocumentVertex.class))//store their documents to re-publish if they decide to come back online 
 				{
 					peerMap.get(Integer.toString(gev.getParam(1))).add(":publish:"+gev.getParam(1)+":"+((PeerDocumentVertex) opposite).getDocumentNumber());
-					logEvents.add(new LogEvent(gev.getTime(),"depublish",gev.getParam(1),((PeerDocumentVertex) opposite).getDocumentNumber()));
+					logEvents.add(new LogEvent(gev.getTime(),"depublish",gev.getParam(1),((PeerDocumentVertex) opposite).getDocumentNumber(), 0));
 				}
 				else if(opposite.getClass().equals(PeerVertex.class)) {//store their connected peers for when they come back online
 					peerMap.get(Integer.toString(gev.getParam(1))).add(":connect:"+gev.getParam(1)+":"+((PeerVertex) opposite).getKey());
@@ -180,7 +192,7 @@ public class LogEventListBuilder  {
 			//[start] bold the edge between the peer which the query reached and the sender
 			for(P2PVertex querySender : queryPeers) {
 				if(tempGraph.findEdge(querySender, queriedPeer) != null) {
-					LogEvent ev = new LogEvent(gev.getTime()+1,"queryedge",querySender.getKey(),queriedPeer.getKey());
+					LogEvent ev = new LogEvent(gev.getTime()+1,"queryedge",querySender.getKey(),queriedPeer.getKey(),0);
 					
 					colouringEvents.add(ev);
 					colouringEvents.add(LogEvent.createOpposingLogEvent(ev,750));

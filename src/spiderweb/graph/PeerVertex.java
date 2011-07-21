@@ -1,7 +1,11 @@
-/**
- * Contains the class definition for a PeerVertex in the P2P Network Graph project.
- * @author Matthew Smith
- * @version May 12, 2011
+/*
+ * File:         PeerVertex.java
+ * Project:		 Spiderweb Network Graph Visualizer
+ * Created:      01/06/2011
+ * Last Changed: Date: 21/07/2011 
+ * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * 
+ * This code was produced at Carleton University 2011
  */
 package spiderweb.graph;
 
@@ -11,13 +15,13 @@ import java.util.List;
 /**
  * <p>A class which represents a peer as a vertex in the P2P network visualization.</p>
  * <ul>
- * <li>A peer is drawn differently than a document, as well, it has more states.</li>]
+ * <li>A peer is drawn differently than a document, as well, it has more states.</li>
  * <li>Maintains a list of outgoing and incoming queries.</li>
  * <li>Has a state which describes if it has sent a query or not.</li>
  * <li>Has a state which describes if it has received a query or not.</li>
  * </ul>
- * @author Matthew Smith
- * @version May 12, 2011
+ * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * @version Date: 21/07/2011 
  */
 public class PeerVertex extends P2PVertex {
 

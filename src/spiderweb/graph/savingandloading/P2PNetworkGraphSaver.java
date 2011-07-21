@@ -1,3 +1,12 @@
+/*
+ * File:         P2PNetworkGraphSaver.java
+ * Project:		 Spiderweb Network Graph Visualizer
+ * Created:      01/06/2011
+ * Last Changed: Date: 21/07/2011 
+ * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * 
+ * This code was produced at Carleton University 2011
+ */
 package spiderweb.graph.savingandloading;
 
 import java.io.File;
@@ -19,7 +28,11 @@ import spiderweb.graph.*;
 import edu.uci.ics.jung.graph.util.Pair;
 
 /**
- * @author  Matty
+ * The P2PNetworkGraphSaver is a class that will take a Network Graph
+ * and Log Events and save it to an XML File.
+ * 
+ * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * @version Date: 21/07/2011 
  */
 public class P2PNetworkGraphSaver {
 	private long currentTime;

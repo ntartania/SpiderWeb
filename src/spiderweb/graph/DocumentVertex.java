@@ -1,7 +1,11 @@
-/**
- * Contains the class definition for a DocumentVertex in the P2P Network Graph project.
- * @author Matthew Smith
- * @version May 12, 2011
+/*
+ * File:         DocumentVertex.java
+ * Project:		 Spiderweb Network Graph Visualizer
+ * Created:      01/06/2011
+ * Last Changed: Date: 20/07/2011 
+ * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * 
+ * This code was produced at Carleton University 2011
  */
 package spiderweb.graph;
 
@@ -12,8 +16,8 @@ package spiderweb.graph;
  * <li>Has a state which describes if it was hit by a query or not.</li>
  * <li>Stores the key of it's publisher so it knows where it came from.</li>
  * </ul>
- * @author Matthew Smith
- * @version May 12, 2011
+ * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * @version Date: 21/07/2011 
  */
 public class DocumentVertex extends P2PVertex {
 	

@@ -1,3 +1,12 @@
+/*
+ * File:         EventPlayer.java
+ * Project:		 Spiderweb Network Graph Visualizer
+ * Created:      01/06/2011
+ * Last Changed: Date: 21/07/2011 
+ * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * 
+ * This code was produced at Carleton University 2011
+ */
 package spiderweb.visualizer.eventplayer;
 
 import java.awt.event.ActionEvent;
@@ -13,8 +22,12 @@ import spiderweb.graph.LogEvent;
 import spiderweb.graph.P2PNetworkGraph;
 
 /**
- * an internal class extending thread, that can play the sequence of events from the log file in real time or fast forward.
- * @author  alan
+ * The Event Player is what plays the graph backwards and forward, 
+ * it maintains a time and the state of the playback.
+ * 
+ * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * @author Alan Davoust
+ * @version Date: 21/07/2011 
  */
 public class EventPlayer implements ActionListener{
 	

@@ -1,13 +1,13 @@
 /*
- * Created on Jul 19, 2005
- *
- * Copyright (c) 2005, the JUNG Project and the Regents of the University 
- * of California
- * All rights reserved.
- *
- * This software is open-source under the BSD license; see either
- * "license.txt" or
- * http://jung.sourceforge.net/license.txt for a description.
+ * File:         RandomLocationTransformer.Java
+ * Project:		 Spiderweb Network Graph Visualizer
+ * Created:      01/06/2011
+ * Last Changed: Date: 21/07/2011 
+ * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * 
+ * This code was produced at Carleton University 2011
+ * Takes ideas from the JUNG Project
+ * @see http://jung.sourceforge.net/
  */
 package spiderweb.visualizer;
 

@@ -1,3 +1,12 @@
+/*
+ * File:         P2PGraphVeiwer.java
+ * Project:		 Spiderweb Network Graph Visualizer
+ * Created:      01/06/2011
+ * Last Changed: Date: 20/07/2011 
+ * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * 
+ * This code was produced at Carleton University 2011
+ */
 package spiderweb;
 
 //[start] Imports
@@ -68,11 +77,14 @@ import edu.uci.ics.jung.visualization.renderers.Renderer;
 //[end] Imports
 
 /**
- * an applet that will display a graph using a spring layout, and as the graph changes the layout is updated.
- * @author  Alan
- * @author  Matt
+ * P2PGraphViewer is the main program which contains the swing application 
+ * and maintains all the visualizers and event players.
+ * 
+ * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * @author Alan Davoust
+ * @version Date: 20/07/2011 
  */
-public class P2PApplet extends JApplet implements EventPlayerListener, NetworkListener {
+public class P2PGraphViewer extends JApplet implements EventPlayerListener, NetworkGraphListener {
 	//[start] Attributes
 	
 	//[start] Static Final Attributes
@@ -126,7 +138,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 	//[end] Attributes
 	
 	//[start] Constructor
-	public P2PApplet() {
+	public P2PGraphViewer() {
 		
 		networkClient = new HTTPClient(this);
 		
@@ -140,6 +152,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 		
 		frame.pack();
 		frame.setVisible(true);
+		frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
 	}
 	//[end] Constructor
 
@@ -746,7 +759,6 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 		fastSpeedSlider.setEnabled(true);
 		
 		layout.lock(true);
-		
 		doRepaint();
 		eventThread.run();
 	}
@@ -764,7 +776,7 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 	public static void main(String[] args) {
 
 		@SuppressWarnings("unused")
-		P2PApplet myapp = new P2PApplet();
+		P2PGraphViewer myapp = new P2PGraphViewer();
 	}
 	//[end] Main
 
@@ -1289,11 +1301,11 @@ public class P2PApplet extends JApplet implements EventPlayerListener, NetworkLi
 			synchronized(fullGraph) {
 				events = P2PNetworkGraphLoader.buildLogs(inStream, networkClient, fullGraph);
 			}
-			
-			networkClient.setLatestTime(events.getLast().getTime());
-			events.addLast(LogEvent.getEndEvent(events.getLast()));
-			eventThread.addEvents(events);
-			
+			if(!events.isEmpty()) {
+				networkClient.setLatestTime(events.getLast().getTime());
+				events.addLast(LogEvent.getEndEvent(events.getLast()));
+				eventThread.addEvents(events);
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

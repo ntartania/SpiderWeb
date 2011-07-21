@@ -1,3 +1,12 @@
+/*
+ * File:         P2PNetworkGraphLoader.java
+ * Project:		 Spiderweb Network Graph Visualizer
+ * Created:      01/06/2011
+ * Last Changed: Date: 21/07/2011 
+ * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * 
+ * This code was produced at Carleton University 2011
+ */
 package spiderweb.graph.savingandloading;
 
 import java.io.BufferedReader;
@@ -23,7 +32,11 @@ import spiderweb.graph.LogEvent;
 import edu.uci.ics.jung.graph.util.Pair;
 
 /**
- * @author  Matty
+ * The P2PNetworkGraphLoader is a class that will load multiple types 
+ * of files and create graphs and log events from them.
+ * 
+ * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * @version Date: 21/07/2011 
  */
 public class P2PNetworkGraphLoader {
 	
@@ -205,10 +218,14 @@ public class P2PNetworkGraphLoader {
 					long timeDifference = Integer.parseInt(event.getChildText("timedifference"));
 					int paramOne = Integer.parseInt(event.getChildText("param1"));
 					int paramTwo = 0;
+					int paramThree = 0;
 					if(LogEvent.typeHasParamTwo(type)) {
 						paramTwo = Integer.parseInt(event.getChildText("param2"));
 					}
-					LogEvent evt = new LogEvent(timeDifference, type, paramOne, paramTwo);
+					if(LogEvent.typeHasParamThree(type)) {
+						paramThree = Integer.parseInt(event.getChildText("param3"));
+					}
+					LogEvent evt = new LogEvent(timeDifference, type, paramOne, paramTwo, paramThree);
 					if(evt.isConstructing()) {
 						if (evt.getType().equals("online")){
 							hiddenGraph.addVertex(new PeerVertex(evt.getParam(1)));
@@ -287,10 +304,14 @@ public class P2PNetworkGraphLoader {
 					long timeDifference = Integer.parseInt(event.getChildText("timedifference"));
 					int paramOne = Integer.parseInt(event.getChildText("param1"));
 					int paramTwo = 0;
+					int paramThree = 0;
 					if(LogEvent.typeHasParamTwo(type)) {
 						paramTwo = Integer.parseInt(event.getChildText("param2"));
 					}
-					LogEvent evt = new LogEvent(timeDifference, type, paramOne, paramTwo);
+					if(LogEvent.typeHasParamThree(type)) {
+						paramThree = Integer.parseInt(event.getChildText("param3"));
+					}
+					LogEvent evt = new LogEvent(timeDifference, type, paramOne, paramTwo, paramThree);
 					if(evt.isConstructing()) {
 						if (evt.getType().equals("online")){
 							hiddenGraph.addVertex(new PeerVertex(evt.getParam(1)));

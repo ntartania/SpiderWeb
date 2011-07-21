@@ -1,3 +1,12 @@
+/*
+ * File:         LoadingBar.java
+ * Project:		 Spiderweb Network Graph Visualizer
+ * Created:      01/06/2011
+ * Last Changed: Date: 21/07/2011 
+ * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * 
+ * This code was produced at Carleton University 2011
+ */
 package spiderweb.graph.savingandloading;
 
 import java.awt.Color;
@@ -8,8 +17,17 @@ import java.awt.GridLayout;
 import javax.swing.JDialog;
 import javax.swing.JProgressBar;
 
-public class LoadingBar extends JDialog implements LoadingListener{
-	private static final long serialVersionUID = 1L;
+/**
+ * The LoadingBar class is an adapted LoadingListener. It creates a new 
+ * JProgressBar with a maximum value passed from loadingStarted and 
+ * updates it's progress with every call from the loadingProgress Method.
+ * 
+ * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * @version Date: 21/07/2011 
+ */
+public class LoadingBar extends JDialog implements LoadingListener {
+
+	private static final long serialVersionUID = -1503207667856223226L;
 	JProgressBar progressBar;
 	
 	public LoadingBar(Component parent) {
@@ -34,9 +52,6 @@ public class LoadingBar extends JDialog implements LoadingListener{
 		
 		progressBar = new JProgressBar(JProgressBar.HORIZONTAL);
 		
-		
-		//this.pack();
-		//this.validate();
 	}
 	
 	@Override

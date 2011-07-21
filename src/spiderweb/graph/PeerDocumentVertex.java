@@ -1,7 +1,11 @@
-/**
- * Contains the class definition for a PeerDocumentVertex in the P2P Network Graph project.
- * @author Matthew Smith
- * @version May 19, 2011
+/*
+ * File:         PeerDocumentVertex.java
+ * Project:		 Spiderweb Network Graph Visualizer
+ * Created:      01/06/2011
+ * Last Changed: Date: 21/07/2011 
+ * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * 
+ * This code was produced at Carleton University 2011
  */
 package spiderweb.graph;
 

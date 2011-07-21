@@ -1,8 +1,20 @@
+/*
+ * File:         LogEvent.java
+ * Project:		 Spiderweb Network Graph Visualizer
+ * Created:      01/06/2011
+ * Last Changed: Date: 20/07/2011 
+ * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * 
+ * This code was produced at Carleton University 2011
+ */
 package spiderweb.graph;
 
 /**
- * a simple class to encapsulate events to the graph as read from the processed log file. 
- * @author  adavoust
+ * The LogEvent class encapsulate information that modifies the network graph.
+ * 
+ * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * @author Alan Davoust
+ * @version Date: 21/07/2011 
  */
 public class LogEvent implements Comparable<LogEvent>{
 	
@@ -33,13 +45,8 @@ public class LogEvent implements Comparable<LogEvent>{
 	private String type="default"; //publish, join, connect...
 	private int param1=0;
 	private int param2=0;
-	
-	/**
-	 * 
-	 * @param str
-	 * @return
-	 */
-	
+	private int param3=0;
+
 	/**constructor for an event as represented by a line in a (processed) log file*/
 	public LogEvent(String str){
 		// possible lines :
@@ -58,8 +65,13 @@ public class LogEvent implements Comparable<LogEvent>{
 		type = words[1];
 		param1 = Integer.parseInt(words[2]);
 		param2 = 0;
-		if(words.length>3)
+		param3 = 0;
+		if(words.length==4) {
 			param2 = Integer.parseInt(words[3]);
+		}
+		if(words.length==5) {
+			param3 = Integer.parseInt(words[4]);
+		}
 
 	}
 	
@@ -69,13 +81,15 @@ public class LogEvent implements Comparable<LogEvent>{
 	 * @param type		the type of event occurring
 	 * @param param1 	the first parameter (peer number)
 	 * @param param2	the second parameter (peer2/doc/query number)
+	 * @param param3	the third parameter(queryID)
 	 */
-	public LogEvent(long time, String type, int param1, int param2)
+	public LogEvent(long time, String type, int param1, int param2, int param3)
 	{
 		this.time = time;
 		this.type = type;
 		this.param1 = param1;
 		this.param2 = param2;
+		this.param3 = param3;
 	}
 	
 	/**
@@ -86,7 +100,7 @@ public class LogEvent implements Comparable<LogEvent>{
 	 */
 	public static LogEvent createOpposingLogEvent(LogEvent creator,int delay)
 	{
-		return new LogEvent((creator.getTime()+delay), "un"+creator.getType(), creator.getParam(1), creator.getParam(2));
+		return new LogEvent((creator.getTime()+delay), "un"+creator.getType(), creator.getParam(1), creator.getParam(2), creator.getParam(3));
 	}
 	
 	/** indicates whether this event is a "construction" event in the graph (adds an edge or a vertex)*/
@@ -118,23 +132,53 @@ public class LogEvent implements Comparable<LogEvent>{
 	 * @return<code>true</code> if the event type has a second parameter.
 	 */
 	public boolean hasParamTwo() {
-		return !(type.equals("online")||type.equals("offline"));
+		return typeHasParamTwo(this.type);
 	}
 	
+	/**
+	 * Returns <code>true</code> if the event type has a second parameter.
+	 * @return<code>true</code> if the event type has a second parameter.
+	 */
 	public static boolean typeHasParamTwo(String eventType) {
 		return !(eventType.equals("online")||eventType.equals("offline"));
 	}
 	
 	/**
-	 * get one of the parameters of the event
-	 * @param which 1 or 2
-	 * @return the value of the parameter
+	 * Returns <code>true</code> if the event type has a third parameter.
+	 * @return<code>true</code> if the event type has a third parameter.
+	 */
+	public boolean hasParamThree() {
+		return typeHasParamThree(this.type);
+	}
+	
+	/**
+	 * Returns <code>true</code> if the event type has a third parameter.
+	 * @return<code>true</code> if the event type has a third parameter.
+	 */
+	public static boolean typeHasParamThree(String eventType) {
+		return (eventType.equals("query") || eventType.equals("queryhit"));
+	}
+	
+	
+	/**
+	 * Get the one of the three parameters from the Log Event
+	 * corresponding to the passed value (1, 2 or 3)
+	 * 
+	 * -1 if not a valid parameter.
+	 * @param which The parameter to get (1, 2 or 3)
+	 * @return the value of the parameter (-1 if not a valid parameter)
 	 */
 	public int getParam(int which){
-		if (which==1)
+		if (which==1) {
 			return param1;
-		else
+		}
+		else if(which==2) {
 			return param2;
+		}
+		else if(which==3) {
+			return param3;
+		}
+		return -1;
 	}
 	
 	public Object[] toArray() {
