@@ -18,7 +18,8 @@ package spiderweb.graph;
  */
 public class LogEvent implements Comparable<LogEvent>{
 	
-	/* (non-javaDoc) Types of Events
+	/* (non-javaDoc) 
+	 * Types of Events
 	 * start
 	 * end
 	 * 
@@ -47,19 +48,24 @@ public class LogEvent implements Comparable<LogEvent>{
 	private int param2=0;
 	private int param3=0;
 
-	/**constructor for an event as represented by a line in a (processed) log file*/
-	public LogEvent(String str){
-		// possible lines :
-		//timemillisec [online |offline] peernumber
-		//timemillisec [publish | remove] peernumber documentnumber
-		//timemillisec query peernumber querynumber
-		//timemillisec queryhit peernumber docnumber
-		//timemillisec [connect | disconnect] peer1 peer2
-		//timemillisec linkdocument doc1 doc2
+	/**
+	 * constructor for an event as represented by a line in a (processed) log file
+	 * 
+	 * possible lines :
+	 * timemillisec:[online |offline]:peernumber
+	 * timemillisec:[publish | remove]:peernumber documentnumber
+	 * timemillisec:query:peernumber:querynumber:queryid
+	 * timemillisec:queryreachespeer:peernumber:queryid
+	 * timemillisec:queryhit:peernumber:docnumber:queryid
+	 * timemillisec:[connect | disconnect]:peer1:peer2
+	 * timemillisec:[linkdocument | delinkdocument]:doc1:doc2
+	 * @param str The string to parse into a Log Event
+	 */
+	public LogEvent(String rawEvent){
 
-		str.trim();
+		rawEvent.trim();
 		//tokenize line.
-		String [] words = str.split("[:]+");
+		String [] words = rawEvent.split("[:]+");
 	
 		time = Long.parseLong(words[0]);
 		type = words[1];
@@ -70,6 +76,7 @@ public class LogEvent implements Comparable<LogEvent>{
 			param2 = Integer.parseInt(words[3]);
 		}
 		if(words.length==5) {
+			param2 = Integer.parseInt(words[3]);
 			param3 = Integer.parseInt(words[4]);
 		}
 
@@ -103,26 +110,63 @@ public class LogEvent implements Comparable<LogEvent>{
 		return new LogEvent((creator.getTime()+delay), "un"+creator.getType(), creator.getParam(1), creator.getParam(2), creator.getParam(3));
 	}
 	
-	/** indicates whether this event is a "construction" event in the graph (adds an edge or a vertex)*/
+	/** 
+	 * Indicates whether this event is a "construction" event in the graph (adds an edge or a vertex)
+	 * @return <code>true</code>
+	 */
 	public boolean isConstructing(){
 		return (type.equals("connect")||type.equals("publish")||type.equals("online")||type.equals("linkdocument"));
 	}
-	/**events that modify the graph*/ 
+	
+	/**
+	 * Indicates whether this event modifies the structure of the graph.
+	 * @return <code>true</code> if the event is a type which modifies the structure of the graph.
+	 */
 	public boolean isStructural(){
 		return (isConstructing()||type.equals("offline")||type.equals("disconnect")||type.equals("remove")||type.equals("delinkdocument"));
 	}
+	
+	/**
+	 * Indicates whether this event is important to an individual peer.
+	 * @return <code>true</code> if this event matters to a peer.
+	 */
 	public boolean isImportantToPeer() {
 		return (type.equals("connect")||type.equals("publish")||type.equals("disconnect")||type.equals("remove"));
 	}
 	
-	public boolean isColouringEvent() {
-		return !isStructural();
+	/**
+	 * Indicates whether or not this event type is a valid, known, event type.
+	 * @param type	The type of event to check the validity of.
+	 * @return <code>true</code> if the event is a valid type.
+	 */
+	public static boolean isValidEventType(String type) {
+		return type.equals("start") || type.equals("end") || type.equals("online") || type.equals("offline") ||
+			   type.equals("publish") || type.equals("remove") || type.equals("connect") || type.equals("disconnect") ||
+			   type.equals("linkdocument") || type.equals("delinkdocument") || type.equals("query") || 
+			   type.equals("unquery") || type.equals("queryhit") || type.equals("unqueryhit") || type.equals("queryedge") ||
+			   type.equals("unqueryedge") || type.equals("queryreachespeer") || type.equals("unqueryreachespeer");
 	}
 	
+	/**
+	 * Gets whether this event is a "colouring" event in the graph
+	 * @return <code>true</code> if the event has a type that requires colouring.
+	 */
+	public boolean isColouringEvent() {
+		return (!isStructural() && isValidEventType(type));
+	}
+	
+	/**
+	 * Gets the time this event takes place.
+	 * @return <code>long</code> time of this event.
+	 */
 	public long getTime(){
 		return time;
 	}
 
+	/**
+	 * Gets the type of log event this is.
+	 * @return The type of this log event as a String.
+	 */
 	public String getType(){
 		return type;
 	}
@@ -181,14 +225,19 @@ public class LogEvent implements Comparable<LogEvent>{
 		return -1;
 	}
 	
+	/**
+	 * Converts this LogEvent to an Object array where:
+	 * [ time, type, param1, param2, param3 ]
+	 * @return The LogEvent array.
+	 */
 	public Object[] toArray() {
-		Object[] array = { (new Long(time)), type, (new Integer(param1)), (new Integer(param2)) };
+		Object[] array = { new Long(time), type, new Integer(param1), new Integer(param2), new Integer(param3) };
 		return array;
 	}
 	
 	@Override
 	public String toString() {
-		return(time+":"+type+":"+param1+":"+param2);
+		return(time+":"+type+":"+param1+":"+param2+":"+param3);
 	}
 	
 	@Override
@@ -208,10 +257,22 @@ public class LogEvent implements Comparable<LogEvent>{
 		return 0; //Otherwise they may as well be equal
 	}
 	
-	
+	/**
+	 * Returns a LogEvent with type 'start' to signify it is the first event in the list.
+	 * 
+	 * @return LogEvent signifying the start of the list of events.
+	 */
 	public static LogEvent getStartEvent() {
 		return new LogEvent("0:start:0:0");
 	}
+	
+	/**
+	 * Returns a LogEvent with type 'end' to signify it is the last event in the list.
+	 * 
+	 * Event is 100 ms after the passed 'last event'
+	 * @param lastEventInList The last event in the current list as a way of adjusting time properly.
+	 * @return LogEvent signifying the end of the list of events.
+	 */
 	public static LogEvent getEndEvent(LogEvent lastEventInList) {
 		return new LogEvent((lastEventInList.getTime()+100)+":end:0:0");
 	}

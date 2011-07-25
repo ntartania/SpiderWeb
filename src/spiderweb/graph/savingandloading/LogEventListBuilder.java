@@ -76,11 +76,13 @@ public class LogEventListBuilder  {
 			final int totalLines = Integer.parseInt(logFile.readLine()); //the total number of lines so the loading bar can size itself properly
 			int lineCount = 0;
 			//[end] Create local variables for the creation of the list
+			
 			//[start] Notify listeners that the log events have begun loading
 			for(LoadingListener l : loadingListeners) { //notify the listeners that the log events have begun loading
 				l.loadingChanged(totalLines, "LogEvents");
 			}
 			//[end] Notify listeners that the log events have begun loading
+			
 			//[start] Loop reading the file and creating the list
 			logEvents.add(LogEvent.getStartEvent()); //a start event to know when to stop playback of a reversing graph
 			while ((str = logFile.readLine()) != null) //reading lines log file

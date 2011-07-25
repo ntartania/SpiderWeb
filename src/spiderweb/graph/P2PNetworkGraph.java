@@ -71,8 +71,12 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	}
 
 	protected void addDocument(int docnumber, int peer, Integer edgeKey) {
-		P2PVertex vdoc = new DocumentVertex(docnumber);
-		addVertex(vdoc);
+		P2PVertex vdoc = getDocument(docnumber);
+		
+		if(vdoc==null) {
+			vdoc = new DocumentVertex(docnumber);
+			addVertex(vdoc);
+		}
 		//create a vertex that we can compare with the ones in the graph to find the peer vertex
 		P2PVertex vpeer = getVertexInGraph(new PeerVertex(peer));
 		addEdge(new P2PConnection(P2PConnection.P2DOC,edgeKey), vpeer, vdoc);
@@ -92,8 +96,10 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 		removeEdge(peerToPeerDocEdge);
 		removeEdge(docToPeerDocEdge);
 		removeVertex(peerDoc);
-		if(getIncidentEdges(document).size() == 0) {
-			removeVertex(document);
+		if(document != null) {
+			if(getIncidentEdges(document).size() == 0) {
+				removeVertex(document);
+			}
 		}
 	}
 

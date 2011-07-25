@@ -30,31 +30,31 @@ import spiderweb.graph.P2PNetworkGraph;
  * @version Date: 21/07/2011 
  */
 public class EventPlayer implements ActionListener{
-	
+
 	private Timer schedule;
 	private TimeCounter timeCounter;
-	
+
 	private static final int speed = 33; // 33 millisec between events while playing regularly
 	private int fastMultiplier = 10;
-	
+
 	private PlayState state;
 
 	private LinkedList<LogEvent> myEventList;
-	
+
 	private List<EventPlayerListener> my_listeners;
-	
+
 	private int current_index;
-	
+
 
 	private P2PNetworkGraph fullGraph;
 	private P2PNetworkGraph dynamicGraph;
-	
+
 	private long myTimeNow;
-	
+
 	JSlider playbackSlider;
-	
+
 	private boolean playable; //for when a graph is loaded without any events
-	
+
 	public EventPlayer(P2PNetworkGraph fullGraph, P2PNetworkGraph dynamicGraph, LinkedList<LogEvent> eventlist, JSlider playbackSlider){
 		this.fullGraph = fullGraph;
 		this.dynamicGraph = dynamicGraph;
@@ -68,7 +68,7 @@ public class EventPlayer implements ActionListener{
 		myTimeNow = timeCounter.getLowerBound();
 		playable=true;
 	}
-	
+
 	public EventPlayer(P2PNetworkGraph fullGraph, P2PNetworkGraph dynamicGraph){
 		this.fullGraph = fullGraph;
 		this.dynamicGraph = dynamicGraph;
@@ -80,11 +80,11 @@ public class EventPlayer implements ActionListener{
 		my_listeners = new LinkedList<EventPlayerListener>();
 		playable = false;
 	}
-	
+
 	public void addEventPlayerListener(EventPlayerListener epl) {
 		my_listeners.add(epl);
 	}
-	
+
 	public void setFastSpeed(int value) {
 		if(value!=fastMultiplier) {
 			fastMultiplier = value;
@@ -95,15 +95,15 @@ public class EventPlayer implements ActionListener{
 			}
 		}
 	}
-	
+
 	public PlayState getPlayState() {
 		return state;
 	}
-	
+
 	public int getCurrentIndex() {
 		return current_index;
 	}
-	
+
 	//[start] Playback Properties
 	/**
 	 * Returns whether or not the graph is playing forward or backwards.
@@ -150,7 +150,7 @@ public class EventPlayer implements ActionListener{
 		return false;
 	}
 	//[end]
-	
+
 	//[start] State Change handlers for button clicks.
 	/**
 	 * 
@@ -166,7 +166,7 @@ public class EventPlayer implements ActionListener{
 			wakeup(prevState);
 		}
 	}
-	
+
 	public void reverse() {
 		for(EventPlayerListener epl : my_listeners) {
 			epl.playbackReverse();
@@ -202,7 +202,7 @@ public class EventPlayer implements ActionListener{
 			wakeup(prevState);
 		}
 	}
-	
+
 	private synchronized void wakeup(PlayState previousState) {
 		if(previousState == PlayState.PAUSE) {
 			if(atAnEnd()) {
@@ -212,7 +212,7 @@ public class EventPlayer implements ActionListener{
 			notify();
 		}
 	}
-	
+
 	public synchronized void pause(){
 		for(EventPlayerListener epl : my_listeners) {
 			epl.playbackPause();
@@ -226,57 +226,56 @@ public class EventPlayer implements ActionListener{
 			}*/
 		}
 	}
-	
+
 	public void goToTime(int value) {
 		PlayState prevState = state;
-		
+
 		if(value < timeCounter.getTime()) {
 			state = PlayState.REVERSE;
 		}
 		else {
 			state = PlayState.FORWARD;
 		}
-		
+
 		/*for( LogEvent evt : getLogEventsUntil(value) ) {
 			handleLogEvent(evt);
 		}*/
 		/*for(EventPlayerListener epl : my_listeners) {
 			epl.doRepaint();
 		}*/
-		
+
 		timeCounter.setTime(value);
 		state = prevState;
 	}
-	
+
 	public void stopPlayback() {
 		wakeup(state);
 		schedule.stop();
 	}
 	//[end]
-			 
+
 	//[start] Graph Editors for highlighting and changing colours
 	/**
 	 * Visualize a query
 	 * @param peer
-	 * @param q
 	 */
-	public void doQuery(int peer, int queryMessageID){
+	public void doQuery(int peer, int queryString, int queryMessageID){
 		fullGraph.getPeer(peer).query(queryMessageID);
 	}
-	
-	public void undoQuery(int peer, int queryMessageID){
+
+	public void undoQuery(int peer, int queryString, int queryMessageID){
 		fullGraph.getPeer(peer).endQuery(queryMessageID);
 	}
-	
-	
+
+
 	public void doQueryEdge(int peerFrom, int peerTo) {
 		fullGraph.findPeerConnection(peerFrom, peerTo).query();
 	}
-	
+
 	public void undoQueryEdge(int peerFrom, int peerTo) {
 		fullGraph.findPeerConnection(peerFrom, peerTo).backToNormal();
 	}
-	
+
 	/**
 	 * Visualize a query reaches peer event (bold edges)
 	 * @param peer
@@ -293,21 +292,12 @@ public class EventPlayer implements ActionListener{
 		fullGraph.getPeer(peer).endReceivedQuery(queryMessageID);
 	}
 
-	/**
-	 * Visualize a queryHit
-	 * @param peer
-	 * @param q
-	 */
-	public void doQueryHit(int peerNumber, int documentNumber) {
+
+	public void doQueryHit(int peerNumber, int documentNumber, int queryMessageID) {
 		fullGraph.getPeerDocument(peerNumber, documentNumber).setQueryHit(true);
 	}
-	
-	/**
-	 * Visualize a queryHit
-	 * @param peer
-	 * @param q
-	 */
-	public void undoQueryHit(int peerNumber, int documentNumber) {
+
+	public void undoQueryHit(int peerNumber, int documentNumber, int queryMessageID) {
 		fullGraph.getPeerDocument(peerNumber, documentNumber).setQueryHit(false);
 	}
 	//[end]
@@ -317,12 +307,12 @@ public class EventPlayer implements ActionListener{
 		//System.out.println("Starting log event sequence.");
 
 		//READING FROM CD++ LOG FILE/////////////
-		
+
 		schedule = new Timer(speed,this);
 		schedule.start();
 
 	}
-	
+
 	//[start] Graph Event Getting & Handling
 	/**
 	 * current_index is always the next event with time greater than the simulation time.
@@ -347,13 +337,13 @@ public class EventPlayer implements ActionListener{
 				}
 				events.add(evt);
 				evt = myEventList.get(current_index);
-									
+
 			}
 		}
 		else {
 			evt = myEventList.get(current_index-1);
 			while(evt.getTime() > timeGoingTo) {
-				
+
 				current_index--;
 				if(current_index < 1) {
 					break;
@@ -364,75 +354,80 @@ public class EventPlayer implements ActionListener{
 		}
 		return events;
 	}
-	
+
 	/**
 	 * Handles the passed LogEvent be it structural or visual.
 	 * @param evt The Log event to handle.
 	 */
 	private void handleLogEvent(LogEvent evt, boolean forward) {
-		
-		if (evt.isStructural()){ //if the event is to modify the structure of the graph
-			dynamicGraph.graphEvent(evt,forward,fullGraph);
-		} else { //other events: queries
-			String what = evt.getType();
-			int val1 = evt.getParam(1);
-			int val2 = evt.getParam(2);
-			if(what.equals("query")) {
-				if(forward) {
-					doQuery(val1, val2);
-				} else {
-					undoQuery(val1,val2);
+		try {
+			if (evt.isStructural()){ //if the event is to modify the structure of the graph
+				dynamicGraph.graphEvent(evt,forward,fullGraph);
+			} else { //other events: queries
+				String what = evt.getType();
+				int val1 = evt.getParam(1);
+				int val2 = evt.getParam(2);
+				int val3 = evt.getParam(3);
+				if(what.equals("query")) {
+					if(forward) {
+						doQuery(val1, val2, val3);
+					} else {
+						undoQuery(val1,val2, val3);
+					}
+				}
+				else if (what.equals("unquery")) {
+					if(forward) {
+						undoQuery(val1,val2, val3);
+					} else {
+						doQuery(val1, val2, val3);
+					}
+				}
+				else if (what.equals("queryhit")) {
+					if(forward) {
+						doQueryHit(val1, val2, val3);
+					} else {
+						undoQueryHit(val1, val2, val3);
+					}
+				}
+				else if (what.equals("unqueryhit")) {
+					if(forward) {
+						undoQueryHit(val1, val2, val3);
+					} else {
+						doQueryHit(val1, val2, val3);
+					}
+				}
+				else if (what.equals("queryreachespeer")) {
+					if(forward) {
+						doQueryReachesPeer(val1,val2);
+					} else {
+						undoQueryReachesPeer(val1,val2);
+					}
+				}
+				else if (what.equals("unqueryreachespeer")) {
+					if(forward) {
+						undoQueryReachesPeer(val1,val2);
+					} else {
+						doQueryReachesPeer(val1,val2);
+					}
+				}
+				else if (what.equals("queryedge")) {
+					if(forward) {
+						doQueryEdge(val1,val2);
+					} else {
+						undoQueryEdge(val1,val2);
+					}
+				}
+				else if (what.equals("unqueryedge")) {
+					if(forward) {
+						undoQueryEdge(val1,val2);
+					} else {
+						doQueryEdge(val1,val2);
+					}
 				}
 			}
-			else if (what.equals("unquery")) {
-				if(forward) {
-					undoQuery(val1,val2);
-				} else {
-					doQuery(val1, val2);
-				}
-			}
-			else if (what.equals("queryhit")) {
-				if(forward) {
-					doQueryHit(val1, val2);
-				} else {
-					undoQueryHit(val1, val2);
-				}
-			}
-			else if (what.equals("unqueryhit")) {
-				if(forward) {
-					undoQueryHit(val1, val2);
-				} else {
-					doQueryHit(val1, val2);
-				}
-			}
-			else if (what.equals("queryreachespeer")) {
-				if(forward) {
-					doQueryReachesPeer(val1,val2);
-				} else {
-					undoQueryReachesPeer(val1,val2);
-				}
-			}
-			else if (what.equals("unqueryreachespeer")) {
-				if(forward) {
-					undoQueryReachesPeer(val1,val2);
-				} else {
-					doQueryReachesPeer(val1,val2);
-				}
-			}
-			else if (what.equals("queryedge")) {
-				if(forward) {
-					doQueryEdge(val1,val2);
-				} else {
-					undoQueryEdge(val1,val2);
-				}
-			}
-			else if (what.equals("unqueryedge")) {
-				if(forward) {
-					undoQueryEdge(val1,val2);
-				} else {
-					doQueryEdge(val1,val2);
-				}
-			}
+		}catch(Exception e) {
+			e.printStackTrace();
+			System.out.println(evt);
 		}
 	}
 	//[end] Graph Event Handling
@@ -447,11 +442,11 @@ public class EventPlayer implements ActionListener{
 				}
 			}
 			long nextTime = timeCounter.getTime();
-	
+
 			boolean isforward = nextTime>myTimeNow;
-			
+
 			List<LogEvent> events = getLogEventsUntil(nextTime);
-			
+
 			for( LogEvent evt :  events) {
 				handleLogEvent(evt,isforward);
 			}
@@ -478,7 +473,7 @@ public class EventPlayer implements ActionListener{
 		}
 		return events;
 	}
-	
+
 	public synchronized void addEvents(LinkedList<LogEvent> events) {
 		//current_index--;
 		myEventList.removeLast();
@@ -486,7 +481,7 @@ public class EventPlayer implements ActionListener{
 		playbackSlider.setMaximum((int) myEventList.getLast().getTime());
 		timeCounter.setUpperBound(myEventList.getLast().getTime());
 	}
-	
+
 	public long getCurrentTime() {
 		return myTimeNow;
 	}
