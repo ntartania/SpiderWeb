@@ -297,9 +297,6 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 					saver.addProgressListener(new LoadingBar());
 					saver.doSave();
 				}
-				else { //testing web saver
-					System.out.print(P2PNetworkGraphSaver.saveEventsForWeb(myGraphEvolution, eventThread.getCurrentTime()));
-				}
 				//else cancel option, don't do anything
 			}	
 		});
@@ -1171,7 +1168,8 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		}
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(fullGraph);
+			CircleLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(fullGraph);
+			graphLayout.setRadius(fullGraph.getVertexCount()*10);
 			vv.getModel().setGraphLayout(graphLayout);
 			mouseContext.setVisible(false);
 			mouseContext.setEnabled(false);
@@ -1200,7 +1198,6 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			graphLayout.lock(true);
 		}
 	}
-	
 	class  TreeLayoutListener implements ActionListener {
 		VisualizationViewer<P2PVertex,P2PConnection> vv;
 		public TreeLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
@@ -1226,7 +1223,6 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			
 		}
 	}
-	
 	class  BalloonLayoutListener implements ActionListener {
 		VisualizationViewer<P2PVertex,P2PConnection> vv;
 		public BalloonLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {

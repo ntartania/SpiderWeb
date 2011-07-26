@@ -99,6 +99,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 	//[end] Loading Method
 
 	//[start] Graph Builder
+	
 	private void buildGraphVertices(Element nodeMap, P2PNetworkGraph startGraph) {
 		int counter = 0;
 		//Tell the listeners what is going to be loaded and how much
@@ -268,7 +269,6 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 			taskComplete();
 		}
 	}
-
 
 	private void addEventsToGraph(Document networkDoc) {
 		if(networkDoc.getRootElement().getName().equals("network")) {

@@ -231,6 +231,12 @@ public class P2PNetworkGraphSaver extends ProgressAdapter {
 			        event.addContent(paramTwo);
 		        }
 		        
+		        if(ev.hasParamThree()) {
+		        	Element paramThree = new Element("param3");
+		        	paramThree.addContent(Integer.toString(ev.getParam(3)));
+			        event.addContent(paramThree);
+		        }
+		        
 		        logEventsElement.addContent(event);
 		        progress(count);
 		        count++;
