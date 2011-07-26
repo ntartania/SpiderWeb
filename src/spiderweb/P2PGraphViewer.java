@@ -785,7 +785,6 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	public List<JMenuItem> getLayoutItems() {
 		List<JMenuItem> menuItems = new LinkedList<JMenuItem>();
 		
-		
 		if(tabsPane.getSelectedComponent().getName().equals("Full View")) {
 			JMenuItem frLayout = new JMenuItem("FR Layout");
 			frLayout.addActionListener(new FRLayoutListener(fullViewViewer));

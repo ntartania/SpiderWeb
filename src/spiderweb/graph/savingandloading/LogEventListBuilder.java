@@ -145,7 +145,7 @@ public class LogEventListBuilder extends ProgressAdapter {
 				if(opposite.getClass().equals(PeerDocumentVertex.class))//store their documents to re-publish if they decide to come back online 
 				{
 					peerMap.get(Integer.toString(gev.getParam(1))).add(":publish:"+gev.getParam(1)+":"+((PeerDocumentVertex) opposite).getDocumentNumber());
-					logEvents.add(new LogEvent(gev.getTime(),"depublish",gev.getParam(1),((PeerDocumentVertex) opposite).getDocumentNumber(), 0));
+					logEvents.add(new LogEvent(gev.getTime(),"remove",gev.getParam(1),((PeerDocumentVertex) opposite).getDocumentNumber(), 0));
 				}
 				else if(opposite.getClass().equals(PeerVertex.class)) {//store their connected peers for when they come back online
 					peerMap.get(Integer.toString(gev.getParam(1))).add(":connect:"+gev.getParam(1)+":"+((PeerVertex) opposite).getKey());

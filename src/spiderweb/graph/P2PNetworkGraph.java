@@ -322,7 +322,7 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 				addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
 				addPeerDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey(),
 						referenceGraph.findDocToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
-			} else if(gev.getType().equals("depublish")){
+			} else if(gev.getType().equals("remove")){
 				removeDocument(gev.getParam(2), gev.getParam(1));
 			} else if(gev.getType().equals("linkdocument")) {
 				connectDocuments(gev.getParam(1), gev.getParam(2),referenceGraph.findDocumentToDocumentConnection(gev.getParam(1), gev.getParam(2)).getKey());
@@ -342,7 +342,7 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 				connectPeers(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerConnection(gev.getParam(2), gev.getParam(1)).getKey());
 			} else if(gev.getType().equals("publish")){
 				removeDocument(gev.getParam(2), gev.getParam(1));
-			} else if(gev.getType().equals("depublish")){
+			} else if(gev.getType().equals("remove")){
 				addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
 				addPeerDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey(),
 						referenceGraph.findDocToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
