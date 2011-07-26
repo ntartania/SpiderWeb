@@ -23,18 +23,21 @@ import edu.uci.ics.jung.graph.util.Context;
  * This is used because the simulation contains two graphs, one partly visible, that maintains the full layout,
  * and one invisible, which simply stores the information of the graph state as the simulation proceeds.
  * 
- * @author alan
- *
+ * @author Alan Davoust
+ * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * @version Date: 20/07/2011 
  */
 public class EdgeIsInTheOtherGraphPredicate implements
 		Predicate<Context<Graph<P2PVertex, P2PConnection>, P2PConnection>> {
 
+	//The other graph which the primary graph will be compared with
 	private Graph<P2PVertex, P2PConnection> othergraph;
+	
 	
 	public EdgeIsInTheOtherGraphPredicate(Graph<P2PVertex, P2PConnection> g){
 		othergraph= g;
-		
 	}
+	
 	@Override
 	public boolean evaluate(Context<Graph<P2PVertex, P2PConnection>, P2PConnection> context) {
 		

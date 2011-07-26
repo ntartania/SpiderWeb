@@ -98,6 +98,7 @@ public class HTTPClient implements ActionListener{
 	 * @param inStream InputStream containing the Network Graph XML file as it's payload.
 	 */ 
 	protected void notifyIncomingGraph(InputStream inStream) {
+		System.out.println("Incoming Graph");
 		for(NetworkGraphListener l : networkListeners) {
 			l.incomingGraph(inStream);
 		}
@@ -108,6 +109,7 @@ public class HTTPClient implements ActionListener{
 	 * @param inStream InputStream containing the Log Event XML file as it's payload.
 	 */
 	protected void notifyIncomingLogEvents(InputStream inStream) {
+		System.out.println("Incoming Log Events");
 		for(NetworkGraphListener l : networkListeners) {
 			l.incomingLogEvents(inStream);
 		}

@@ -2,26 +2,23 @@
  * File:         LogEventListBuilder.java
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
- * Last Changed: Date: 21/07/2011 
+ * Last Changed: Date: 26/07/2011 
  * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
  * 
  * This code was produced at Carleton University 2011
  */
 package spiderweb.graph.savingandloading;
 
-//[start] Imports
 import spiderweb.graph.*;
 import spiderweb.graph.LogEvent;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-//[end] Imports
 
 /**
  * The LogEventListBuilder class is used for loading graphs from a text(.txt) file.
@@ -30,35 +27,28 @@ import java.util.List;
  * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
  * @version Date: 21/07/2011 
  */
-public class LogEventListBuilder  {
+public class LogEventListBuilder extends ProgressAdapter {
 	
 	//[start] private variables
-	private P2PNetworkGraph hiddenGraph;
-	private List<LoadingListener> loadingListeners;
+	private P2PNetworkGraph fullGraph;
 	private LinkedList<LogEvent> logEvents;
 	//[end] private variables
 	
 	//[start] Constructor and listener initializer
-	public LogEventListBuilder(P2PNetworkGraph hiddenGraph) {
-		loadingListeners = new ArrayList<LoadingListener>();
-		this.hiddenGraph = hiddenGraph;
+	public LogEventListBuilder(P2PNetworkGraph fullGraph) {
+		super();
+		this.fullGraph = fullGraph;
 	}
 	
 	public LogEventListBuilder() {
 		this(new P2PNetworkGraph());
 	}
-	
-	public void addLoadingListener(LoadingListener loadingListener) {
-		loadingListeners.add(loadingListener);
-	}
 	//[end] Constructor and listener initializer
 
 	//[start] Getters
-	/**
-	 * @return
-	 */
-	public P2PNetworkGraph getHiddenGraph() {
-		return hiddenGraph;
+	
+	public P2PNetworkGraph getFullGraph() {
+		return fullGraph;
 	}
 	//[end] Getters
 	
@@ -77,27 +67,21 @@ public class LogEventListBuilder  {
 			int lineCount = 0;
 			//[end] Create local variables for the creation of the list
 			
-			//[start] Notify listeners that the log events have begun loading
-			for(LoadingListener l : loadingListeners) { //notify the listeners that the log events have begun loading
-				l.loadingChanged(totalLines, "LogEvents");
-			}
-			//[end] Notify listeners that the log events have begun loading
-			
+			//notify the listeners that the log events have begun loading
+			taskChanged(totalLines, "LogEvents");
+						
 			//[start] Loop reading the file and creating the list
 			logEvents.add(LogEvent.getStartEvent()); //a start event to know when to stop playback of a reversing graph
 			while ((str = logFile.readLine()) != null) //reading lines log file
 			{
-				//[start] Increment the line number and notify the loading listeners that we are lineCount number of lines through
+				//Increment the line number and notify the loading listeners
 				lineCount++;
-				for(LoadingListener l : loadingListeners) { 
-					l.loadingProgress(lineCount);
-				}
-				//[end] Increment the line number and notify the loading listeners that we are lineCount number of lines through
+				progress(lineCount);
 				
-				LogEvent gev = new LogEvent(str);//create the log event
+				LogEvent gev = new LogEvent(str); //create the log event
 				
-				if (gev.isConstructing()){ //construct the hiddenGraph as we go
-					hiddenGraph.graphConstructionEvent(gev);
+				if (gev.isConstructing()){ //construct the fullGraph as we go
+					fullGraph.graphConstructionEvent(gev);
 				}
 				
 				createColouringEvents(gev,colouringEvents,queryPeers, tempGraph); //add in colouring events if needed
@@ -107,7 +91,7 @@ public class LogEventListBuilder  {
 
 				// Update the temporary graph afterwards so it can be used as a reference
 				if (gev.isStructural()) { //construct the tempGraph which has the current connections including disconnects as a reference.
-					tempGraph.graphEvent(gev, true, hiddenGraph);
+					tempGraph.graphEvent(gev, true, fullGraph);
 				}
 				
 			}//end while
@@ -155,9 +139,9 @@ public class LogEventListBuilder  {
 			if(!peerMap.containsKey(Integer.toString(gev.getParam(1)))) {
 				peerMap.put(Integer.toString(gev.getParam(1)), new LinkedList<String>());
 			}
-			for(P2PConnection edge : hiddenGraph.getIncidentEdges(peerGoingOffline)) { //check through the nodes they are attached to
+			for(P2PConnection edge : fullGraph.getIncidentEdges(peerGoingOffline)) { //check through the nodes they are attached to
 				
-				P2PVertex opposite = hiddenGraph.getOpposite(peerGoingOffline, edge);
+				P2PVertex opposite = fullGraph.getOpposite(peerGoingOffline, edge);
 				if(opposite.getClass().equals(PeerDocumentVertex.class))//store their documents to re-publish if they decide to come back online 
 				{
 					peerMap.get(Integer.toString(gev.getParam(1))).add(":publish:"+gev.getParam(1)+":"+((PeerDocumentVertex) opposite).getDocumentNumber());

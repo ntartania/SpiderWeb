@@ -2,7 +2,7 @@
  * File:         P2PNetworkGraphLoader.java
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
- * Last Changed: Date: 21/07/2011 
+ * Last Changed: Date: 26/07/2011 
  * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
  * 
  * This code was produced at Carleton University 2011
@@ -15,7 +15,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedList;
-import java.util.List;
 
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -38,19 +37,20 @@ import edu.uci.ics.jung.graph.util.Pair;
  * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
  * @version Date: 21/07/2011 
  */
-public class P2PNetworkGraphLoader {
+public class P2PNetworkGraphLoader extends ProgressAdapter{
 	
 	private LinkedList<LogEvent> logList;
-	private P2PNetworkGraph hiddenGraph;
-	private P2PNetworkGraph visibleGraph;
-	private List<LoadingListener> loadingListeners;
+	private P2PNetworkGraph fullGraph;
+	private P2PNetworkGraph dynamicGraph;
+	
 
 	//[start] Constructor
 	public P2PNetworkGraphLoader() {
+		super();
 		logList = new LinkedList<LogEvent>();
-		hiddenGraph = new P2PNetworkGraph();
-		visibleGraph = new P2PNetworkGraph();
-		loadingListeners = new LinkedList<LoadingListener>();
+		fullGraph = new P2PNetworkGraph();
+		dynamicGraph = new P2PNetworkGraph();
+		
 	}
 	//[end] Constructor
 
@@ -64,17 +64,18 @@ public class P2PNetworkGraphLoader {
 		if(file != null) {
 			if(file.getAbsolutePath().endsWith(".txt")) {
 				try {
-					loadingStarted(1,"Log Files");
+					taskStarted(1,"Log Files");
 					LogEventListBuilder logBuilder = new LogEventListBuilder();
-					for(LoadingListener l : loadingListeners) {
-						logBuilder.addLoadingListener(l);
+					for(LoadingListener l : progressListeners) {
+						logBuilder.addProgressListener(l);
 					}
 					logList = logBuilder.createList(new BufferedReader(new FileReader(file)));
 
-					hiddenGraph = logBuilder.getHiddenGraph(); //load hidden graph but keep visible graph empty
-					loadingComplete();
+					fullGraph = logBuilder.getFullGraph(); //load hidden graph but keep visible graph empty
+					taskComplete();
 					return true;
 				} catch(Exception e) {
+					taskComplete();
 					e.printStackTrace();
 					JOptionPane.showMessageDialog(null, e.getMessage(), "Failure", JOptionPane.ERROR_MESSAGE);
 				}
@@ -88,6 +89,7 @@ public class P2PNetworkGraphLoader {
 					logList.addLast(LogEvent.getEndEvent(logList.getLast()));
 					return true;
 				} catch(Exception e) {
+					taskComplete();
 					JOptionPane.showMessageDialog(null, e.getMessage(), "Failure", JOptionPane.ERROR_MESSAGE);
 				}
 			}
@@ -95,36 +97,6 @@ public class P2PNetworkGraphLoader {
 		return false;
 	}
 	//[end] Loading Method
-
-	//[start] Listener Methods
-	public void addLoadingListener(LoadingListener listener) {
-		loadingListeners.add(listener);
-	}
-
-	private void loadingStarted(int numberLines, String whatIsLoading) {
-		for(LoadingListener l : loadingListeners) {
-			l.loadingStarted(numberLines, whatIsLoading);
-		}
-	}
-
-	private void loadingProgress(int progress) {
-		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(progress);
-		}
-	}
-
-	private void loadingChanged(int numberLines, String whatIsLoading) {
-		for(LoadingListener l : loadingListeners) {
-			l.loadingChanged(numberLines, whatIsLoading);
-		}
-	}
-
-	private void loadingComplete() {
-		for(LoadingListener l : loadingListeners) {
-			l.loadingComplete();
-		}
-	}
-	//[end] Listener Methods
 
 	//[start] Graph Builder
 	private void graphBuilder(Document networkDoc) {
@@ -138,7 +110,7 @@ public class P2PNetworkGraphLoader {
 			if(graphElem != null) {
 				//[start] Add Vertices to graph
 				Element nodeMap = graphElem.getChild("nodemap");
-				loadingStarted(nodeMap.getChildren().size(), "Vertices");
+				taskStarted(nodeMap.getChildren().size(), "Vertices");
 
 				for(Object o : nodeMap.getChildren()) {
 					Element elem = (Element)o;
@@ -146,21 +118,21 @@ public class P2PNetworkGraphLoader {
 
 					if(type.equals("PeerVertex")) {
 						int key = Integer.parseInt(elem.getChild("key").getText());
-						hiddenGraph.addVertex(new PeerVertex(key));
+						fullGraph.addVertex(new PeerVertex(key));
 						startGraph.addVertex(new PeerVertex(key));
 					}
 					else if(type.equals("DocumentVertex")) {
 						int key = Integer.parseInt(elem.getChild("key").getText());
-						hiddenGraph.addVertex(new DocumentVertex(key));
+						fullGraph.addVertex(new DocumentVertex(key));
 						startGraph.addVertex(new DocumentVertex(key));
 					}
-					loadingProgress(++counter);
+					progress(++counter);
 				}
 				//[end] Add Vertices to graph
 
 				//[start] Add Edges to graph
 				Element edgeMap = graphElem.getChild("edgemap");
-				loadingChanged(edgeMap.getChildren().size(), "Edges");
+				taskChanged(edgeMap.getChildren().size(), "Edges");
 				counter=0;
 
 				for(Object o : edgeMap.getChildren()) {
@@ -170,34 +142,34 @@ public class P2PNetworkGraphLoader {
 					if(type.equals("PeerToPeer")) { //Peer to Peer
 						int v1Key = Integer.parseInt(elem.getChild("v1").getText());
 						int v2Key = Integer.parseInt(elem.getChild("v2").getText());
-						P2PVertex peer1 = hiddenGraph.getVertexInGraph(new PeerVertex(v1Key));
-						P2PVertex peer2 = hiddenGraph.getVertexInGraph(new PeerVertex(v2Key));
+						P2PVertex peer1 = fullGraph.getVertexInGraph(new PeerVertex(v1Key));
+						P2PVertex peer2 = fullGraph.getVertexInGraph(new PeerVertex(v2Key));
 						startGraph.addEdge(new P2PConnection(P2PConnection.P2P,edgeCounter), peer1, peer2);
-						hiddenGraph.addEdge(new P2PConnection(P2PConnection.P2P,edgeCounter), peer1, peer2);
+						fullGraph.addEdge(new P2PConnection(P2PConnection.P2P,edgeCounter), peer1, peer2);
 						edgeCounter++;
 					}
 					else if(type.equals("PeerToDocument")) { //Peer to Document
 						int v1Key = Integer.parseInt(elem.getChild("v1").getText());
 						int v2Key = Integer.parseInt(elem.getChild("v2").getText())%1000;
-						P2PVertex document = hiddenGraph.getVertexInGraph(new DocumentVertex(v2Key));
-						P2PVertex peer = hiddenGraph.getVertexInGraph(new PeerVertex(v1Key));
+						P2PVertex document = fullGraph.getVertexInGraph(new DocumentVertex(v2Key));
+						P2PVertex peer = fullGraph.getVertexInGraph(new PeerVertex(v1Key));
 						Pair<P2PVertex> pair = new Pair<P2PVertex>(peer, document);
 						startGraph.addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter),pair);
-						hiddenGraph.addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter),pair);
+						fullGraph.addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter),pair);
 						edgeCounter++;
 
 						PeerDocumentVertex pdv = new PeerDocumentVertex(v1Key, v2Key);
-						hiddenGraph.addVertex(pdv);
+						fullGraph.addVertex(pdv);
 						startGraph.addVertex(pdv);
 						startGraph.addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter),peer,pdv);
-						hiddenGraph.addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter),peer,pdv);
+						fullGraph.addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter),peer,pdv);
 						edgeCounter++;
 
 						startGraph.addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter),pdv,document);
-						hiddenGraph.addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter),pdv,document);
+						fullGraph.addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter),pdv,document);
 						edgeCounter++;
 					}
-					loadingProgress(++counter);
+					progress(++counter);
 				}
 				//[end] Add Edges to graph
 			}
@@ -206,7 +178,7 @@ public class P2PNetworkGraphLoader {
 			//[start] Create Logs
 			Element logElem = networkElem.getChild("logevents");
 			if(logElem != null) {
-				loadingChanged(logElem.getChildren().size(), "Events");
+				taskChanged(logElem.getChildren().size(), "Events");
 				counter=0;
 				for(Object o : logElem.getChildren()) {
 
@@ -228,72 +200,72 @@ public class P2PNetworkGraphLoader {
 					LogEvent evt = new LogEvent(timeDifference, type, paramOne, paramTwo, paramThree);
 					if(evt.isConstructing()) {
 						if (evt.getType().equals("online")){
-							hiddenGraph.addVertex(new PeerVertex(evt.getParam(1)));
+							fullGraph.addVertex(new PeerVertex(evt.getParam(1)));
 						} else if(evt.getType().equals("connect")){
-							P2PVertex from = hiddenGraph.getVertexInGraph(new PeerVertex(evt.getParam(1)));
-							P2PVertex to = hiddenGraph.getVertexInGraph(new PeerVertex(evt.getParam(2)));
-							if(hiddenGraph.findEdge(to, from) == null) {
+							P2PVertex from = fullGraph.getVertexInGraph(new PeerVertex(evt.getParam(1)));
+							P2PVertex to = fullGraph.getVertexInGraph(new PeerVertex(evt.getParam(2)));
+							if(fullGraph.findEdge(to, from) == null) {
 								P2PConnection edgeOne = new P2PConnection(P2PConnection.P2P,edgeCounter);
 								edgeCounter++;
 								P2PConnection edgeTwo = new P2PConnection(P2PConnection.P2P,edgeCounter);
 								edgeCounter++;
-								hiddenGraph.addEdge(edgeOne, from, to);
-								hiddenGraph.addEdge(edgeTwo, to, from);
+								fullGraph.addEdge(edgeOne, from, to);
+								fullGraph.addEdge(edgeTwo, to, from);
 							}
 							// else the edge already exists
 						} else if(evt.getType().equals("publish")){
 							P2PVertex document = new DocumentVertex(evt.getParam(2));
 							P2PVertex peerDocument = new PeerDocumentVertex(evt.getParam(1), evt.getParam(2));
-							P2PVertex peer = hiddenGraph.getVertexInGraph(new PeerVertex(evt.getParam(1)));
+							P2PVertex peer = fullGraph.getVertexInGraph(new PeerVertex(evt.getParam(1)));
 
-							if(!hiddenGraph.containsVertex(document)) {
-								hiddenGraph.addVertex(document);
+							if(!fullGraph.containsVertex(document)) {
+								fullGraph.addVertex(document);
 							}
 							else {
-								document = hiddenGraph.getVertexInGraph(document);
+								document = fullGraph.getVertexInGraph(document);
 							}
-							hiddenGraph.addVertex(peerDocument);
+							fullGraph.addVertex(peerDocument);
 
-							if(hiddenGraph.findEdge(peer, document) == null) {
-								hiddenGraph.addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter), peer, document);
+							if(fullGraph.findEdge(peer, document) == null) {
+								fullGraph.addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter), peer, document);
 								edgeCounter++;
 							}
-							if(hiddenGraph.findEdge(peer, peerDocument) == null) {
-								hiddenGraph.addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter), peer, peerDocument);
+							if(fullGraph.findEdge(peer, peerDocument) == null) {
+								fullGraph.addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter), peer, peerDocument);
 								edgeCounter++;
 							}
-							if(hiddenGraph.findEdge(peerDocument, document) == null) {
-								hiddenGraph.addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter), peerDocument, document);
+							if(fullGraph.findEdge(peerDocument, document) == null) {
+								fullGraph.addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter), peerDocument, document);
 								edgeCounter++;
 							}
 						}
 						else if(evt.getType().equals("linkdocument")){
-							P2PVertex documentOne = hiddenGraph.getVertexInGraph(new DocumentVertex(evt.getParam(1)));
-							P2PVertex documentTwo = hiddenGraph.getVertexInGraph(new DocumentVertex(evt.getParam(2)));
-							if(hiddenGraph.findEdge(documentOne, documentTwo) == null) {
-								hiddenGraph.addEdge(new P2PConnection(P2PConnection.DOC2DOC,edgeCounter), documentOne, documentTwo);
+							P2PVertex documentOne = fullGraph.getVertexInGraph(new DocumentVertex(evt.getParam(1)));
+							P2PVertex documentTwo = fullGraph.getVertexInGraph(new DocumentVertex(evt.getParam(2)));
+							if(fullGraph.findEdge(documentOne, documentTwo) == null) {
+								fullGraph.addEdge(new P2PConnection(P2PConnection.DOC2DOC,edgeCounter), documentOne, documentTwo);
 								edgeCounter++;
 							}
 						}
 					}
 					logList.add(evt);
-					loadingProgress(++counter);
+					progress(++counter);
 				}
 			}
-			visibleGraph = startGraph;
+			dynamicGraph = startGraph;
 			//[end] Create Logs
-			loadingComplete();
+			taskComplete();
 		}
 	}
 
 
 	private void addEventsToGraph(Document networkDoc) {
 		if(networkDoc.getRootElement().getName().equals("network")) {
-			int edgeCounter=hiddenGraph.getEdgeCount();
+			int edgeCounter=fullGraph.getEdgeCount();
 			Element networkElem = networkDoc.getRootElement();
 			Element logElem = networkElem.getChild("logevents");
 			if(logElem != null) {
-				loadingChanged(logElem.getChildren().size(), "Events");
+				taskChanged(logElem.getChildren().size(), "Events");
 				for(Object o : logElem.getChildren()) {
 
 					Element event = (Element)o;
@@ -314,50 +286,50 @@ public class P2PNetworkGraphLoader {
 					LogEvent evt = new LogEvent(timeDifference, type, paramOne, paramTwo, paramThree);
 					if(evt.isConstructing()) {
 						if (evt.getType().equals("online")){
-							hiddenGraph.addVertex(new PeerVertex(evt.getParam(1)));
+							fullGraph.addVertex(new PeerVertex(evt.getParam(1)));
 						} else if(evt.getType().equals("connect")){
-							P2PVertex from = hiddenGraph.getVertexInGraph(new PeerVertex(evt.getParam(1)));
-							P2PVertex to = hiddenGraph.getVertexInGraph(new PeerVertex(evt.getParam(2)));
-							if(hiddenGraph.findEdge(to, from) == null) {
+							P2PVertex from = fullGraph.getVertexInGraph(new PeerVertex(evt.getParam(1)));
+							P2PVertex to = fullGraph.getVertexInGraph(new PeerVertex(evt.getParam(2)));
+							if(fullGraph.findEdge(to, from) == null) {
 								P2PConnection edgeOne = new P2PConnection(P2PConnection.P2P,edgeCounter);
 								edgeCounter++;
 								P2PConnection edgeTwo = new P2PConnection(P2PConnection.P2P,edgeCounter);
 								edgeCounter++;
-								hiddenGraph.addEdge(edgeOne, from, to);
-								hiddenGraph.addEdge(edgeTwo, to, from);
+								fullGraph.addEdge(edgeOne, from, to);
+								fullGraph.addEdge(edgeTwo, to, from);
 							}
 							// else the edge already exists
 						} else if(evt.getType().equals("publish")){
 							P2PVertex document = new DocumentVertex(evt.getParam(2));
 							P2PVertex peerDocument = new PeerDocumentVertex(evt.getParam(1), evt.getParam(2));
-							P2PVertex peer = hiddenGraph.getVertexInGraph(new PeerVertex(evt.getParam(1)));
+							P2PVertex peer = fullGraph.getVertexInGraph(new PeerVertex(evt.getParam(1)));
 
-							if(!hiddenGraph.containsVertex(document)) {
-								hiddenGraph.addVertex(document);
+							if(!fullGraph.containsVertex(document)) {
+								fullGraph.addVertex(document);
 							}
 							else {
-								document = hiddenGraph.getVertexInGraph(document);
+								document = fullGraph.getVertexInGraph(document);
 							}
-							hiddenGraph.addVertex(peerDocument);
+							fullGraph.addVertex(peerDocument);
 
-							if(hiddenGraph.findEdge(peer, document) == null) {
-								hiddenGraph.addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter), peer, document);
+							if(fullGraph.findEdge(peer, document) == null) {
+								fullGraph.addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter), peer, document);
 								edgeCounter++;
 							}
-							if(hiddenGraph.findEdge(peer, peerDocument) == null) {
-								hiddenGraph.addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter), peer, peerDocument);
+							if(fullGraph.findEdge(peer, peerDocument) == null) {
+								fullGraph.addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter), peer, peerDocument);
 								edgeCounter++;
 							}
-							if(hiddenGraph.findEdge(peerDocument, document) == null) {
-								hiddenGraph.addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter), peerDocument, document);
+							if(fullGraph.findEdge(peerDocument, document) == null) {
+								fullGraph.addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter), peerDocument, document);
 								edgeCounter++;
 							}
 						}
 						else if(evt.getType().equals("linkdocument")){
-							P2PVertex documentOne = hiddenGraph.getVertexInGraph(new DocumentVertex(evt.getParam(1)));
-							P2PVertex documentTwo = hiddenGraph.getVertexInGraph(new DocumentVertex(evt.getParam(2)));
-							if(hiddenGraph.findEdge(documentOne, documentTwo) == null) {
-								hiddenGraph.addEdge(new P2PConnection(P2PConnection.DOC2DOC,edgeCounter), documentOne, documentTwo);
+							P2PVertex documentOne = fullGraph.getVertexInGraph(new DocumentVertex(evt.getParam(1)));
+							P2PVertex documentTwo = fullGraph.getVertexInGraph(new DocumentVertex(evt.getParam(2)));
+							if(fullGraph.findEdge(documentOne, documentTwo) == null) {
+								fullGraph.addEdge(new P2PConnection(P2PConnection.DOC2DOC,edgeCounter), documentOne, documentTwo);
 								edgeCounter++;
 							}
 						}
@@ -370,17 +342,15 @@ public class P2PNetworkGraphLoader {
 	//[end] Graph Builder
 
 	//[start] Getters
-	/**
-	 * @return
-	 */
+
 	public LinkedList<LogEvent> getLogList() {
 		return logList;
 	}
-	public P2PNetworkGraph getHiddenP2PNetworkGraph() {
-		return hiddenGraph;
+	public P2PNetworkGraph getFullP2PNetworkGraph() {
+		return fullGraph;
 	}
-	public P2PNetworkGraph getVisibleP2PNetworkGraph() {
-		return visibleGraph;
+	public P2PNetworkGraph getDynamicP2PNetworkGraph() {
+		return dynamicGraph;
 	}
 	//[end] Getters
 
@@ -425,7 +395,7 @@ public class P2PNetworkGraphLoader {
 	}
 
 
-	public static LinkedList<LogEvent> buildLogs(InputStream inStream, HTTPClient client, P2PNetworkGraph hiddenGraph) throws JDOMException, IOException {
+	public static LinkedList<LogEvent> buildLogs(InputStream inStream, HTTPClient client, P2PNetworkGraph fullGraph) throws JDOMException, IOException {
 
 		SAXBuilder parser = new SAXBuilder();
 		Document doc = parser.build(inStream);
@@ -434,7 +404,7 @@ public class P2PNetworkGraphLoader {
 		
 		P2PNetworkGraphLoader loader = new P2PNetworkGraphLoader();
 		
-		loader.hiddenGraph = hiddenGraph;
+		loader.fullGraph = fullGraph;
 		loader.addEventsToGraph(doc);
 		return loader.logList;
 	}

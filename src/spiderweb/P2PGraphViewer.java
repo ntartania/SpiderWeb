@@ -289,12 +289,12 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 				
 				if(option == JOptionPane.YES_OPTION) {
 					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(dynamicGraph,eventThread.getSaveEvents(), eventThread.getCurrentTime());
-					saver.addLoadingListener(new LoadingBar());
+					saver.addProgressListener(new LoadingBar());
 					saver.doSave();
 				}
 				else if(option == JOptionPane.NO_OPTION) {
 					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(dynamicGraph);
-					saver.addLoadingListener(new LoadingBar());
+					saver.addProgressListener(new LoadingBar());
 					saver.doSave();
 				}
 				else { //testing web saver
@@ -1261,7 +1261,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 				public void run() {
 					
 					P2PNetworkGraphLoader loader = new P2PNetworkGraphLoader();
-					loader.addLoadingListener(new LoadingBar());
+					loader.addProgressListener(new LoadingBar());
 					if(loader.doLoad()) {
 						if(myGraphEvolution != null) {
 							myGraphEvolution.clear();
@@ -1281,8 +1281,8 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 							collapsedDocumentViewViewer.getModel().setGraphLayout(graphLayout);
 						}
 						myGraphEvolution = loader.getLogList();
-						fullGraph = loader.getHiddenP2PNetworkGraph();
-						dynamicGraph = loader.getVisibleP2PNetworkGraph();
+						fullGraph = loader.getFullP2PNetworkGraph();
+						dynamicGraph = loader.getDynamicP2PNetworkGraph();
 						startGraph();
 					}
 				}
@@ -1338,8 +1338,8 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			}
 			
 			myGraphEvolution = loader.getLogList();
-			fullGraph = loader.getHiddenP2PNetworkGraph();
-			dynamicGraph = loader.getVisibleP2PNetworkGraph();
+			fullGraph = loader.getFullP2PNetworkGraph();
+			dynamicGraph = loader.getDynamicP2PNetworkGraph();
 			startGraph();
 		} catch (JDOMException e) {
 			e.printStackTrace();

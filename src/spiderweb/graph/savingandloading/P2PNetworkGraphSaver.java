@@ -2,7 +2,7 @@
  * File:         P2PNetworkGraphSaver.java
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
- * Last Changed: Date: 21/07/2011 
+ * Last Changed: Date: 26/07/2011 
  * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
  * 
  * This code was produced at Carleton University 2011
@@ -34,11 +34,10 @@ import edu.uci.ics.jung.graph.util.Pair;
  * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
  * @version Date: 21/07/2011 
  */
-public class P2PNetworkGraphSaver {
+public class P2PNetworkGraphSaver extends ProgressAdapter {
 	private long currentTime;
 	private List<LogEvent> logList;
 	private P2PNetworkGraph graph;
-	private List<LoadingListener> progressListeners;
 	
 	//[start] Constructors
 	public P2PNetworkGraphSaver(P2PNetworkGraph graph) {
@@ -50,10 +49,10 @@ public class P2PNetworkGraphSaver {
 	}
 	
 	public P2PNetworkGraphSaver(P2PNetworkGraph graph, List<LogEvent> events, long currentTime) {
+		super();
 		this.currentTime = currentTime;
 		this.logList = events;
 		this.graph = graph;
-		progressListeners = new LinkedList<LoadingListener>();
 	}
 	//[end] Constructors
 	
@@ -69,7 +68,7 @@ public class P2PNetworkGraphSaver {
 					if(outputDocumentToFile(doc, path)) {
 						JOptionPane.showMessageDialog(null, "Success: File Saved", "Success", JOptionPane.INFORMATION_MESSAGE);
 					}
-					loadingComplete();
+					taskComplete();
 				}
 			}
 		});
@@ -114,7 +113,7 @@ public class P2PNetworkGraphSaver {
 			LinkedList<DocumentVertex> documents = new LinkedList<DocumentVertex>();
 			LinkedList<P2PConnection> edges = new LinkedList<P2PConnection>(graph.getEdges());
 			int count = 0;
-			loadingStarted(graph.getVertices().size(),"Compiling Vertex Lists");
+			taskStarted(graph.getVertices().size(),"Compiling Vertex Lists");
 			for(P2PVertex vertex : graph.getVertices()) {
 				if(vertex.getClass().equals(PeerVertex.class)) {
 					peers.addLast((PeerVertex) vertex);
@@ -122,7 +121,7 @@ public class P2PNetworkGraphSaver {
 				else if(vertex.getClass().equals(DocumentVertex.class)) {
 					documents.addLast((DocumentVertex) vertex);
 				}
-				loadingProgress(count);
+				progress(count);
 				count++;
 			}
 			//[end] compile separate lists for peers, documents and peerdocuments
@@ -134,7 +133,7 @@ public class P2PNetworkGraphSaver {
 	        //[start] Create vertices
 	        Element nodemap = new Element("nodemap");
 	        count=0;
-	        loadingChanged(peers.size(), "Peer Vertices");
+	        taskChanged(peers.size(), "Peer Vertices");
 			for(PeerVertex peer : peers) { //write out all the peer information
 				Element node = new Element("node");
 		        node.setAttribute("type", "PeerVertex");
@@ -144,11 +143,11 @@ public class P2PNetworkGraphSaver {
 		        node.addContent(key);
 		        
 		        nodemap.addContent(node);
-		        loadingProgress(count);
+		        progress(count);
 		        count++;
 			}
 			count=0;
-	        loadingChanged(documents.size(), "Document Vertices");
+	        taskChanged(documents.size(), "Document Vertices");
 			for(DocumentVertex doc : documents) {//write out all the document information
 				Element node = new Element("node");
 		        node.setAttribute("type", "DocumentVertex");
@@ -159,7 +158,7 @@ public class P2PNetworkGraphSaver {
 		        
 		        nodemap.addContent(node);
 		        
-		        loadingProgress(count);
+		        progress(count);
 		        count++;
 			}
 			graphElement.addContent(nodemap);
@@ -168,7 +167,7 @@ public class P2PNetworkGraphSaver {
 			//[start] Create Edges
 			Element edgemap = new Element("edgemap");
 			count=0;
-	        loadingChanged(edges.size(), "Edges");
+	        taskChanged(edges.size(), "Edges");
 			for(P2PConnection e : edges) {//write out all the edge information
 				Element edge = new Element("edge");
 				
@@ -200,7 +199,7 @@ public class P2PNetworkGraphSaver {
 		        
 		        edgemap.addContent(edge);
 		        
-		        loadingProgress(count);
+		        progress(count);
 		        count++;
 			}
 			//[end] Create Edges
@@ -213,7 +212,7 @@ public class P2PNetworkGraphSaver {
 			//[start] Creating Log Event Elements
 			Element logEventsElement = new Element("logevents");
 			int count=0;
-	        loadingChanged(logList.size(), "LogEvents");
+	        taskChanged(logList.size(), "LogEvents");
 			for(LogEvent ev : logList) {
 				Element event = new Element("event");
 				event.setAttribute("type", ev.getType());
@@ -233,7 +232,7 @@ public class P2PNetworkGraphSaver {
 		        }
 		        
 		        logEventsElement.addContent(event);
-		        loadingProgress(count);
+		        progress(count);
 		        count++;
 			}
 			
@@ -245,35 +244,7 @@ public class P2PNetworkGraphSaver {
 	}
 	//[end] Document Builder Methods
 	
-	//[start] Listener Methods
-	public void addLoadingListener(LoadingListener listener) {
-		progressListeners.add(listener);
-	}
-
-	private void loadingStarted(int numberLines, String whatIsLoading) {
-		for(LoadingListener l : progressListeners) {
-			l.loadingStarted(numberLines, whatIsLoading);
-		}
-	}
-
-	private void loadingProgress(int progress) {
-		for(LoadingListener l : progressListeners) {
-			l.loadingProgress(progress);
-		}
-	}
-
-	private void loadingChanged(int numberLines, String whatIsLoading) {
-		for(LoadingListener l : progressListeners) {
-			l.loadingChanged(numberLines, whatIsLoading);
-		}
-	}
-
-	private void loadingComplete() {
-		for(LoadingListener l : progressListeners) {
-			l.loadingComplete();
-		}
-	}
-	//[end] Listener Methods
+	
 	
 	//[start] XML outputter
     /**
