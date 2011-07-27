@@ -54,6 +54,7 @@ public class EventPlayer implements ActionListener{
 	JSlider playbackSlider;
 
 	private boolean playable; //for when a graph is loaded without any events
+	private boolean robustMode=false;
 
 	public EventPlayer(P2PNetworkGraph fullGraph, P2PNetworkGraph dynamicGraph, LinkedList<LogEvent> eventlist, JSlider playbackSlider){
 		this.fullGraph = fullGraph;
@@ -79,6 +80,30 @@ public class EventPlayer implements ActionListener{
 		timeCounter = new TimeCounter(0,0,0,0);
 		my_listeners = new LinkedList<EventPlayerListener>();
 		playable = false;
+	}
+
+	/**
+	 * Sets the event player to be in robust mode
+	 * 
+	 * (robust mode mean that when an event is received that does not fully match
+	 * with the current graph, an additional event will be placed in the list which 
+	 * will satisfy the original event)
+	 * @param robustMode <code>true</code> if the graph will be set to robust mode 
+	 */
+	public void setRobustMode(boolean robustMode) {
+		this.robustMode = robustMode;
+	}
+
+	/**
+	 * Returns whether or not the event player is in robust mode
+	 * 
+	 * (robust mode mean that when an event is received that does not fully match
+	 * with the current graph, an additional event will be placed in the list which 
+	 * will satisfy the original event)
+	 * @return <code>true</code> if the graph is presently set to robust mode.
+	 */
+	public boolean isRobustMode() {
+		return robustMode;
 	}
 
 	public void addEventPlayerListener(EventPlayerListener epl) {
@@ -304,9 +329,6 @@ public class EventPlayer implements ActionListener{
 
 
 	public void run() {
-		//System.out.println("Starting log event sequence.");
-
-		//READING FROM CD++ LOG FILE/////////////
 
 		schedule = new Timer(speed,this);
 		schedule.start();
@@ -353,6 +375,77 @@ public class EventPlayer implements ActionListener{
 			}
 		}
 		return events;
+	}
+
+	private void robustHandleLogEvent(LogEvent evt, boolean forward) {
+
+		try {
+			dynamicGraph.graphEvent(evt,forward,fullGraph);
+			String what = evt.getType();
+			int val1 = evt.getParam(1);
+			int val2 = evt.getParam(2);
+			int val3 = evt.getParam(3);
+			if(what.equals("query")) {
+				if(forward) {
+					doQuery(val1, val2, val3);
+				} else {
+					undoQuery(val1,val2, val3);
+				}
+			}
+			else if (what.equals("unquery")) {
+				if(forward) {
+					undoQuery(val1,val2, val3);
+				} else {
+					doQuery(val1, val2, val3);
+				}
+			}
+			else if (what.equals("queryhit")) {
+				if(forward) {
+					doQueryHit(val1, val2, val3);
+				} else {
+					undoQueryHit(val1, val2, val3);
+				}
+			}
+			else if (what.equals("unqueryhit")) {
+				if(forward) {
+					undoQueryHit(val1, val2, val3);
+				} else {
+					doQueryHit(val1, val2, val3);
+				}
+			}
+			else if (what.equals("queryreachespeer")) {
+				if(forward) {
+					doQueryReachesPeer(val1,val2);
+				} else {
+					undoQueryReachesPeer(val1,val2);
+				}
+			}
+			else if (what.equals("unqueryreachespeer")) {
+				if(forward) {
+					undoQueryReachesPeer(val1,val2);
+				} else {
+					doQueryReachesPeer(val1,val2);
+				}
+			}
+			else if (what.equals("queryedge")) {
+				if(forward) {
+					doQueryEdge(val1,val2);
+				} else {
+					undoQueryEdge(val1,val2);
+				}
+			}
+			else if (what.equals("unqueryedge")) {
+				if(forward) {
+					undoQueryEdge(val1,val2);
+				} else {
+					doQueryEdge(val1,val2);
+				}
+			}
+
+		}catch(Exception e) {
+			e.printStackTrace();
+			System.err.println(evt);
+		}
 	}
 
 	/**
@@ -427,7 +520,7 @@ public class EventPlayer implements ActionListener{
 			}
 		}catch(Exception e) {
 			e.printStackTrace();
-			System.out.println(evt);
+			System.err.println(evt);
 		}
 	}
 	//[end] Graph Event Handling
@@ -448,7 +541,12 @@ public class EventPlayer implements ActionListener{
 			List<LogEvent> events = getLogEventsUntil(nextTime);
 
 			for( LogEvent evt :  events) {
-				handleLogEvent(evt,isforward);
+				if(robustMode) {
+					robustHandleLogEvent(evt,isforward);
+				}
+				else {
+					handleLogEvent(evt,isforward);
+				}
 			}
 			myTimeNow = nextTime; //advance time
 			playbackSlider.setValue((int)myTimeNow);

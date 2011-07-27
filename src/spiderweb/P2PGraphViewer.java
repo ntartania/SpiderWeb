@@ -1279,6 +1279,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 						fullGraph = loader.getFullP2PNetworkGraph();
 						dynamicGraph = loader.getDynamicP2PNetworkGraph();
 						startGraph();
+						eventThread.setRobustMode(false);
 					}
 				}
 			});
@@ -1301,6 +1302,9 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			if(!events.isEmpty()) {
 				networkClient.setLatestTime(events.getLast().getTime());
 				events.addLast(LogEvent.getEndEvent(events.getLast()));
+				for(int i=0;i<events.size();i++) {
+					fullGraph.robustGraphEvent(events,i); //apply events to graph
+				}//any events that didn't match up with the current graph will have been handled and new events created to compensate.
 				eventThread.addEvents(events);
 			}
 		} catch (Exception e) {
@@ -1336,6 +1340,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			fullGraph = loader.getFullP2PNetworkGraph();
 			dynamicGraph = loader.getDynamicP2PNetworkGraph();
 			startGraph();
+			eventThread.setRobustMode(true);
 		} catch (JDOMException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
