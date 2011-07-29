@@ -11,6 +11,7 @@ package spiderweb.visualizer.eventplayer;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -39,7 +40,7 @@ public class EventPlayer implements ActionListener{
 
 	private PlayState state;
 
-	private LinkedList<LogEvent> myEventList;
+	private ArrayList<LogEvent> myEventList;
 
 	private List<EventPlayerListener> my_listeners;
 
@@ -56,7 +57,7 @@ public class EventPlayer implements ActionListener{
 	private boolean playable; //for when a graph is loaded without any events
 	private boolean robustMode=false;
 
-	public EventPlayer(P2PNetworkGraph fullGraph, P2PNetworkGraph dynamicGraph, LinkedList<LogEvent> eventlist, JSlider playbackSlider){
+	public EventPlayer(P2PNetworkGraph fullGraph, P2PNetworkGraph dynamicGraph, ArrayList<LogEvent> eventlist, JSlider playbackSlider){
 		this.fullGraph = fullGraph;
 		this.dynamicGraph = dynamicGraph;
 		this.playbackSlider = playbackSlider;
@@ -64,7 +65,7 @@ public class EventPlayer implements ActionListener{
 		current_index = 0; 
 		state = PlayState.FORWARD;
 		//timeCounter = new TimeCounter(speed,eventlist.getFirst().getTime(),eventlist.getFirst().getTime(),eventlist.getLast().getTime());
-		timeCounter = new TimeCounter(speed,0,0,eventlist.getLast().getTime());
+		timeCounter = new TimeCounter(speed,0,0,eventlist.get(eventlist.size()-1).getTime());
 		my_listeners = new LinkedList<EventPlayerListener>();
 		myTimeNow = timeCounter.getLowerBound();
 		playable=true;
@@ -74,7 +75,7 @@ public class EventPlayer implements ActionListener{
 		this.fullGraph = fullGraph;
 		this.dynamicGraph = dynamicGraph;
 		this.playbackSlider = null;
-		myEventList = new LinkedList<LogEvent>();
+		myEventList = new ArrayList<LogEvent>();
 		current_index = 0; 
 		state = PlayState.PAUSE;
 		timeCounter = new TimeCounter(0,0,0,0);
@@ -347,7 +348,7 @@ public class EventPlayer implements ActionListener{
 	 * @return	The list of log events which need to be taken care of for this time span.
 	 */
 	private List<LogEvent> getLogEventsUntil(long timeGoingTo) {
-		List<LogEvent> events = new LinkedList<LogEvent>();
+		List<LogEvent> events = new ArrayList<LogEvent>();
 		LogEvent evt;
 		if(myTimeNow<timeGoingTo) {
 			evt = myEventList.get(current_index);
@@ -565,19 +566,19 @@ public class EventPlayer implements ActionListener{
 
 	public List<LogEvent> getSaveEvents() {
 		ListIterator<LogEvent> i = myEventList.listIterator(current_index);
-		List<LogEvent> events = new LinkedList<LogEvent>();
+		List<LogEvent> events = new ArrayList<LogEvent>();
 		while(i.hasNext()) {
 			events.add(i.next());
 		}
 		return events;
 	}
 
-	public synchronized void addEvents(LinkedList<LogEvent> events) {
+	public synchronized void addEvents(ArrayList<LogEvent> events) {
 		//current_index--;
-		myEventList.removeLast();
+		myEventList.remove(myEventList.size()-1);
 		myEventList.addAll(events);
-		playbackSlider.setMaximum((int) myEventList.getLast().getTime());
-		timeCounter.setUpperBound(myEventList.getLast().getTime());
+		playbackSlider.setMaximum((int) myEventList.get(myEventList.size()-1).getTime());
+		timeCounter.setUpperBound(myEventList.get(myEventList.size()-1).getTime());
 	}
 
 	public long getCurrentTime() {

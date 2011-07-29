@@ -32,6 +32,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import javax.swing.BorderFactory;
@@ -107,7 +108,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 
 	private AbstractLayout<P2PVertex,P2PConnection> layout = null;
 	
-	private LinkedList<LogEvent> myGraphEvolution;
+	private ArrayList<LogEvent> myGraphEvolution;
 
 	//a hidden graph that contains all the nodes that will ever be added... 
 	//in order to calculate the positions of all the nodes
@@ -724,7 +725,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			SliderListener s = new SliderListener();
 			//playbackSlider.setMinimum((int)myGraphEvolution.getFirst().getTime());
 			playbackSlider.setMinimum(0);
-			playbackSlider.setMaximum((int)myGraphEvolution.getLast().getTime());
+			playbackSlider.setMaximum((int)myGraphEvolution.get(myGraphEvolution.size()-1).getTime());
 			playbackSlider.addChangeListener(s);
 			playbackSlider.addMouseListener(s);
 			
@@ -1295,13 +1296,13 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	public synchronized void incomingLogEvents(InputStream inStream) {
 		try {
 			eventThread.pause();
-			LinkedList<LogEvent> events;
+			ArrayList<LogEvent> events;
 			synchronized(fullGraph) {
 				events = P2PNetworkGraphLoader.buildLogs(inStream, networkClient, fullGraph);
 			}
 			if(!events.isEmpty()) {
-				networkClient.setLatestTime(events.getLast().getTime());
-				events.addLast(LogEvent.getEndEvent(events.getLast()));
+				networkClient.setLatestTime(events.get(events.size()-1).getTime());
+				events.add(LogEvent.getEndEvent(events.get(events.size()-1)));
 				for(int i=0;i<events.size();i++) {
 					fullGraph.robustGraphEvent(events,i); //apply events to graph
 				}//any events that didn't match up with the current graph will have been handled and new events created to compensate.

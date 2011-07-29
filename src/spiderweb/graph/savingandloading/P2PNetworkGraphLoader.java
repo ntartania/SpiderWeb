@@ -14,7 +14,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.LinkedList;
+import java.util.ArrayList;
 
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -39,7 +39,7 @@ import edu.uci.ics.jung.graph.util.Pair;
  */
 public class P2PNetworkGraphLoader extends ProgressAdapter{
 	
-	private LinkedList<LogEvent> logList;
+	private ArrayList<LogEvent> logList;
 	private P2PNetworkGraph fullGraph;
 	private P2PNetworkGraph dynamicGraph;
 	
@@ -47,7 +47,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 	//[start] Constructor
 	public P2PNetworkGraphLoader() {
 		super();
-		logList = new LinkedList<LogEvent>();
+		logList = new ArrayList<LogEvent>();
 		fullGraph = new P2PNetworkGraph();
 		dynamicGraph = new P2PNetworkGraph();
 		
@@ -85,8 +85,8 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 					SAXBuilder builder = new SAXBuilder();
 					final Document networkDoc = builder.build(file);
 					graphBuilder(networkDoc);
-					logList.addFirst(LogEvent.getStartEvent());
-					logList.addLast(LogEvent.getEndEvent(logList.getLast()));
+					logList.add(0,LogEvent.getStartEvent());
+					logList.add(LogEvent.getEndEvent(logList.get(logList.size()-1)));
 					return true;
 				} catch(Exception e) {
 					taskComplete();
@@ -354,7 +354,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 
 	//[start] Getters
 
-	public LinkedList<LogEvent> getLogList() {
+	public ArrayList<LogEvent> getLogList() {
 		return logList;
 	}
 	public P2PNetworkGraph getFullP2PNetworkGraph() {
@@ -398,15 +398,15 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 		client.setLatestTime(doc.getRootElement().getAttribute("time").getLongValue());
 
 		P2PNetworkGraphLoader loader = new P2PNetworkGraphLoader();
-		loader.logList.addFirst(LogEvent.getStartEvent());
-		loader.logList.addLast(LogEvent.getEndEvent(loader.logList.getLast()));
+		loader.logList.add(0,LogEvent.getStartEvent());
+		loader.logList.add(LogEvent.getEndEvent(loader.logList.get(loader.logList.size()-1)));
 		loader.graphBuilder(doc);
 
 		return loader;
 	}
 
 
-	public static LinkedList<LogEvent> buildLogs(InputStream inStream, HTTPClient client, P2PNetworkGraph fullGraph) throws JDOMException, IOException {
+	public static ArrayList<LogEvent> buildLogs(InputStream inStream, HTTPClient client, P2PNetworkGraph fullGraph) throws JDOMException, IOException {
 
 		SAXBuilder parser = new SAXBuilder();
 		Document doc = parser.build(inStream);

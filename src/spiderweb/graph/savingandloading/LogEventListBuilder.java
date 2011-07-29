@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -31,7 +31,7 @@ public class LogEventListBuilder extends ProgressAdapter {
 	
 	//[start] private variables
 	private P2PNetworkGraph fullGraph;
-	private LinkedList<LogEvent> logEvents;
+	private ArrayList<LogEvent> logEvents;
 	//[end] private variables
 	
 	//[start] Constructor and listener initializer
@@ -53,17 +53,18 @@ public class LogEventListBuilder extends ProgressAdapter {
 	//[end] Getters
 	
 	//[start] List Creator
-	public LinkedList<LogEvent> createList(BufferedReader logFile) {
-		logEvents = new LinkedList<LogEvent>();
+	public ArrayList<LogEvent> createList(BufferedReader logFile) {
+		
 		try {
 			//[start] Create local variables for the creation of the list
 			P2PNetworkGraph tempGraph = new P2PNetworkGraph();
 			String str; //will contain each log event as it is read.
-			List<LogEvent> colouringEvents = new LinkedList<LogEvent>();//list of events that represent the colouring and decolouring of graph elements
-			List<P2PVertex> queryPeers = new LinkedList<P2PVertex>();//
+			List<LogEvent> colouringEvents = new ArrayList<LogEvent>();//list of events that represent the colouring and decolouring of graph elements
+			List<P2PVertex> queryPeers = new ArrayList<P2PVertex>();//
 			HashMap<String, List<String>> peerMap = new HashMap<String, List<String>>();
 			
 			final int totalLines = Integer.parseInt(logFile.readLine()); //the total number of lines so the loading bar can size itself properly
+			logEvents = new ArrayList<LogEvent>(totalLines+2);
 			int lineCount = 0;
 			//[end] Create local variables for the creation of the list
 			
@@ -103,7 +104,7 @@ public class LogEventListBuilder extends ProgressAdapter {
 		} catch(IOException e) {
 			e.printStackTrace();
 		}
-		return (LinkedList<LogEvent>) logEvents;
+		return (ArrayList<LogEvent>) logEvents;
 	}
 	//[end] List Creator
 	
@@ -137,7 +138,7 @@ public class LogEventListBuilder extends ProgressAdapter {
 			P2PVertex peerGoingOffline = new PeerVertex(gev.getParam(1));
 			
 			if(!peerMap.containsKey(Integer.toString(gev.getParam(1)))) {
-				peerMap.put(Integer.toString(gev.getParam(1)), new LinkedList<String>());
+				peerMap.put(Integer.toString(gev.getParam(1)), new ArrayList<String>());
 			}
 			for(P2PConnection edge : fullGraph.getIncidentEdges(peerGoingOffline)) { //check through the nodes they are attached to
 				

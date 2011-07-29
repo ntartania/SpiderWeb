@@ -10,7 +10,7 @@
 package spiderweb.graph;
 
 import java.util.Collection;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -360,7 +360,7 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	 * Primarily used for online as the edges are keyed similar to how edges are keyed when a graph is constructed.
 	 * @param gev				The Log event which needs to be handled.
 	 */
-	public void robustGraphEvent(LinkedList<LogEvent> events, int currentIndex) {
+	public void robustGraphEvent(ArrayList<LogEvent> events, int currentIndex) {
 		LogEvent gev = events.get(currentIndex);
 
 		if (gev.getType().equals("online")){
@@ -486,7 +486,7 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	 * @param timeToAddEvent The time the event takes place
 	 * @param peerNumber	 The peer to add the event for
 	 */
-	private void addPeerOnlineEvent(LinkedList<LogEvent> events, int currentIndex, long timeToAddEvent, int peerNumber) {
+	private void addPeerOnlineEvent(ArrayList<LogEvent> events, int currentIndex, long timeToAddEvent, int peerNumber) {
 		LogEvent eventToAdd = new LogEvent(timeToAddEvent,"online",peerNumber,0,0);
 		
 		if(currentIndex > 1) { //make sure that the current index is not going to cause an out of bounds
@@ -497,7 +497,7 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 			}
 		}
 		else {//if the peer was not online, add an event in the list to put that peer online.
-			events.addFirst(eventToAdd); 
+			events.add(0,eventToAdd); 
 		}
 	}
 	
@@ -512,7 +512,7 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	 * @param peerNumber	 The peer who publishes the document in the event
 	 * @param documentNumber the Document to be published in the event
 	 */
-	private void addDocumentPublish(LinkedList<LogEvent> events, int currentIndex, long timeToAddEvent, int peerNumber, int documentNumber) {
+	private void addDocumentPublish(ArrayList<LogEvent> events, int currentIndex, long timeToAddEvent, int peerNumber, int documentNumber) {
 		LogEvent eventToAdd = new LogEvent(timeToAddEvent,"publish",peerNumber,documentNumber,0);
 		
 		if(currentIndex > 1) { //make sure that the current index is not going to cause an out of bounds
@@ -523,7 +523,7 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 			}
 		}
 		else {//if the peer was not online, add an event in the list to put that peer online.
-			events.addFirst(eventToAdd); 
+			events.add(0,eventToAdd); 
 		}
 	}
 
