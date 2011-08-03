@@ -40,7 +40,7 @@ public class EventPlayer implements ActionListener{
 
 	private PlayState state;
 
-	private ArrayList<LogEvent> myEventList;
+	private List<LogEvent> myEventList;
 
 	private List<EventPlayerListener> my_listeners;
 
@@ -57,7 +57,7 @@ public class EventPlayer implements ActionListener{
 	private boolean playable; //for when a graph is loaded without any events
 	private boolean robustMode=false;
 
-	public EventPlayer(P2PNetworkGraph fullGraph, P2PNetworkGraph dynamicGraph, ArrayList<LogEvent> eventlist, JSlider playbackSlider){
+	public EventPlayer(P2PNetworkGraph fullGraph, P2PNetworkGraph dynamicGraph, List<LogEvent> eventlist, JSlider playbackSlider){
 		this.fullGraph = fullGraph;
 		this.dynamicGraph = dynamicGraph;
 		this.playbackSlider = playbackSlider;
@@ -348,7 +348,7 @@ public class EventPlayer implements ActionListener{
 	 * @return	The list of log events which need to be taken care of for this time span.
 	 */
 	private List<LogEvent> getLogEventsUntil(long timeGoingTo) {
-		List<LogEvent> events = new ArrayList<LogEvent>();
+		List<LogEvent> events = new LinkedList<LogEvent>();
 		LogEvent evt;
 		if(myTimeNow<timeGoingTo) {
 			evt = myEventList.get(current_index);
@@ -566,14 +566,14 @@ public class EventPlayer implements ActionListener{
 
 	public List<LogEvent> getSaveEvents() {
 		ListIterator<LogEvent> i = myEventList.listIterator(current_index);
-		List<LogEvent> events = new ArrayList<LogEvent>();
+		List<LogEvent> events = new LinkedList<LogEvent>();
 		while(i.hasNext()) {
 			events.add(i.next());
 		}
 		return events;
 	}
 
-	public synchronized void addEvents(ArrayList<LogEvent> events) {
+	public synchronized void addEvents(List<LogEvent> events) {
 		//current_index--;
 		myEventList.remove(myEventList.size()-1);
 		myEventList.addAll(events);

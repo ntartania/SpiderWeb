@@ -87,17 +87,19 @@ public class P2PNetworkGraphSaver extends ProgressAdapter {
 		return "";
 	}
 	
-	public static String saveEventsForWeb(LinkedList<LogEvent> events, long simulationTime) {
-		try {
-			P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(events,events.get(0).getTime());
-			Document doc = saver.buildDoc();
-			doc.getRootElement().setAttribute("time",Long.toString(simulationTime));
-			
-			XMLOutputter outputter = new XMLOutputter();
-	    
-	    	return outputter.outputString(doc);   
-	    }
-	    catch (Exception e) {e.printStackTrace();}
+	public static String saveEventsForWeb(List<LogEvent> events, long simulationTime) {
+		if(!events.isEmpty()) {
+			try {
+				P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(events,events.get(0).getTime());
+				Document doc = saver.buildDoc();
+				doc.getRootElement().setAttribute("time",Long.toString(simulationTime));
+				
+				XMLOutputter outputter = new XMLOutputter();
+		    
+		    	return outputter.outputString(doc);   
+		    }
+		    catch (Exception e) {e.printStackTrace();}
+		}
 		return "";
 	}
 	//[end] Saver Method

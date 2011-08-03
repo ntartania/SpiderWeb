@@ -16,6 +16,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.LinkedList;
+import java.util.List;
 
 import javax.swing.JOptionPane;
 import javax.swing.Timer;
@@ -34,7 +35,7 @@ public class HTTPClient implements ActionListener{
 	private static int connectTimeOut = 10000;
 	private static int sleepTime = 1000;
 
-	private LinkedList<NetworkGraphListener> networkListeners;
+	private List<NetworkGraphListener> networkListeners;
 
 	private String serverURL;
 	private long latestTime;

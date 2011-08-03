@@ -10,7 +10,7 @@
 package spiderweb.graph;
 
 import java.util.Collection;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -360,7 +360,7 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	 * Primarily used for online as the edges are keyed similar to how edges are keyed when a graph is constructed.
 	 * @param gev				The Log event which needs to be handled.
 	 */
-	public void robustGraphEvent(ArrayList<LogEvent> events, int currentIndex) {
+	public void robustGraphEvent(List<LogEvent> events, int currentIndex) {
 		LogEvent gev = events.get(currentIndex);
 
 		if (gev.getType().equals("online")){
@@ -486,18 +486,24 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	 * @param timeToAddEvent The time the event takes place
 	 * @param peerNumber	 The peer to add the event for
 	 */
-	private void addPeerOnlineEvent(ArrayList<LogEvent> events, int currentIndex, long timeToAddEvent, int peerNumber) {
-		LogEvent eventToAdd = new LogEvent(timeToAddEvent,"online",peerNumber,0,0);
-		
-		if(currentIndex > 1) { //make sure that the current index is not going to cause an out of bounds
-			for(int i=currentIndex-1;i>=0;i--) {
-				if(events.get(i).getTime()<timeToAddEvent || i==0) { // go backwards from the index to find the proper time to insert the event
-					events.add(i, eventToAdd);						 // if i == 0 add it anyways
+	private void addPeerOnlineEvent(List<LogEvent> events, int currentIndex, long timeToAddEvent, int peerNumber) {
+		try{
+			//peer will for sure be online as long as "if(!isPeerOnline(peer))" is done before addPeerOnlineEvent
+			LogEvent eventToAdd = new LogEvent(timeToAddEvent,"online",peerNumber,0,0);
+			System.out.println("Event: "+eventToAdd+"\nCurrentIndex: "+currentIndex+"\nNumber of events: "+events.size());
+			if(currentIndex > 1) { //make sure that the current index is not going to cause an out of bounds
+				for(int i=currentIndex-1;i>=0;i--) {
+					if(events.get(i).getTime()<timeToAddEvent || i==0) { // go backwards from the index to find the proper time to insert the event
+						events.add(i, eventToAdd);						 // if i == 0 add it anyways
+					}
 				}
 			}
-		}
-		else {//if the peer was not online, add an event in the list to put that peer online.
-			events.add(0,eventToAdd); 
+			else {//if the peer was not online, add an event in the list to put that peer online.
+				events.add(0,eventToAdd); 
+			}
+		} catch(Exception e) {
+			System.out.println("Error in adding peer online event");
+			e.printStackTrace();
 		}
 	}
 	
@@ -512,18 +518,26 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	 * @param peerNumber	 The peer who publishes the document in the event
 	 * @param documentNumber the Document to be published in the event
 	 */
-	private void addDocumentPublish(ArrayList<LogEvent> events, int currentIndex, long timeToAddEvent, int peerNumber, int documentNumber) {
-		LogEvent eventToAdd = new LogEvent(timeToAddEvent,"publish",peerNumber,documentNumber,0);
-		
-		if(currentIndex > 1) { //make sure that the current index is not going to cause an out of bounds
-			for(int i=currentIndex-1;i>=0;i--) {
-				if(events.get(i).getTime()<timeToAddEvent || i==0) { // go backwards from the index to find the proper time to insert the event
-					events.add(i, eventToAdd);						 // if i == 0 add it anyways
+	private void addDocumentPublish(List<LogEvent> events, int currentIndex, long timeToAddEvent, int peerNumber, int documentNumber) {
+		System.out.println("events is empty: "+events.isEmpty());
+		System.out.println("Index: "+currentIndex+"\nNumber of Events: "+events.size());
+		try {
+			LogEvent eventToAdd = new LogEvent(timeToAddEvent,"publish",peerNumber,documentNumber,0);
+			System.out.println("Event: "+eventToAdd+"\nCurrentIndex: "+currentIndex+"\nNumber of events: "+events.size());
+			if(currentIndex > 1) { //make sure that the current index is not going to cause an out of bounds
+				for(int i=currentIndex-1;i>=0;i--) {
+					if(events.get(i).getTime()<timeToAddEvent || i==0) { // go backwards from the index to find the proper time to insert the event
+						events.add(i, eventToAdd);
+						break;// if i == 0 add it anyways
+					}
 				}
 			}
-		}
-		else {//if the peer was not online, add an event in the list to put that peer online.
-			events.add(0,eventToAdd); 
+			else {//if the peer was not online, add an event in the list to put that peer online.
+				events.add(0,eventToAdd); 
+			}
+		} catch(Exception e) {
+			System.out.println("Error in adding document publish event");
+			e.printStackTrace();
 		}
 	}
 

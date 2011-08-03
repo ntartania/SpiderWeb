@@ -108,7 +108,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 
 	private AbstractLayout<P2PVertex,P2PConnection> layout = null;
 	
-	private ArrayList<LogEvent> myGraphEvolution;
+	private List<LogEvent> myGraphEvolution;
 
 	//a hidden graph that contains all the nodes that will ever be added... 
 	//in order to calculate the positions of all the nodes
@@ -1296,7 +1296,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	public synchronized void incomingLogEvents(InputStream inStream) {
 		try {
 			eventThread.pause();
-			ArrayList<LogEvent> events;
+			List<LogEvent> events;
 			synchronized(fullGraph) {
 				events = P2PNetworkGraphLoader.buildLogs(inStream, networkClient, fullGraph);
 			}

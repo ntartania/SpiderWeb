@@ -53,7 +53,7 @@ public class LogEventListBuilder extends ProgressAdapter {
 	//[end] Getters
 	
 	//[start] List Creator
-	public ArrayList<LogEvent> createList(BufferedReader logFile) {
+	public List<LogEvent> createList(BufferedReader logFile) {
 		
 		try {
 			//[start] Create local variables for the creation of the list
@@ -104,7 +104,7 @@ public class LogEventListBuilder extends ProgressAdapter {
 		} catch(IOException e) {
 			e.printStackTrace();
 		}
-		return (ArrayList<LogEvent>) logEvents;
+		return logEvents;
 	}
 	//[end] List Creator
 	

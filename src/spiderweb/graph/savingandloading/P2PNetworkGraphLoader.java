@@ -15,6 +15,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -39,7 +40,7 @@ import edu.uci.ics.jung.graph.util.Pair;
  */
 public class P2PNetworkGraphLoader extends ProgressAdapter{
 	
-	private ArrayList<LogEvent> logList;
+	private List<LogEvent> logList;
 	private P2PNetworkGraph fullGraph;
 	private P2PNetworkGraph dynamicGraph;
 	
@@ -354,7 +355,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 
 	//[start] Getters
 
-	public ArrayList<LogEvent> getLogList() {
+	public List<LogEvent> getLogList() {
 		return logList;
 	}
 	public P2PNetworkGraph getFullP2PNetworkGraph() {
@@ -406,7 +407,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 	}
 
 
-	public static ArrayList<LogEvent> buildLogs(InputStream inStream, HTTPClient client, P2PNetworkGraph fullGraph) throws JDOMException, IOException {
+	public static List<LogEvent> buildLogs(InputStream inStream, HTTPClient client, P2PNetworkGraph fullGraph) throws JDOMException, IOException {
 
 		SAXBuilder parser = new SAXBuilder();
 		Document doc = parser.build(inStream);
