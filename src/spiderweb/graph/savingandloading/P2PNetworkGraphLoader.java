@@ -20,6 +20,7 @@ import java.util.List;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 
+import org.jdom.Attribute;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -271,7 +272,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 		}
 	}
 
-	private void addEventsToGraph(Document networkDoc) {
+	private void addEventsToGraph(Document networkDoc, long timeOffset) {
 		if(networkDoc.getRootElement().getName().equals("network")) {
 			int edgeCounter=fullGraph.getEdgeCount();
 			Element networkElem = networkDoc.getRootElement();
@@ -286,6 +287,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 						continue;
 					}
 					long timeDifference = Integer.parseInt(event.getChildText("timedifference"));
+					long eventTime = timeDifference+timeOffset;
 					int paramOne = Integer.parseInt(event.getChildText("param1"));
 					int paramTwo = 0;
 					int paramThree = 0;
@@ -295,7 +297,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 					if(LogEvent.typeHasParamThree(type)) {
 						paramThree = Integer.parseInt(event.getChildText("param3"));
 					}
-					LogEvent evt = new LogEvent(timeDifference, type, paramOne, paramTwo, paramThree);
+					LogEvent evt = new LogEvent(eventTime, type, paramOne, paramTwo, paramThree);
 					if(evt.isConstructing()) {
 						if (evt.getType().equals("online")){
 							fullGraph.addVertex(new PeerVertex(evt.getParam(1)));
@@ -396,7 +398,8 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 		SAXBuilder parser = new SAXBuilder();
 		Document doc = parser.build(inStream);
 		
-		client.setLatestTime(doc.getRootElement().getAttribute("time").getLongValue());
+		long currentTime = doc.getRootElement().getAttribute("currentTime").getLongValue();
+		client.setZeroTime(currentTime);
 
 		P2PNetworkGraphLoader loader = new P2PNetworkGraphLoader();
 		loader.logList.add(0,LogEvent.getStartEvent());
@@ -408,16 +411,17 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 
 
 	public static List<LogEvent> buildLogs(InputStream inStream, HTTPClient client, P2PNetworkGraph fullGraph) throws JDOMException, IOException {
-
+		
 		SAXBuilder parser = new SAXBuilder();
 		Document doc = parser.build(inStream);
+		long requestTime = doc.getRootElement().getAttribute("requestTime").getIntValue();
+		long currentTime = doc.getRootElement().getAttribute("currentTime").getLongValue();
 		
-		client.setLatestTime(doc.getRootElement().getAttribute("time").getLongValue());
+		client.setLatestTime(currentTime);
 		
 		P2PNetworkGraphLoader loader = new P2PNetworkGraphLoader();
-		
 		loader.fullGraph = fullGraph;
-		loader.addEventsToGraph(doc);
+		loader.addEventsToGraph(doc, requestTime);
 		return loader.logList;
 	}
 	//[end] Static Methods

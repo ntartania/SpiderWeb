@@ -33,12 +33,13 @@ public class HTTPClient implements ActionListener{
 	//[start] Attributes
 	private static int readTimeOut = 120000;
 	private static int connectTimeOut = 10000;
-	private static int sleepTime = 1000;
+	private static int sleepTime = 10000;
 
 	private List<NetworkGraphListener> networkListeners;
 
 	private String serverURL;
 	private long latestTime;
+	private long startingTime;
 	private boolean connected;
 	private Timer networkScheduler;
 	//[end] Attributes	
@@ -47,6 +48,7 @@ public class HTTPClient implements ActionListener{
 	public HTTPClient() {
 		networkListeners = new LinkedList<NetworkGraphListener>();
 		latestTime=0;
+		startingTime=0;
 		connected = false;
 		
 		networkScheduler = new Timer(sleepTime,this);
@@ -84,6 +86,19 @@ public class HTTPClient implements ActionListener{
 	public void setLatestTime(long latestTime) {
 		this.latestTime = latestTime;
 	}
+	
+	/**
+	 * sets the zero(epoch) time as well as sets that as the latest time to be received.
+	 * @param firstReceivedTime The time received when the graph came in.(to be used as the epoch)
+	 */
+	public void setZeroTime(long firstReceivedTime) {
+		latestTime = firstReceivedTime;
+		startingTime = firstReceivedTime;
+	}
+	
+	public long getZeroTime() {
+		return startingTime;
+	}
 
 	//[start] Listener Methods	
 	/**
@@ -99,7 +114,6 @@ public class HTTPClient implements ActionListener{
 	 * @param inStream InputStream containing the Network Graph XML file as it's payload.
 	 */ 
 	protected void notifyIncomingGraph(InputStream inStream) {
-		System.out.println("Incoming Graph");
 		for(NetworkGraphListener l : networkListeners) {
 			l.incomingGraph(inStream);
 		}
@@ -110,7 +124,6 @@ public class HTTPClient implements ActionListener{
 	 * @param inStream InputStream containing the Log Event XML file as it's payload.
 	 */
 	protected void notifyIncomingLogEvents(InputStream inStream) {
-		System.out.println("Incoming Log Events");
 		for(NetworkGraphListener l : networkListeners) {
 			l.incomingLogEvents(inStream);
 		}
@@ -154,7 +167,6 @@ public class HTTPClient implements ActionListener{
 	private void getLogEvents() throws IOException {
 		String url = "/getLogEvents?";
 		url = addTimeOfLastResponse(url);//add a time attribute to the URL
-		
 		//Connect to the HTTP Server and receive an input stream.
 		InputStream inStream = connect(url); 
 		
@@ -184,7 +196,6 @@ public class HTTPClient implements ActionListener{
 		if(connected) {
 			try {
 				getLogEvents();
-				connected = false;
 			} catch (IOException e) {
 				connected = false;
 				e.printStackTrace();

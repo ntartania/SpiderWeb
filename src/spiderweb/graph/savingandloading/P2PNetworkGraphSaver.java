@@ -78,21 +78,22 @@ public class P2PNetworkGraphSaver extends ProgressAdapter {
 	public static String saveGraphForWeb(P2PNetworkGraph graph, long simulationTime) {
 		P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(graph);
 		Document doc = saver.buildDoc();
-		doc.getRootElement().setAttribute("time",Long.toString(simulationTime));
+		doc.getRootElement().setAttribute("currentTime",Long.toString(simulationTime));
 		XMLOutputter outputter = new XMLOutputter();
 	    try {
 	    	return outputter.outputString(doc);   
 	    }
 	    catch (Exception e) {e.printStackTrace();}
-		return "";
+	    return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<network currentTime=\""+simulationTime+"\"/>";
 	}
 	
-	public static String saveEventsForWeb(List<LogEvent> events, long simulationTime) {
+	public static String saveEventsForWeb(List<LogEvent> events, long requestTime, long simulationTime) {
 		if(!events.isEmpty()) {
 			try {
-				P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(events,events.get(0).getTime());
+				P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(events,requestTime);
 				Document doc = saver.buildDoc();
-				doc.getRootElement().setAttribute("time",Long.toString(simulationTime));
+				doc.getRootElement().setAttribute("requestTime",Long.toString(requestTime));
+				doc.getRootElement().setAttribute("currentTime",Long.toString(simulationTime));
 				
 				XMLOutputter outputter = new XMLOutputter();
 		    
@@ -100,7 +101,7 @@ public class P2PNetworkGraphSaver extends ProgressAdapter {
 		    }
 		    catch (Exception e) {e.printStackTrace();}
 		}
-		return "";
+		return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<network requestTime=\""+requestTime+"\" currentTime=\""+simulationTime+"\"/>";
 	}
 	//[end] Saver Method
 	
@@ -252,9 +253,7 @@ public class P2PNetworkGraphSaver extends ProgressAdapter {
 		return new Document(networkElement);
 	}
 	//[end] Document Builder Methods
-	
-	
-	
+		
 	//[start] XML outputter
     /**
      * This method shows how to use XMLOutputter to output a JDOM document to

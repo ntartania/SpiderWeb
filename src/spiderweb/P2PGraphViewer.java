@@ -1300,12 +1300,11 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			synchronized(fullGraph) {
 				events = P2PNetworkGraphLoader.buildLogs(inStream, networkClient, fullGraph);
 			}
-			if(!events.isEmpty()) {
-				networkClient.setLatestTime(events.get(events.size()-1).getTime());
-				events.add(LogEvent.getEndEvent(events.get(events.size()-1)));
+			if(!events.isEmpty()) {				
 				for(int i=0;i<events.size();i++) {
 					fullGraph.robustGraphEvent(events,i); //apply events to graph
 				}//any events that didn't match up with the current graph will have been handled and new events created to compensate.
+				events.add(LogEvent.getEndEvent(events.get(events.size()-1)));
 				eventThread.addEvents(events);
 			}
 		} catch (Exception e) {
