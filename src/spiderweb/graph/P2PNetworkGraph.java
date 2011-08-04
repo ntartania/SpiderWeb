@@ -483,13 +483,11 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	/**
 	 * Helper method adds an "online" event into the list of LogEvents
 	 * 
-	 * The method checks to make sure the event is in the proper position in
-	 * the list (times match up and index does not go out of bounds)
 	 * @param events		 The list of LogEvents modifying the graph
 	 * @param timeToAddEvent The time the event takes place
 	 * @param peerNumber	 The peer to add the event for
 	 */
-	private void addPeerOnlineEvent(List<LogEvent> events, long timeToAddEvent, int peerNumber) {
+	private static void addPeerOnlineEvent(List<LogEvent> events, long timeToAddEvent, int peerNumber) {
 		try{
 			//peer will for sure be online as long as "if(!isPeerOnline(peer))" is done before addPeerOnlineEvent
 			LogEvent eventToAdd = new LogEvent(timeToAddEvent,"online",peerNumber,0,0);		
@@ -504,15 +502,12 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	/**
 	 * Helper method adds a "publish" event into the list of LogEvents
 	 * 
-	 * The method checks to make sure the event is in the proper position in
-	 * the list (times match up and index does not go out of bounds)
 	 * @param events		 The list of LogEvents modifying the graph
-	 * @param currentIndex	 The index which the current event is located 
 	 * @param timeToAddEvent The time the event takes place
 	 * @param peerNumber	 The peer who publishes the document in the event
 	 * @param documentNumber the Document to be published in the event
 	 */
-	private void addDocumentPublish(List<LogEvent> events, long timeToAddEvent, int peerNumber, int documentNumber) {
+	private static void addDocumentPublish(List<LogEvent> events, long timeToAddEvent, int peerNumber, int documentNumber) {
 		try {
 			LogEvent eventToAdd = new LogEvent(timeToAddEvent,"publish",peerNumber,documentNumber,0);
 			addEventAtProperTime(eventToAdd, events);
@@ -523,26 +518,29 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	}
 	
 	/**
+	 * Helper method places the passed event into the properly sorted position.
 	 * 
-	 * @param eventToAdd
-	 * @param events
+	 * ensures the event is placed in the proper position in the list (times match up)
+	 * @param eventToAdd The event to place into the list.
+	 * @param events The list which the event will be added to
 	 */
-	private void addEventAtProperTime(LogEvent eventToAdd, List<LogEvent>events) {
-		
-		if(events.isEmpty()) {
-			events.add(0,eventToAdd); 
-		}
-		else {
-			// Generate an iterator. Start just after the last element.
-			ListIterator<LogEvent> li = events.listIterator(events.size());
-			int index = events.size();
-			// Iterate in reverse.
-			while(li.hasPrevious()) {
-				LogEvent evt = li.previous();
-				index--;
-				if(evt.getTime()<eventToAdd.getTime() || index == 0) { //find the proper time to insert the event
-					events.add(index,eventToAdd);
-					break;
+	private static void addEventAtProperTime(LogEvent eventToAdd, List<LogEvent>events) {
+		synchronized(events) {
+			if(events.isEmpty()) {
+				events.add(0,eventToAdd); 
+			}
+			else {
+				// Generate an iterator. Start just after the last element.
+				ListIterator<LogEvent> li = events.listIterator(events.size());
+				int index = events.size();
+				// Iterate in reverse.
+				while(li.hasPrevious()) {
+					LogEvent evt = li.previous();
+					if(evt.getTime()<eventToAdd.getTime() || index == 0) { //find the proper time to insert the event
+						events.add(index,eventToAdd);
+						break;
+					}
+					index--;
 				}
 			}
 		}
