@@ -11,6 +11,7 @@ package spiderweb.graph;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -356,9 +357,12 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	}
 	
 	/**
-	 * Handles the Log Events which affect the structure of the graph.
+	 * Handles the Log Events which affect the structure of the graph and compensates for 
+	 * discrepancy with graph in its current state.
+	 * 
 	 * Primarily used for online as the edges are keyed similar to how edges are keyed when a graph is constructed.
-	 * @param gev				The Log event which needs to be handled.
+	 * @param events The list of log events (will be modified if discrepancy found)
+	 * @param currentIndex The index of the event to handle.
 	 */
 	public void robustGraphEvent(List<LogEvent> events, int currentIndex) {
 		LogEvent gev = events.get(currentIndex);
@@ -381,11 +385,11 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 			//check peers are online and that they are not already connected
 			//if peer is not online, come online
 			if(!isPeerOnline(peer1)) {
-				addPeerOnlineEvent(events,currentIndex,gev.getTime()-100,peer1);
+				addPeerOnlineEvent(events,gev.getTime()-100,peer1);
 				addPeer(peer1);
 			}
 			if(!isPeerOnline(peer2)) {
-				addPeerOnlineEvent(events,currentIndex,gev.getTime()-100,peer2);
+				addPeerOnlineEvent(events,gev.getTime()-100,peer2);
 				addPeer(peer2);
 			}
 			if(!arePeersConnected(peer1, peer2)) {
@@ -398,11 +402,11 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 			//check peers are online and that they are already connected
 			//if peer is not online, come online
 			if(!isPeerOnline(peer1)) {
-				addPeerOnlineEvent(events,currentIndex,gev.getTime()-100,peer1);
+				addPeerOnlineEvent(events,gev.getTime()-100,peer1);
 				addPeer(peer1);
 			}
 			if(!isPeerOnline(peer2)) {
-				addPeerOnlineEvent(events,currentIndex,gev.getTime()-100,peer2);
+				addPeerOnlineEvent(events,gev.getTime()-100,peer2);
 				addPeer(peer2);
 			}
 			if(arePeersConnected(peer1, peer2)) {
@@ -415,7 +419,7 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 			//check peer is online, check peer has not already published document
 			//if peer is not online, come online
 			if(!isPeerOnline(peer)) {
-				addPeerOnlineEvent(events,currentIndex,gev.getTime()-100,peer);
+				addPeerOnlineEvent(events,gev.getTime()-100,peer);
 				addPeer(peer);
 			}
 			if(!isDocumentPublished(document)) {
@@ -427,7 +431,7 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 			//check peer is online, check peer has published document
 			//if peer is not online, come online
 			if(!isPeerOnline(peer)) {
-				addPeerOnlineEvent(events,currentIndex,gev.getTime()-100,peer);
+				addPeerOnlineEvent(events,gev.getTime()-100,peer);
 				addPeer(peer);
 			}
 			if(isDocumentPublished(document)) {
@@ -452,25 +456,25 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 		} else if(gev.getType().endsWith("query")) { //use ends with so 'un'-prefix (unquery etc.) will also satisfy
 			int peer = gev.getParam(1);
 			if(!isPeerOnline(peer)) {
-				addPeerOnlineEvent(events,currentIndex,gev.getTime()-100,peer);
+				addPeerOnlineEvent(events,gev.getTime()-100,peer);
 				addPeer(peer);
 			}
 		} else if(gev.getType().endsWith("queryhit")) {
 			int peer = gev.getParam(1);
 			int document = gev.getParam(2);
 			if(!isPeerOnline(peer)) {
-				addPeerOnlineEvent(events,currentIndex,gev.getTime()-100,peer);
+				addPeerOnlineEvent(events,gev.getTime()-100,peer);
 				addPeer(peer);
 			}
 			if(!isDocumentPublished(document)) {
-				addDocumentPublish(events,currentIndex,gev.getTime()-100,peer,document);
+				addDocumentPublish(events,gev.getTime()-100,peer,document);
 				addDocument(document, peer);
 			}
 			
 		} else if(gev.getType().endsWith("queryreachespeer")) {
 			int peer = gev.getParam(1);
 			if(!isPeerOnline(peer)) {
-				addPeerOnlineEvent(events,currentIndex,gev.getTime()-100,peer);
+				addPeerOnlineEvent(events,gev.getTime()-100,peer);
 				addPeer(peer);
 			}
 		}
@@ -482,25 +486,15 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	 * The method checks to make sure the event is in the proper position in
 	 * the list (times match up and index does not go out of bounds)
 	 * @param events		 The list of LogEvents modifying the graph
-	 * @param currentIndex	 The index which the current event is located 
 	 * @param timeToAddEvent The time the event takes place
 	 * @param peerNumber	 The peer to add the event for
 	 */
-	private void addPeerOnlineEvent(List<LogEvent> events, int currentIndex, long timeToAddEvent, int peerNumber) {
+	private void addPeerOnlineEvent(List<LogEvent> events, long timeToAddEvent, int peerNumber) {
 		try{
 			//peer will for sure be online as long as "if(!isPeerOnline(peer))" is done before addPeerOnlineEvent
-			LogEvent eventToAdd = new LogEvent(timeToAddEvent,"online",peerNumber,0,0);
-			System.out.println("Event: "+eventToAdd+"\nCurrentIndex: "+currentIndex+"\nNumber of events: "+events.size());
-			if(currentIndex > 1) { //make sure that the current index is not going to cause an out of bounds
-				for(int i=currentIndex-1;i>=0;i--) {
-					if(events.get(i).getTime()<timeToAddEvent || i==0) { // go backwards from the index to find the proper time to insert the event
-						events.add(i, eventToAdd);						 // if i == 0 add it anyways
-					}
-				}
-			}
-			else {//if the peer was not online, add an event in the list to put that peer online.
-				events.add(0,eventToAdd); 
-			}
+			LogEvent eventToAdd = new LogEvent(timeToAddEvent,"online",peerNumber,0,0);		
+			addEventAtProperTime(eventToAdd, events);
+			
 		} catch(Exception e) {
 			System.out.println("Error in adding peer online event");
 			e.printStackTrace();
@@ -518,26 +512,39 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	 * @param peerNumber	 The peer who publishes the document in the event
 	 * @param documentNumber the Document to be published in the event
 	 */
-	private void addDocumentPublish(List<LogEvent> events, int currentIndex, long timeToAddEvent, int peerNumber, int documentNumber) {
-		System.out.println("events is empty: "+events.isEmpty());
-		System.out.println("Index: "+currentIndex+"\nNumber of Events: "+events.size());
+	private void addDocumentPublish(List<LogEvent> events, long timeToAddEvent, int peerNumber, int documentNumber) {
 		try {
 			LogEvent eventToAdd = new LogEvent(timeToAddEvent,"publish",peerNumber,documentNumber,0);
-			System.out.println("Event: "+eventToAdd+"\nCurrentIndex: "+currentIndex+"\nNumber of events: "+events.size());
-			if(currentIndex > 1) { //make sure that the current index is not going to cause an out of bounds
-				for(int i=currentIndex-1;i>=0;i--) {
-					if(events.get(i).getTime()<timeToAddEvent || i==0) { // go backwards from the index to find the proper time to insert the event
-						events.add(i, eventToAdd);
-						break;// if i == 0 add it anyways
-					}
-				}
-			}
-			else {//if the peer was not online, add an event in the list to put that peer online.
-				events.add(0,eventToAdd); 
-			}
+			addEventAtProperTime(eventToAdd, events);
 		} catch(Exception e) {
 			System.out.println("Error in adding document publish event");
 			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * 
+	 * @param eventToAdd
+	 * @param events
+	 */
+	private void addEventAtProperTime(LogEvent eventToAdd, List<LogEvent>events) {
+		
+		if(events.isEmpty()) {
+			events.add(0,eventToAdd); 
+		}
+		else {
+			// Generate an iterator. Start just after the last element.
+			ListIterator<LogEvent> li = events.listIterator(events.size());
+			int index = events.size();
+			// Iterate in reverse.
+			while(li.hasPrevious()) {
+				LogEvent evt = li.previous();
+				index--;
+				if(evt.getTime()<eventToAdd.getTime() || index == 0) { //find the proper time to insert the event
+					events.add(index,eventToAdd);
+					break;
+				}
+			}
 		}
 	}
 
