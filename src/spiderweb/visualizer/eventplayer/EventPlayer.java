@@ -20,7 +20,7 @@ import javax.swing.JSlider;
 import javax.swing.Timer;
 
 import spiderweb.graph.LogEvent;
-import spiderweb.graph.P2PNetworkGraph;
+import spiderweb.graph.ReferencedNetworkGraph;
 
 /**
  * The Event Player is what plays the graph backwards and forward, 
@@ -47,8 +47,7 @@ public class EventPlayer implements ActionListener{
 	private int current_index;
 
 
-	private P2PNetworkGraph fullGraph;
-	private P2PNetworkGraph dynamicGraph;
+	private ReferencedNetworkGraph graph;
 
 	private long myTimeNow;
 
@@ -57,9 +56,8 @@ public class EventPlayer implements ActionListener{
 	private boolean playable; //for when a graph is loaded without any events
 	private boolean robustMode=false;
 
-	public EventPlayer(P2PNetworkGraph fullGraph, P2PNetworkGraph dynamicGraph, List<LogEvent> eventlist, JSlider playbackSlider){
-		this.fullGraph = fullGraph;
-		this.dynamicGraph = dynamicGraph;
+	public EventPlayer(ReferencedNetworkGraph graph, List<LogEvent> eventlist, JSlider playbackSlider){
+		this.graph = graph;
 		this.playbackSlider = playbackSlider;
 		myEventList = eventlist;
 		current_index = 0; 
@@ -71,9 +69,8 @@ public class EventPlayer implements ActionListener{
 		playable=true;
 	}
 
-	public EventPlayer(P2PNetworkGraph fullGraph, P2PNetworkGraph dynamicGraph){
-		this.fullGraph = fullGraph;
-		this.dynamicGraph = dynamicGraph;
+	public EventPlayer(ReferencedNetworkGraph graph){
+		this.graph = graph;
 		this.playbackSlider = null;
 		myEventList = new ArrayList<LogEvent>();
 		current_index = 0; 
@@ -286,20 +283,20 @@ public class EventPlayer implements ActionListener{
 	 * @param peer
 	 */
 	public void doQuery(int peer, int queryString, int queryMessageID){
-		fullGraph.getPeer(peer).query(queryMessageID);
+		graph.getReferenceGraph().getPeer(peer).query(queryMessageID);
 	}
 
 	public void undoQuery(int peer, int queryString, int queryMessageID){
-		fullGraph.getPeer(peer).endQuery(queryMessageID);
+		graph.getReferenceGraph().getPeer(peer).endQuery(queryMessageID);
 	}
 
 
 	public void doQueryEdge(int peerFrom, int peerTo) {
-		fullGraph.findPeerConnection(peerFrom, peerTo).query();
+		graph.getReferenceGraph().findPeerConnection(peerFrom, peerTo).query();
 	}
 
 	public void undoQueryEdge(int peerFrom, int peerTo) {
-		fullGraph.findPeerConnection(peerFrom, peerTo).backToNormal();
+		graph.getReferenceGraph().findPeerConnection(peerFrom, peerTo).backToNormal();
 	}
 
 	/**
@@ -308,23 +305,23 @@ public class EventPlayer implements ActionListener{
 	 * @param q
 	 */
 	public void doQueryReachesPeer(int peer, int queryMessageID){
-		fullGraph.getPeer(peer).receiveQuery(queryMessageID);
+		graph.getReferenceGraph().getPeer(peer).receiveQuery(queryMessageID);
 	}
 	/**
 	 * Visualize a query reaches peer event (bold edges)
 	 * @param peer
 	 */
 	public void undoQueryReachesPeer(int peer, int queryMessageID){
-		fullGraph.getPeer(peer).endReceivedQuery(queryMessageID);
+		graph.getReferenceGraph().getPeer(peer).endReceivedQuery(queryMessageID);
 	}
 
 
 	public void doQueryHit(int peerNumber, int documentNumber, int queryMessageID) {
-		fullGraph.getPeerDocument(peerNumber, documentNumber).setQueryHit(true);
+		graph.getReferenceGraph().getPeerDocument(peerNumber, documentNumber).setQueryHit(true);
 	}
 
 	public void undoQueryHit(int peerNumber, int documentNumber, int queryMessageID) {
-		fullGraph.getPeerDocument(peerNumber, documentNumber).setQueryHit(false);
+		graph.getReferenceGraph().getPeerDocument(peerNumber, documentNumber).setQueryHit(false);
 	}
 	//[end]
 
@@ -381,7 +378,7 @@ public class EventPlayer implements ActionListener{
 	private void robustHandleLogEvent(LogEvent evt, boolean forward) {
 
 		try {
-			dynamicGraph.graphEvent(evt,forward,fullGraph);
+			graph.graphEvent(evt,forward);
 			String what = evt.getType();
 			int val1 = evt.getParam(1);
 			int val2 = evt.getParam(2);
@@ -456,7 +453,7 @@ public class EventPlayer implements ActionListener{
 	private void handleLogEvent(LogEvent evt, boolean forward) {
 		try {
 			if (evt.isStructural()){ //if the event is to modify the structure of the graph
-				dynamicGraph.graphEvent(evt,forward,fullGraph);
+				graph.graphEvent(evt,forward);
 			} else { //other events: queries
 				String what = evt.getType();
 				int val1 = evt.getParam(1);

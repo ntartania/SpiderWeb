@@ -18,6 +18,7 @@ import spiderweb.visualizer.eventplayer.*;
 import spiderweb.networking.*;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -26,26 +27,24 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+
+import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.JApplet;
 import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JRootPane;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JSplitPane;
@@ -60,21 +59,9 @@ import org.apache.commons.collections15.functors.ConstantTransformer;
 import org.jdom.JDOMException;
 
 import edu.uci.ics.jung.algorithms.layout.AbstractLayout;
-import edu.uci.ics.jung.algorithms.layout.BalloonLayout;
 import edu.uci.ics.jung.algorithms.layout.CircleLayout;
-import edu.uci.ics.jung.algorithms.layout.FRLayout;
 import edu.uci.ics.jung.algorithms.layout.FRLayout2;
-import edu.uci.ics.jung.algorithms.layout.ISOMLayout;
-import edu.uci.ics.jung.algorithms.layout.KKLayout;
-import edu.uci.ics.jung.algorithms.layout.Layout;
-import edu.uci.ics.jung.algorithms.layout.SpringLayout;
-import edu.uci.ics.jung.algorithms.layout.TreeLayout;
-import edu.uci.ics.jung.visualization.VisualizationViewer;
-import edu.uci.ics.jung.visualization.VisualizationViewer.GraphMouse;
 import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
-import edu.uci.ics.jung.visualization.control.ModalGraphMouse.Mode;
-import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
-import edu.uci.ics.jung.visualization.renderers.Renderer;
 //[end] Imports
 
 /**
@@ -101,10 +88,12 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	//[start] Private Variables
 	private static final long serialVersionUID = 2L;
 	
-	private VisualizationViewer<P2PVertex,P2PConnection> fullViewViewer = null;
-	private VisualizationViewer<P2PVertex,P2PConnection> collapsedDocumentViewViewer = null;
-	private VisualizationViewer<P2PVertex,P2PConnection> collapsedPeerViewViewer = null;
-	private VisualizationViewer<P2PVertex,P2PConnection> collapsedPeerAndDocumentViewViewer = null;
+	private PersonalizedVisualizationViewer fullViewViewer = null;
+	private PersonalizedVisualizationViewer collapsedDocumentViewViewer = null;
+	private PersonalizedVisualizationViewer collapsedPeerViewViewer = null;
+	private PersonalizedVisualizationViewer collapsedPeerAndDocumentViewViewer = null;
+	
+	private PersonalizedVisualizationViewer currentViewer = null;
 
 	private AbstractLayout<P2PVertex,P2PConnection> layout = null;
 	
@@ -112,12 +101,18 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 
 	//a hidden graph that contains all the nodes that will ever be added... 
 	//in order to calculate the positions of all the nodes
-	private P2PNetworkGraph fullGraph; 
-	private P2PNetworkGraph dynamicGraph = null;
+	private ReferencedNetworkGraph graph;
+	
+	//private P2PNetworkGraph fullGraph; 
+	//private P2PNetworkGraph dynamicGraph = null;
 	
 	private List<LoadingListener> loadingListeners;
 	
 	private HTTPClient networkClient;
+	
+	private Component mainPane;
+	
+	private GraphPopupMenu popupMenu;
 	
 	//[end] Private Variables
 	
@@ -131,7 +126,6 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	protected JButton fastReverseButton;
 	protected JSlider fastSpeedSlider;
 	protected JSlider playbackSlider;
-	protected JPopupMenu mouseContext;
 
 	protected EventPlayer eventThread;
 	//[end] Protected Variables
@@ -154,6 +148,8 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		frame.pack();
 		frame.setVisible(true);
 		frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+		
+		
 	}
 	//[end] Constructor
 
@@ -193,64 +189,6 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	}*/
 	//[end] Calculate the Spring Layout
 	
-	//[start] Create the visualization viewer
-	/**
-	 * 
-	 * @return The Initialized Visualization Viewer
-	 */
-	private VisualizationViewer<P2PVertex,P2PConnection> visualizationViewerBuilder(final Layout<P2PVertex, P2PConnection> layout, int width, int height, GraphMouse gm) {
-		VisualizationViewer<P2PVertex,P2PConnection> viewer = new VisualizationViewer<P2PVertex,P2PConnection>(layout, new Dimension(width,height));
-		JRootPane rp = this.getRootPane();
-		rp.putClientProperty("defeatSystemEventQueueCheck", Boolean.TRUE);
-
-		
-
-		// the default mouse makes the mouse usable as a picking tool (pick, drag vertices & edges) or as a transforming tool (pan, zoom)
-		viewer.setGraphMouse(gm);
-
-		//set graph rendering parameters & functions
-		viewer.getRenderer().getVertexLabelRenderer().setPosition(Renderer.VertexLabel.Position.CNTR);
-		//the vertex labeler will use the tostring method which is fine, the P2PVertex class has an appropriate toString() method implementation
-		viewer.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<P2PVertex>());
-		//viewer.getRenderContext().setEdgeLabelTransformer(new ToStringLabeller<P2PConnection>());
-		viewer.getRenderContext().setVertexFillPaintTransformer(new P2PVertexFillPaintTransformer(viewer.getPickedVertexState()));
-		// P2PVertex objects also now have multiple states : we can represent which nodes are documents, picked, querying, queried, etc.
-		
-		viewer.getRenderContext().setVertexStrokeTransformer(new P2PVertexStrokeTransformer());
-		viewer.setForeground(Color.white);
-		viewer.setBackground(Color.GRAY);
-		viewer.setBounds(0,0,width,height);
-		
-		viewer.addComponentListener(new ComponentAdapter() {
-			
-			/**
-			 * @see java.awt.event.ComponentAdapter#componentResized(java.awt.event.ComponentEvent)
-			 */
-			@Override
-			public void componentResized(ComponentEvent arg0) {
-				super.componentResized(arg0);
-				//viewer.getGraphLayout().setSize(arg0.getComponent().getSize());
-			}
-		});
-		
-		return viewer;
-	}
-	
-	private void initSpecialTransformers(VisualizationViewer<P2PVertex,P2PConnection> viewer,
-			VertexShapeType peerShape, VertexShapeType documentShape, VertexShapeType peerDocumentShape,
-			EdgeShapeType P2PEdgeShape, EdgeShapeType P2DocEdgeShape, EdgeShapeType Doc2PDocEdgeShape, EdgeShapeType P2PDocEdgeShape) {
-		
-		//add my own vertex shape & color fill transformers
-		viewer.getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer(peerShape,documentShape, peerDocumentShape));
-		// note :the color depends on being picked.
-		
-		//make the p2p edges different from the peer to doc edges 
-		viewer.getRenderContext().setEdgeStrokeTransformer(new P2PEdgeStrokeTransformer()); //stroke width
-		viewer.getRenderContext().setEdgeShapeTransformer(new P2PEdgeShapeTransformer(P2PEdgeShape,P2DocEdgeShape,Doc2PDocEdgeShape,P2PDocEdgeShape)); //stroke width
-		
-	}
-	//[end] Create the visualization viewer
-	
 	//[start] Create Components
 	
 	//[start] File Menu
@@ -289,12 +227,12 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 						"Save", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
 				
 				if(option == JOptionPane.YES_OPTION) {
-					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(dynamicGraph,eventThread.getSaveEvents(), eventThread.getCurrentTime());
+					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(graph.getDynamicGraph(),eventThread.getSaveEvents(), eventThread.getCurrentTime());
 					saver.addProgressListener(new LoadingBar());
 					saver.doSave();
 				}
 				else if(option == JOptionPane.NO_OPTION) {
-					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(dynamicGraph);
+					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(graph.getDynamicGraph());
 					saver.addProgressListener(new LoadingBar());
 					saver.doSave();
 				}
@@ -317,7 +255,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 						JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
 				
 				if(option == JOptionPane.OK_OPTION) {
-					//GraphSaverAndLoader.save(dynamicGraph);
+					//GraphSaverAndLoader.save(graph.getDynamicGraph());
 					System.exit(0);
 				}
 				else if(option == JOptionPane.NO_OPTION) {
@@ -340,17 +278,26 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		
 		//[start] Window Menu
 		JMenu window = new JMenu("Window");
-		JMenuItem logTable = new JMenuItem("Show Log Table");
+		JCheckBoxMenuItem logTable = new JCheckBoxMenuItem("Show Log Table");
 		logTable.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
+			public void actionPerformed(ActionEvent ae) {
 				if(myGraphEvolution != null) { //graph has been initialized
-					JSplitPane p = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-					p.setResizeWeight(1);
-					p.add(getContentPane().getComponent(0));
-					p.add(initializeLogList(myGraphEvolution));
 					
-					getContentPane().add(p);
-					validate();
+					JCheckBoxMenuItem button = (JCheckBoxMenuItem) ae.getSource();
+                    if (button.isSelected()) { //Add the log table
+                        JSplitPane p = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+                        p.setResizeWeight(1);
+                        p.add(mainPane);
+                        p.add(initializeLogList(myGraphEvolution));
+                        p.setDividerSize(3);
+
+                        getContentPane().add(p);
+                        validate();
+                    } else { //Remove the log table
+                        getContentPane().removeAll();
+                        getContentPane().add(mainPane);
+                        validate();
+                    }
 				}
 			}	
 		});
@@ -530,44 +477,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		return west;
 	}*/
 	//[end] West Panel
-	
-	//[start] Mouse Context Menu
-	private void initializeMouseContext(final DefaultModalGraphMouse<P2PVertex,P2PConnection> gm) {
-		mouseContext = new JPopupMenu("Mouse Mode");
-		JMenuItem picking = new JMenuItem("Picking");
-		picking.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				gm.setMode(Mode.PICKING);
-				int size = mouseContext.getComponentCount();
-				for(int i = size-1;i>4;i--) {
-					mouseContext.remove(i);
-				}
-				mouseContext.setVisible(false);
-				mouseContext.setEnabled(false);
-			}
-		});
 		
-		JMenuItem transforming = new JMenuItem("Transforming");
-		transforming.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				gm.setMode(Mode.TRANSFORMING);
-				int size = mouseContext.getComponentCount();
-				for(int i = size-1;i>4;i--) {
-					mouseContext.remove(i);
-				}
-				mouseContext.setVisible(false);
-				mouseContext.setEnabled(false);
-			}
-		});
-		mouseContext.add("Mouse Mode:").setEnabled(false);
-		mouseContext.add(picking);
-		mouseContext.add(transforming);
-		mouseContext.addSeparator();
-		mouseContext.add("Set Layout:").setEnabled(false);
-	}
-	
-	//[end] Mouse Context Menu
-	
 	//[end] Create Components
 	
 	//[start] init method
@@ -583,12 +493,10 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			//private int i=0;
 			@Override
 			public void paint(Graphics g) {
-				//i++;
-				//System.out.println("tabsPane paint "+i);
+				//catches an exception in the look and feel which I am not sure why it is happening or how to fix it
 				try {
 					super.paint(g);
-				} catch(Exception e) {
-					
+				} catch(Exception ignored) {
 				}
 			}
 			
@@ -597,6 +505,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		tabsPane.addTab("Welcome", initialTab);
 		
 		tabsPane.setEnabled(false);
+		
 		//[end] Tabs Pane
 		
 		JPanel graphsPanel = new JPanel(new GridLayout(1,1));
@@ -606,6 +515,8 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		p.setResizeWeight(1);
 		p.add(graphsPanel);
 		p.add(initializeSouthPanel());
+		p.setDividerSize(0);
+		p.setEnabled(false);
 		
 		
 		getContentPane().setFont(new Font("Arial", Font.PLAIN, 12));
@@ -614,6 +525,8 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		setJMenuBar(createFileMenu());
 		getContentPane().add(p);
 		setPreferredSize(new Dimension(DEFWIDTH, DEFHEIGHT));
+		
+		mainPane = p;
 		
 		//startGraph();
 		loadingListeners.add(new LoadingBar());
@@ -625,10 +538,15 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		for(LoadingListener l : loadingListeners) {
 			l.loadingStarted(7,"Building Visualizer");
 		}
+		for(ChangeListener listener : tabsPane.getListeners(ChangeListener.class)) {
+			if(listener.getClass().equals(TabChangeListener.class)) {
+				tabsPane.removeChangeListener(listener);
+			}
+		}
 		tabsPane.removeAll();
 		
-		//layout = springLayoutBuilder(DEFWIDTH,DEFHEIGHT,fullGraph);
-		layout = new FRLayout2<P2PVertex, P2PConnection>(fullGraph);
+		//layout = springLayoutBuilder(DEFWIDTH,DEFHEIGHT,graph.getReferenceGraph());
+		layout = new FRLayout2<P2PVertex, P2PConnection>(graph.getReferenceGraph());
 		layout.setInitializer(new P2PVertexPlacer(layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
 		
 		for(LoadingListener l : loadingListeners) {
@@ -636,28 +554,28 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		}
 		
 		DefaultModalGraphMouse<P2PVertex,P2PConnection> gm = new DefaultModalGraphMouse<P2PVertex,P2PConnection>(); 
-		GraphMouseListener graphListener = new GraphMouseListener();
+		MouseClickListener clickListener = new MouseClickListener();
+		popupMenu = new GraphPopupMenu(this, gm, clickListener);
 		
 		//[start] Full Visualization Viewer Init
-		fullViewViewer = visualizationViewerBuilder(layout, DEFWIDTH,DEFHEIGHT, gm);
-		fullViewViewer.addMouseListener(graphListener);
+		fullViewViewer = new PersonalizedVisualizationViewer(layout, DEFWIDTH,DEFHEIGHT, gm, clickListener, graph.getReferenceGraph());
 		fullViewViewer.setName("Full View");
 		//add my own vertex shape & color fill transformers
-		initSpecialTransformers(fullViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
+		fullViewViewer.setSpecialTransformers(VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
 								EdgeShapeType.QUAD_CURVE,
 								EdgeShapeType.CUBIC_CURVE,
 								EdgeShapeType.LINE,
 								EdgeShapeType.LINE);
 		
-		fullViewViewer.getRenderContext().setVertexIncludePredicate(new VertexIsInTheOtherGraphPredicate(dynamicGraph));
-		fullViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(dynamicGraph));
+		fullViewViewer.getRenderContext().setVertexIncludePredicate(new VertexIsInTheOtherGraphPredicate(graph.getDynamicGraph()));
+		fullViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(graph.getDynamicGraph()));
 		//[end] Full Visualization Viewer Init
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(1);
 		}
 		//[start] Collapsed Document Visualization Viewer Init
-		collapsedDocumentViewViewer = visualizationViewerBuilder(fullViewViewer.getGraphLayout(),DEFWIDTH,DEFHEIGHT, fullViewViewer.getGraphMouse());
-		collapsedDocumentViewViewer.addMouseListener(graphListener);
+		collapsedDocumentViewViewer = new PersonalizedVisualizationViewer(fullViewViewer.getGraphLayout(), DEFWIDTH,DEFHEIGHT, 
+				gm, clickListener, graph.getReferenceGraph());
 		collapsedDocumentViewViewer.setName("Collapsed Document View");		
 		collapsedDocumentViewViewer.getRenderContext().setVertexFillPaintTransformer(new P2PVertexFillPaintTransformer(
 				collapsedDocumentViewViewer.getPickedVertexState(),Color.RED, Color.YELLOW, Color.MAGENTA, Color.RED, Color.RED, Color.BLUE));
@@ -668,47 +586,47 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		collapsedDocumentViewViewer.getRenderContext().setEdgeShapeTransformer(new P2PEdgeShapeTransformer(EdgeShapeType.QUAD_CURVE,
 				EdgeShapeType.CUBIC_CURVE,EdgeShapeType.LINE,EdgeShapeType.LINE)); //stroke width
 		
-		collapsedDocumentViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(dynamicGraph,PeerVertex.class));
-		collapsedDocumentViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(dynamicGraph));
+		collapsedDocumentViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(graph.getDynamicGraph(),PeerVertex.class));
+		collapsedDocumentViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(graph.getDynamicGraph()));
 		//[end] Collapsed Document Visualization Viewer Init
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(2);
 		}
 		//[start] Collapsed Peer Visualization Viewer Init
-		collapsedPeerViewViewer = visualizationViewerBuilder(fullViewViewer.getGraphLayout(),DEFWIDTH,DEFHEIGHT, fullViewViewer.getGraphMouse());
-		collapsedPeerViewViewer.addMouseListener(graphListener);
+		collapsedPeerViewViewer = new PersonalizedVisualizationViewer(fullViewViewer.getGraphLayout(), DEFWIDTH,DEFHEIGHT, 
+				gm, clickListener, graph.getReferenceGraph());
+		collapsedPeerViewViewer.addMouseListener(clickListener);
 		collapsedPeerViewViewer.setName("Collapsed Peer View");
-		initSpecialTransformers(collapsedPeerViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
+		collapsedPeerViewViewer.setSpecialTransformers(VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
 								EdgeShapeType.QUAD_CURVE,
 								EdgeShapeType.CUBIC_CURVE,
 								EdgeShapeType.LINE,
 								EdgeShapeType.LINE);
 		
-		collapsedPeerViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(dynamicGraph, DocumentVertex.class));
-		collapsedPeerViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(dynamicGraph));
+		collapsedPeerViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(graph.getDynamicGraph(), DocumentVertex.class));
+		collapsedPeerViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(graph.getDynamicGraph()));
 		//[end] Collapsed Peer Visualization Viewer Init
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(3);
 		}
 		//[start] Collapsed Peer AndDocument Visualization Viewer Init
-		collapsedPeerAndDocumentViewViewer = visualizationViewerBuilder(fullViewViewer.getGraphLayout(),DEFWIDTH,DEFHEIGHT, fullViewViewer.getGraphMouse());
-		collapsedPeerAndDocumentViewViewer.addMouseListener(graphListener);
+		collapsedPeerAndDocumentViewViewer = new PersonalizedVisualizationViewer(fullViewViewer.getGraphLayout(), DEFWIDTH,DEFHEIGHT, 
+				gm, clickListener, graph.getReferenceGraph());
+		collapsedPeerAndDocumentViewViewer.addMouseListener(clickListener);
 		collapsedPeerAndDocumentViewViewer.setName("Collapsed Peer and Document View");
-		initSpecialTransformers(collapsedPeerAndDocumentViewViewer,VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
+		collapsedPeerAndDocumentViewViewer.setSpecialTransformers(VertexShapeType.ELLIPSE,VertexShapeType.PENTAGON,VertexShapeType.RECTANGLE,
 								EdgeShapeType.QUAD_CURVE,
 								EdgeShapeType.CUBIC_CURVE,
 								EdgeShapeType.LINE,
 								EdgeShapeType.LINE);
 		
-		collapsedPeerAndDocumentViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(dynamicGraph,PeerDocumentVertex.class));
-		collapsedPeerAndDocumentViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(dynamicGraph));
+		collapsedPeerAndDocumentViewViewer.getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(graph.getDynamicGraph(),PeerDocumentVertex.class));
+		collapsedPeerAndDocumentViewViewer.getRenderContext().setEdgeIncludePredicate(new EdgeIsInTheOtherGraphPredicate(graph.getDynamicGraph()));
 		//[end] Collapsed Peer AndDocument Visualization Viewer Init
 		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(4);
 		}
-		
-		initializeMouseContext(gm);
 		
 		if(myGraphEvolution.isEmpty()) {
 			SliderListener s = new SliderListener();
@@ -718,7 +636,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			playbackSlider.addMouseListener(s);
 			
 			/// create the event player
-			eventThread = new EventPlayer(fullGraph, dynamicGraph);
+			eventThread = new EventPlayer(graph);
 			eventThread.addEventPlayerListener(this);
 		}
 		else {
@@ -731,20 +649,22 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			
 			
 			/// create the event player
-			eventThread = new EventPlayer(fullGraph, dynamicGraph, myGraphEvolution, playbackSlider);
+			eventThread = new EventPlayer(graph, myGraphEvolution, playbackSlider);
 			eventThread.addEventPlayerListener(this);
 		}
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(5);
 		}
 		
-		
-		tabsPane.addTab(fullViewViewer.getName(),fullViewViewer);
-		tabsPane.addTab(collapsedDocumentViewViewer.getName(), collapsedDocumentViewViewer);
 		tabsPane.addTab(collapsedPeerViewViewer.getName(), collapsedPeerViewViewer);
+		tabsPane.addTab(collapsedDocumentViewViewer.getName(), collapsedDocumentViewViewer);
 		tabsPane.addTab(collapsedPeerAndDocumentViewViewer.getName(), collapsedPeerAndDocumentViewViewer);
+		tabsPane.addTab(fullViewViewer.getName(),fullViewViewer);
 		tabsPane.setEnabled(true);
 		tabsPane.setIgnoreRepaint(false);
+		tabsPane.addChangeListener(new TabChangeListener());
+		
+		currentViewer = (PersonalizedVisualizationViewer) ((JTabbedPane) tabsPane).getSelectedComponent();
 		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingComplete();
@@ -764,7 +684,6 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	}
 	//[end] Init Graph
 	
-	
 	//[end] Initialization
 	
 	//[start] Main
@@ -775,106 +694,26 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	 */
 	public static void main(String[] args) {
 
-		@SuppressWarnings("unused")
 		P2PGraphViewer myapp = new P2PGraphViewer();
+		myapp.validate();
 	}
 	//[end] Main
 
 	//[start] Helper Methods
 	
-	//[start] Layout Items for context menu
-	public List<JMenuItem> getLayoutItems() {
-		List<JMenuItem> menuItems = new LinkedList<JMenuItem>();
-		
-		if(tabsPane.getSelectedComponent().getName().equals("Full View")) {
-			JMenuItem frLayout = new JMenuItem("FR Layout");
-			frLayout.addActionListener(new FRLayoutListener(fullViewViewer));
-			
-			JMenuItem kkLayout = new JMenuItem("KK Layout");
-			kkLayout.addActionListener(new KKLayoutListener(fullViewViewer));
-			
-			JMenuItem isomLayout = new JMenuItem("ISOM Layout");
-			isomLayout.addActionListener(new ISOMLayoutListener(fullViewViewer));
-			
-			JMenuItem circleLayout = new JMenuItem("Circle Layout");
-			circleLayout.addActionListener(new CircleLayoutListener(fullViewViewer));
-			
-			JMenuItem springLayout = new JMenuItem("Spring Layout");
-			springLayout.addActionListener(new SpringLayoutListener(fullViewViewer));
-			
-			menuItems.add(circleLayout);
-			menuItems.add(frLayout);
-			menuItems.add(isomLayout);
-			menuItems.add(kkLayout);
-			menuItems.add(springLayout);
-		}
-		else if(tabsPane.getSelectedComponent().getName().equals("Collapsed Document View")) {
-			JMenuItem frLayout = new JMenuItem("FR Layout");
-			frLayout.addActionListener(new FRLayoutListener(collapsedDocumentViewViewer));
-			
-			JMenuItem kkLayout = new JMenuItem("KK Layout");
-			kkLayout.addActionListener(new KKLayoutListener(collapsedDocumentViewViewer));
-			
-			JMenuItem isomLayout = new JMenuItem("ISOM Layout");
-			isomLayout.addActionListener(new ISOMLayoutListener(collapsedDocumentViewViewer));
-			
-			JMenuItem circleLayout = new JMenuItem("Circle Layout");
-			circleLayout.addActionListener(new CircleLayoutListener(collapsedDocumentViewViewer));
-			
-			JMenuItem balloonLayout = new JMenuItem("Balloon Layout");
-			balloonLayout.addActionListener(new BalloonLayoutListener(collapsedDocumentViewViewer));
-			
-			JMenuItem treeLayout = new JMenuItem("Tree Layout");
-			treeLayout.addActionListener(new TreeLayoutListener(collapsedDocumentViewViewer));
-			
-			menuItems.add(balloonLayout);
-			menuItems.add(circleLayout);
-			menuItems.add(frLayout);
-			menuItems.add(isomLayout);
-			menuItems.add(kkLayout);
-			menuItems.add(treeLayout);
-		}
-		else if(tabsPane.getSelectedComponent().getName().equals("Collapsed Peer View")) {
-			JMenuItem frLayout = new JMenuItem("FR Layout");
-			frLayout.addActionListener(new FRLayoutListener(collapsedPeerViewViewer));
-			
-			
-			JMenuItem kkLayout = new JMenuItem("KK Layout");
-			kkLayout.addActionListener(new KKLayoutListener(collapsedPeerViewViewer));
-			
-			JMenuItem isomLayout = new JMenuItem("ISOM Layout");
-			isomLayout.addActionListener(new ISOMLayoutListener(collapsedPeerViewViewer));
-			
-			JMenuItem circleLayout = new JMenuItem("Circle Layout");
-			circleLayout.addActionListener(new CircleLayoutListener(collapsedPeerViewViewer));
-			
-			menuItems.add(circleLayout);
-			menuItems.add(frLayout);
-			menuItems.add(isomLayout);
-			menuItems.add(kkLayout);
-		}
-		else if(tabsPane.getSelectedComponent().getName().equals("Collapsed Peer and Document View")) {
-			JMenuItem frLayout = new JMenuItem("FR Layout");
-			frLayout.addActionListener(new FRLayoutListener(collapsedPeerAndDocumentViewViewer));
-			
-			JMenuItem kkLayout = new JMenuItem("KK Layout");
-			kkLayout.addActionListener(new KKLayoutListener(collapsedPeerAndDocumentViewViewer));
-			
-			JMenuItem isomLayout = new JMenuItem("ISOM Layout");
-			isomLayout.addActionListener(new ISOMLayoutListener(collapsedPeerAndDocumentViewViewer));
-			
-			JMenuItem circleLayout = new JMenuItem("Circle Layout");
-			circleLayout.addActionListener(new CircleLayoutListener(collapsedPeerAndDocumentViewViewer));
-			
-			menuItems.add(circleLayout);
-			menuItems.add(frLayout);
-			menuItems.add(isomLayout);
-			menuItems.add(kkLayout);
-		}
-		
-		return menuItems;
+	
+	
+	//[start] getters
+	
+	public ReferencedNetworkGraph getGraph() {
+		return graph;
 	}
-	//[end] Layout Items for context menu
+	
+	public PersonalizedVisualizationViewer getCurrentViewer() {
+		return currentViewer;
+	}
+	
+	//[end] getters
 	
 	//[end] Helper Methods
 	
@@ -947,41 +786,48 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 
 	//[start] Swing Event Listeners
 	
+	//[start] Tabs Listener
+	/**
+     * If the graphsPanel is a JTabbedPane, updates the current viewer when it is changed
+     * so that the playbackPanel knows which viewer to repaint
+     */
+    public class TabChangeListener implements ChangeListener{
+
+        public void stateChanged(ChangeEvent e) {
+            currentViewer = (PersonalizedVisualizationViewer) ((JTabbedPane) tabsPane).getSelectedComponent();
+        }
+
+    }
+    //[end] Tabs Listener
+	
 	//[start] Relaxer and mouse context listener
 	 /**
 	 * an actionlistener that defines the use of a button to stop the spring-layout processing
 	 * @author adavoust
 	 *
 	 */
-	private class GraphMouseListener extends MouseAdapter {
+	private class MouseClickListener extends MouseAdapter implements ActionListener {
 				
 		@Override 
 		public void mousePressed(MouseEvent e) {
-			doPop(e);
-		}
-		
-		@Override 
-		public void mouseReleased(MouseEvent e) {
-			doPop(e);
-		}
-		
-		private void doPop(MouseEvent e) {
+			currentViewer = (PersonalizedVisualizationViewer) e.getComponent();
 			if (e.isPopupTrigger()) {
-				for(JMenuItem item : getLayoutItems()) {
-					mouseContext.add(item);
-				}
-				mouseContext.setEnabled(true);
-	    		mouseContext.show(null, e.getXOnScreen(), e.getYOnScreen());	    		
-	    	}
-			else if(mouseContext.isVisible()) {
-				int size = mouseContext.getComponentCount();
-				for(int i = size-1;i>4;i--) {
-					mouseContext.remove(i);
-				}
-				mouseContext.setVisible(false);
-				mouseContext.setEnabled(false);
-			}
-		}
+                popupMenu.showPopupMenu(e.getX(), e.getY());
+            }
+        }
+
+        @Override
+        public void mouseReleased(MouseEvent e) {
+            //Windows only shows the popup menu on right-click release.  Silly Windows
+            if (System.getProperty("os.name").toLowerCase().startsWith("windows") && e.isPopupTrigger()){
+                popupMenu.showPopupMenu(e.getX(), e.getY());
+            }
+        }
+
+        public void actionPerformed(ActionEvent e) {
+            popupMenu.popupMenuEvent(((AbstractButton)e.getSource()).getText());
+        }
+    
 	}
 	//[end] Relaxer and mouse context listener
 
@@ -1102,148 +948,6 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	}
 	//[end] Playback Slider
 	
-	//[start] Layout Context Listeners
-	
-	//fullViewViewer.getModel().setGraphLayout(new AggregateLayout<P2PVertex, P2PConnection>(
-	//		new AggregateLayout<P2PVertex, P2PConnection>(fullViewViewer.getGraphLayout())));
-	
-	class  FRLayoutListener implements ActionListener {
-		VisualizationViewer<P2PVertex,P2PConnection> vv;
-		public FRLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
-			this.vv = vv;
-		}
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new FRLayout<P2PVertex, P2PConnection>(fullGraph, vv.getSize());
-			vv.getModel().setGraphLayout(graphLayout);
-			mouseContext.setVisible(false);
-			mouseContext.setEnabled(false);
-			int size = mouseContext.getComponentCount();
-			for(int i = size-1;i>4;i--) {
-				mouseContext.remove(i);
-			}
-			graphLayout.lock(true);
-		}
-	}
-	class  ISOMLayoutListener implements ActionListener {
-		VisualizationViewer<P2PVertex,P2PConnection> vv;
-		public ISOMLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
-			this.vv = vv;
-		}
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new ISOMLayout<P2PVertex, P2PConnection>(fullGraph);
-			vv.getModel().setGraphLayout(graphLayout);
-			mouseContext.setVisible(false);
-			mouseContext.setEnabled(false);
-			int size = mouseContext.getComponentCount();
-			for(int i = size-1;i>4;i--) {
-				mouseContext.remove(i);
-			}
-			graphLayout.lock(true);
-		}
-	}
-	class  KKLayoutListener implements ActionListener {
-		VisualizationViewer<P2PVertex,P2PConnection> vv;
-		public KKLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
-			this.vv = vv;
-		}
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new KKLayout<P2PVertex, P2PConnection>(fullGraph);
-			vv.getModel().setGraphLayout(graphLayout);
-			mouseContext.setVisible(false);
-			mouseContext.setEnabled(false);
-			int size = mouseContext.getComponentCount();
-			for(int i = size-1;i>4;i--) {
-				mouseContext.remove(i);
-			}
-			graphLayout.lock(true);
-		}
-	}
-	class  CircleLayoutListener implements ActionListener {
-		VisualizationViewer<P2PVertex,P2PConnection> vv;
-		public CircleLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
-			this.vv = vv;
-		}
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			CircleLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(fullGraph);
-			graphLayout.setRadius(fullGraph.getVertexCount()*10);
-			vv.getModel().setGraphLayout(graphLayout);
-			mouseContext.setVisible(false);
-			mouseContext.setEnabled(false);
-			int size = mouseContext.getComponentCount();
-			for(int i = size-1;i>4;i--) {
-				mouseContext.remove(i);
-			}
-			graphLayout.lock(true);
-		}
-	}
-	class  SpringLayoutListener implements ActionListener {
-		VisualizationViewer<P2PVertex,P2PConnection> vv;
-		public SpringLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
-			this.vv = vv;
-		}
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			AbstractLayout<P2PVertex, P2PConnection> graphLayout = new SpringLayout<P2PVertex, P2PConnection>(fullGraph);
-			vv.getModel().setGraphLayout(graphLayout);
-			mouseContext.setVisible(false);
-			mouseContext.setEnabled(false);
-			int size = mouseContext.getComponentCount();
-			for(int i = size-1;i>4;i--) {
-				mouseContext.remove(i);
-			}
-			graphLayout.lock(true);
-		}
-	}
-	class  TreeLayoutListener implements ActionListener {
-		VisualizationViewer<P2PVertex,P2PConnection> vv;
-		public TreeLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
-			this.vv = vv;
-		} 
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			TreeLayout<P2PVertex, P2PConnection> graphLayout = 
-				new TreeLayout<P2PVertex, P2PConnection>(P2PNetworkGraph.makeTreeGraph(fullGraph)) {
-				
-				@Override
-				public void setSize(Dimension size) {
-					// The set size method was being called, and it raised an exception every time
-				}
-			};
-			vv.getModel().setGraphLayout(graphLayout);
-			mouseContext.setVisible(false);
-			mouseContext.setEnabled(false);
-			int size = mouseContext.getComponentCount();
-			for(int i = size-1;i>4;i--) {
-				mouseContext.remove(i);
-			}
-			
-		}
-	}
-	class  BalloonLayoutListener implements ActionListener {
-		VisualizationViewer<P2PVertex,P2PConnection> vv;
-		public BalloonLayoutListener(VisualizationViewer<P2PVertex,P2PConnection> vv) {
-			this.vv = vv;
-		}
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			BalloonLayout<P2PVertex, P2PConnection> graphLayout = new BalloonLayout<P2PVertex, P2PConnection>(P2PNetworkGraph.makeTreeGraph(fullGraph));
-			graphLayout.setInitializer(new P2PVertexPlacer(layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
-			
-			vv.getModel().setGraphLayout(graphLayout);
-			mouseContext.setVisible(false);
-			mouseContext.setEnabled(false);
-			int size = mouseContext.getComponentCount();
-			for(int i = size-1;i>4;i--) {
-				mouseContext.remove(i);
-			}
-		}
-	}
-	
-	//[end] Layout Context Listeners
 	
 	//[start] Load Listener
 	class LoadListener implements ActionListener {
@@ -1273,12 +977,12 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 							fastSpeedSlider.setEnabled(false);
 							
 							//When loading a new Graph, if the collapsed document view has a tree layout it crashes because of setsize()
-							AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(fullGraph);
+							AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(graph.getReferenceGraph());
 							collapsedDocumentViewViewer.getModel().setGraphLayout(graphLayout);
 						}
 						myGraphEvolution = loader.getLogList();
-						fullGraph = loader.getFullP2PNetworkGraph();
-						dynamicGraph = loader.getDynamicP2PNetworkGraph();
+						graph = loader.getGraph();
+						//dynamicGraph = loader.getDynamicP2PNetworkGraph();
 						startGraph();
 						eventThread.setRobustMode(false);
 					}
@@ -1297,12 +1001,12 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		try {
 			eventThread.pause();
 			List<LogEvent> events;
-			synchronized(fullGraph) {
-				events = P2PNetworkGraphLoader.buildLogs(inStream, networkClient, fullGraph);
+			synchronized(graph.getReferenceGraph()) {
+				events = P2PNetworkGraphLoader.buildLogs(inStream, networkClient, graph);
 			}
 			if(!events.isEmpty()) {				
 				for(int i=0;i<events.size();i++) {
-					fullGraph.robustGraphEvent(events,i); //apply events to graph
+					graph.getReferenceGraph().robustGraphEvent(events,i); //apply events to graph
 				}//any events that didn't match up with the current graph will have been handled and new events created to compensate.
 				events.add(LogEvent.getEndEvent(events.get(events.size()-1)));
 				eventThread.addEvents(events);
@@ -1332,13 +1036,13 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 				fastSpeedSlider.setEnabled(false);
 				
 				//When loading a new Graph, if the collapsed document view has a tree layout it crashes because of setsize()
-				AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(fullGraph);
+				AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(graph.getReferenceGraph());
 				collapsedDocumentViewViewer.getModel().setGraphLayout(graphLayout);
 			}
 			
 			myGraphEvolution = loader.getLogList();
-			fullGraph = loader.getFullP2PNetworkGraph();
-			dynamicGraph = loader.getDynamicP2PNetworkGraph();
+			graph = loader.getGraph();
+			//dynamicGraph = loader.getDynamicP2PNetworkGraph();
 			startGraph();
 			eventThread.setRobustMode(true);
 		} catch (JDOMException e) {

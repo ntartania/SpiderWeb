@@ -19,6 +19,7 @@ public class PeerDocumentVertex extends P2PVertex {
 	//[start] Private Attributes
 	private int peer; // The peer number of the peer who published this document.
 	private boolean queryHit; // for state changing when a this document matches a query.
+	private String name;
 	//[end] Private Attributes
 	
 	//[start] Constructors
@@ -32,6 +33,7 @@ public class PeerDocumentVertex extends P2PVertex {
 		this.peer = peer;
 		this.label = new Integer(document.intValue() % 2000);
 		this.queryHit = false;
+		name = "P"+peer+":D"+getDocumentNumber();
 	}
 	//[end] Constructors
 	
@@ -72,7 +74,7 @@ public class PeerDocumentVertex extends P2PVertex {
 	//[start] Overridden Methods
 	@Override
 	public String toString() {
-		return "P"+peer+":D"+getDocumentNumber();
+		return name;
 	}
 	
 	@Override

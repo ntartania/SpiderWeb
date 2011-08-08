@@ -2,7 +2,7 @@
  * File:         P2PNetworkGraph.java
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
- * Last Changed: Date: 21/07/2011 
+ * Last Changed: Date: 05/08/2011 
  * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
  * 
  * This code was produced at Carleton University 2011
@@ -130,8 +130,8 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	 * @param from	peer 1 (vertex 1)
 	 * @param to	peer 2 (vertex 2)
 	 */
-	protected void connectPeers(int from, int to, Integer key) {
-		P2PConnection edge = new P2PConnection(P2PConnection.P2P,key);
+	protected void connectPeers(int from, int to, Integer edgeKey) {
+		P2PConnection edge = new P2PConnection(P2PConnection.P2P,edgeKey);
 		if(!containsEdge(edge)) {
 			addEdge(edge, getVertexInGraph(new PeerVertex(from)), getVertexInGraph(new PeerVertex(to)));
 		}
@@ -259,18 +259,18 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 
 	/**
 	 * Limited version of graphEvent for construction a graph for layout purposes
-	 * @param gev	The Log event which needs to be handled.
+	 * @param evt	The Log event which needs to be handled.
 	 */
-	public void graphConstructionEvent(LogEvent gev) {
-		if (gev.getType().equals("online")){
-			int peerNumber = gev.getParam(1);
+	public void graphEvent(LogEvent evt) {
+		if (evt.getType().equals("online")){
+			int peerNumber = evt.getParam(1);
 			//check to make sure peer is not online already
 			if(!isPeerOnline(peerNumber)) {
 				addPeer(peerNumber);
 			}
-		} else if(gev.getType().equals("connect")){
-			int peer1 = gev.getParam(1);
-			int peer2 = gev.getParam(2);
+		} else if(evt.getType().equals("connect")){
+			int peer1 = evt.getParam(1);
+			int peer2 = evt.getParam(2);
 			//check peers are online and that they are not already connected
 			//if peer is not online, come online
 			if(!isPeerOnline(peer1)) {
@@ -283,75 +283,75 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 				connectPeers(peer1, peer2);
 				connectPeers(peer2, peer1);
 			}
-		} else if(gev.getType().equals("publish")){
-			int peer = gev.getParam(1);
-			int document = gev.getParam(2);
+		} else if(evt.getType().equals("publish")){
+			int peer = evt.getParam(1);
+			int document = evt.getParam(2);
 			//check peer is online, check peer has not already published document
 			//if peer is not online, come online
 			if(!isPeerOnline(peer)) {
 				addPeer(peer);
 			}
 			addDocument(document, peer);
-		} else if(gev.getType().equals("linkdocument")) {
-			int doc1 = gev.getParam(1);
-			int doc2 = gev.getParam(2);
+		} else if(evt.getType().equals("linkdocument")) {
+			int doc1 = evt.getParam(1);
+			int doc2 = evt.getParam(2);
 			//check documents are both published
 			if(isDocumentPublished(doc1) && isDocumentPublished(doc2)) {
 				connectDocuments(doc1, doc2);
 			}
 		} 
 	}
+	
 
 	/**
 	 * Handles the Log Events which affect the structure of the graph.
-	 * @param gev				The Log event which needs to be handled.
+	 * @param evt				The Log event which needs to be handled.
 	 * @param forward			<code>true</code> if play-back is playing forward.
-	 * @param referenceGraph	The Graph to get edge numbers from.
 	 */
-	public void graphEvent(LogEvent gev, boolean forward, P2PNetworkGraph referenceGraph) {
+	public void graphEvent(LogEvent evt, boolean forward, P2PNetworkGraph referenceGraph) {
 		if(forward) {
-			if (gev.getType().equals("online")){
-				addPeer(gev.getParam(1));
-			} else if (gev.getType().equals("offline")){
-				removePeer(gev.getParam(1));
-			} else if(gev.getType().equals("connect")){
-				connectPeers(gev.getParam(1), gev.getParam(2), referenceGraph.findPeerConnection(gev.getParam(1), gev.getParam(2)).getKey());
-				connectPeers(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerConnection(gev.getParam(2), gev.getParam(1)).getKey());
-			} else if(gev.getType().equals("disconnect")){
-				disconnectPeers(gev.getParam(1), gev.getParam(2));
-				disconnectPeers(gev.getParam(2), gev.getParam(1));
-			} else if(gev.getType().equals("publish")){
-				addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
-				addPeerDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey(),
-						referenceGraph.findDocToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
-			} else if(gev.getType().equals("remove")){
-				removeDocument(gev.getParam(2), gev.getParam(1));
-			} else if(gev.getType().equals("linkdocument")) {
-				connectDocuments(gev.getParam(1), gev.getParam(2),referenceGraph.findDocumentToDocumentConnection(gev.getParam(1), gev.getParam(2)).getKey());
-			} else if(gev.getType().equals("delinkdocument")) {
-				disconnectDocuments(gev.getParam(1), gev.getParam(2));
+			if (evt.getType().equals("online")){
+				addPeer(evt.getParam(1));
+			} else if (evt.getType().equals("offline")){
+				removePeer(evt.getParam(1));
+			} else if(evt.getType().equals("connect")){
+				connectPeers(evt.getParam(1), evt.getParam(2), referenceGraph.findPeerConnection(evt.getParam(1), evt.getParam(2)).getKey());
+				connectPeers(evt.getParam(2), evt.getParam(1), referenceGraph.findPeerConnection(evt.getParam(2), evt.getParam(1)).getKey());
+			} else if(evt.getType().equals("disconnect")){
+				disconnectPeers(evt.getParam(1), evt.getParam(2));
+				disconnectPeers(evt.getParam(2), evt.getParam(1));
+			} else if(evt.getType().equals("publish")){
+				addDocument(evt.getParam(2), evt.getParam(1), referenceGraph.findPeerToDocConnection(evt.getParam(1), evt.getParam(2)).getKey());
+				addPeerDocument(evt.getParam(2), evt.getParam(1), referenceGraph.findPeerToPeerDocConnection(evt.getParam(1), evt.getParam(2)).getKey(),
+						referenceGraph.findDocToPeerDocConnection(evt.getParam(1), evt.getParam(2)).getKey());
+			} else if(evt.getType().equals("remove")){
+				removeDocument(evt.getParam(2), evt.getParam(1));
+			} else if(evt.getType().equals("linkdocument")) {
+				connectDocuments(evt.getParam(1), evt.getParam(2),referenceGraph.findDocumentToDocumentConnection(evt.getParam(1), evt.getParam(2)).getKey());
+			} else if(evt.getType().equals("delinkdocument")) {
+				disconnectDocuments(evt.getParam(1), evt.getParam(2));
 			}
 		} else {
-			if (gev.getType().equals("online")){
-				removePeer(gev.getParam(1));
-			} else if (gev.getType().equals("offline")){
-				addPeer(gev.getParam(1));
-			} else if(gev.getType().equals("connect")){
-				disconnectPeers(gev.getParam(1), gev.getParam(2));
-				disconnectPeers(gev.getParam(2), gev.getParam(1));
-			} else if(gev.getType().equals("disconnect")){
-				connectPeers(gev.getParam(1), gev.getParam(2), referenceGraph.findPeerConnection(gev.getParam(1), gev.getParam(2)).getKey());
-				connectPeers(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerConnection(gev.getParam(2), gev.getParam(1)).getKey());
-			} else if(gev.getType().equals("publish")){
-				removeDocument(gev.getParam(2), gev.getParam(1));
-			} else if(gev.getType().equals("remove")){
-				addDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
-				addPeerDocument(gev.getParam(2), gev.getParam(1), referenceGraph.findPeerToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey(),
-						referenceGraph.findDocToPeerDocConnection(gev.getParam(1), gev.getParam(2)).getKey());
-			} else if(gev.getType().equals("linkdocument")) {
-				disconnectDocuments(gev.getParam(1), gev.getParam(2));
-			} else if(gev.getType().equals("delinkdocument")) {
-				connectDocuments(gev.getParam(1), gev.getParam(2),referenceGraph.findDocumentToDocumentConnection(gev.getParam(1), gev.getParam(2)).getKey());
+			if (evt.getType().equals("online")){
+				removePeer(evt.getParam(1));
+			} else if (evt.getType().equals("offline")){
+				addPeer(evt.getParam(1));
+			} else if(evt.getType().equals("connect")){
+				disconnectPeers(evt.getParam(1), evt.getParam(2));
+				disconnectPeers(evt.getParam(2), evt.getParam(1));
+			} else if(evt.getType().equals("disconnect")){
+				connectPeers(evt.getParam(1), evt.getParam(2), referenceGraph.findPeerConnection(evt.getParam(1), evt.getParam(2)).getKey());
+				connectPeers(evt.getParam(2), evt.getParam(1), referenceGraph.findPeerConnection(evt.getParam(2), evt.getParam(1)).getKey());
+			} else if(evt.getType().equals("publish")){
+				removeDocument(evt.getParam(2), evt.getParam(1));
+			} else if(evt.getType().equals("remove")){
+				addDocument(evt.getParam(2), evt.getParam(1), referenceGraph.findPeerToDocConnection(evt.getParam(1), evt.getParam(2)).getKey());
+				addPeerDocument(evt.getParam(2), evt.getParam(1), referenceGraph.findPeerToPeerDocConnection(evt.getParam(1), evt.getParam(2)).getKey(),
+						referenceGraph.findDocToPeerDocConnection(evt.getParam(1), evt.getParam(2)).getKey());
+			} else if(evt.getType().equals("linkdocument")) {
+				disconnectDocuments(evt.getParam(1), evt.getParam(2));
+			} else if(evt.getType().equals("delinkdocument")) {
+				connectDocuments(evt.getParam(1), evt.getParam(2),referenceGraph.findDocumentToDocumentConnection(evt.getParam(1), evt.getParam(2)).getKey());
 			}
 		}
 	}
@@ -365,120 +365,123 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 	 * @param currentIndex The index of the event to handle.
 	 */
 	public void robustGraphEvent(List<LogEvent> events, int currentIndex) {
-		LogEvent gev = events.get(currentIndex);
+		LogEvent evt = events.get(currentIndex);
 
-		if (gev.getType().equals("online")){
-			int peerNumber = gev.getParam(1);
+		if (evt.getType().equals("online")){
+			int peerNumber = evt.getParam(1);
 			//check to make sure peer is not online already
 			if(!isPeerOnline(peerNumber)) {
 				addPeer(peerNumber);
 			}
-		} else if (gev.getType().equals("offline")){
-			int peerNumber = gev.getParam(1);
+		} else if (evt.getType().equals("offline")){
+			int peerNumber = evt.getParam(1);
 			//check to make sure peer is online
 			if(isPeerOnline(peerNumber)) {
 				removePeer(peerNumber);
 			}
-		} else if(gev.getType().equals("connect")){
-			int peer1 = gev.getParam(1);
-			int peer2 = gev.getParam(2);
+		} else if(evt.getType().equals("connect")){
+			int peer1 = evt.getParam(1);
+			int peer2 = evt.getParam(2);
 			//check peers are online and that they are not already connected
 			//if peer is not online, come online
 			if(!isPeerOnline(peer1)) {
-				addPeerOnlineEvent(events,gev.getTime()-100,peer1);
+				addPeerOnlineEvent(events,evt.getTime()-100,peer1);
 				addPeer(peer1);
 			}
 			if(!isPeerOnline(peer2)) {
-				addPeerOnlineEvent(events,gev.getTime()-100,peer2);
+				addPeerOnlineEvent(events,evt.getTime()-100,peer2);
 				addPeer(peer2);
 			}
 			if(!arePeersConnected(peer1, peer2)) {
 				connectPeers(peer1, peer2);
 				connectPeers(peer2, peer1);
 			}
-		} else if(gev.getType().equals("disconnect")){
-			int peer1 = gev.getParam(1);
-			int peer2 = gev.getParam(2);
+		} else if(evt.getType().equals("disconnect")){
+			int peer1 = evt.getParam(1);
+			int peer2 = evt.getParam(2);
 			//check peers are online and that they are already connected
 			//if peer is not online, come online
 			if(!isPeerOnline(peer1)) {
-				addPeerOnlineEvent(events,gev.getTime()-100,peer1);
+				addPeerOnlineEvent(events,evt.getTime()-100,peer1);
 				addPeer(peer1);
 			}
 			if(!isPeerOnline(peer2)) {
-				addPeerOnlineEvent(events,gev.getTime()-100,peer2);
+				addPeerOnlineEvent(events,evt.getTime()-100,peer2);
 				addPeer(peer2);
 			}
 			if(arePeersConnected(peer1, peer2)) {
 				disconnectPeers(peer1, peer2);
 				disconnectPeers(peer2, peer1);
 			}
-		} else if(gev.getType().equals("publish")){		
-			int peer = gev.getParam(1);
-			int document = gev.getParam(2);
+		} else if(evt.getType().equals("publish")){		
+			int peer = evt.getParam(1);
+			int document = evt.getParam(2);
 			//check peer is online, check peer has not already published document
 			//if peer is not online, come online
 			if(!isPeerOnline(peer)) {
-				addPeerOnlineEvent(events,gev.getTime()-100,peer);
+				addPeerOnlineEvent(events,evt.getTime()-100,peer);
 				addPeer(peer);
 			}
 			if(!isDocumentPublished(document)) {
 				addDocument(document, peer);
 			}
-		} else if(gev.getType().equals("remove")){
-			int peer = gev.getParam(1);
-			int document = gev.getParam(2);
+		} else if(evt.getType().equals("remove")){
+			int peer = evt.getParam(1);
+			int document = evt.getParam(2);
 			//check peer is online, check peer has published document
 			//if peer is not online, come online
 			if(!isPeerOnline(peer)) {
-				addPeerOnlineEvent(events,gev.getTime()-100,peer);
+				addPeerOnlineEvent(events,evt.getTime()-100,peer);
 				addPeer(peer);
 			}
 			if(isDocumentPublished(document)) {
 				removeDocument(document, peer);
 			}
-		} else if(gev.getType().equals("linkdocument")) {
-			int doc1 = gev.getParam(1);
-			int doc2 = gev.getParam(2);
+		} else if(evt.getType().equals("linkdocument")) {
+			int doc1 = evt.getParam(1);
+			int doc2 = evt.getParam(2);
 			//check documents are both published if not, it is impossible to know who published the 
 			//documents making adding them to the graph difficult
 			if(isDocumentPublished(doc1) && isDocumentPublished(doc2)) {
 				connectDocuments(doc1, doc2);
 			}
-		} else if(gev.getType().equals("delinkdocument")) {
-			int doc1 = gev.getParam(1);
-			int doc2 = gev.getParam(2);
+		} else if(evt.getType().equals("delinkdocument")) {
+			int doc1 = evt.getParam(1);
+			int doc2 = evt.getParam(2);
 			//check documents are both published if not, it is impossible to know who published the 
 			//documents making adding them to the graph difficult
 			if(isDocumentPublished(doc1) && isDocumentPublished(doc2)) {
 				disconnectDocuments(doc1, doc2);
 			}
-		} else if(gev.getType().endsWith("query")) { //use ends with so 'un'-prefix (unquery etc.) will also satisfy
-			int peer = gev.getParam(1);
+		} else if(evt.getType().endsWith("query")) { //use ends with so 'un'-prefix (unquery etc.) will also satisfy
+			int peer = evt.getParam(1);
 			if(!isPeerOnline(peer)) {
-				addPeerOnlineEvent(events,gev.getTime()-100,peer);
+				addPeerOnlineEvent(events,evt.getTime()-100,peer);
 				addPeer(peer);
 			}
-		} else if(gev.getType().endsWith("queryhit")) {
-			int peer = gev.getParam(1);
-			int document = gev.getParam(2);
+		} else if(evt.getType().endsWith("queryhit")) {
+			int peer = evt.getParam(1);
+			int document = evt.getParam(2);
 			if(!isPeerOnline(peer)) {
-				addPeerOnlineEvent(events,gev.getTime()-100,peer);
+				addPeerOnlineEvent(events,evt.getTime()-100,peer);
 				addPeer(peer);
 			}
 			if(!isDocumentPublished(document)) {
-				addDocumentPublish(events,gev.getTime()-100,peer,document);
+				addDocumentPublish(events,evt.getTime()-100,peer,document);
 				addDocument(document, peer);
 			}
 			
-		} else if(gev.getType().endsWith("queryreachespeer")) {
-			int peer = gev.getParam(1);
+		} else if(evt.getType().endsWith("queryreachespeer")) {
+			int peer = evt.getParam(1);
 			if(!isPeerOnline(peer)) {
-				addPeerOnlineEvent(events,gev.getTime()-100,peer);
+				addPeerOnlineEvent(events,evt.getTime()-100,peer);
 				addPeer(peer);
 			}
 		}
 	}
+	
+
+	
 	
 	/**
 	 * Helper method adds an "online" event into the list of LogEvents
@@ -545,5 +548,4 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 			}
 		}
 	}
-
 }

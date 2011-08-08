@@ -25,6 +25,7 @@ public class P2PConnection/* implements Comparable<P2PConnection> */{
 	private int mytypeandstate;
 	//private P2PVertex peer;
 	private Integer key;
+	private String edgeName;
 	
 	//not sure how useful this will be
 	public static P2PConnection connectPeers(Integer p1, Integer p2, int count){
@@ -39,6 +40,7 @@ public class P2PConnection/* implements Comparable<P2PConnection> */{
 	public P2PConnection(int type, Integer key){
 		mytypeandstate = type;
 		this.key = key;
+		edgeName = "edge "+key.toString();
 	}
 	
 	/**
@@ -122,7 +124,7 @@ public class P2PConnection/* implements Comparable<P2PConnection> */{
 	}*/
 
 	public String toString(){
-		return "edge "+key.toString();
+		return edgeName;
 	}
 	public boolean isQuerying() {
 		

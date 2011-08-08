@@ -2,7 +2,7 @@
  * File:         LogEventListBuilder.java
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
- * Last Changed: Date: 26/07/2011 
+ * Last Changed: Date: 08/08/2011 
  * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
  * 
  * This code was produced at Carleton University 2011
@@ -25,7 +25,7 @@ import java.util.List;
  * It is used by the P2PNetworkGraphLoader to load graphs from text files.
  * 
  * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
- * @version Date: 21/07/2011 
+ * @version Date: 08/08/2011 
  */
 public class LogEventListBuilder extends ProgressAdapter {
 	
@@ -47,8 +47,8 @@ public class LogEventListBuilder extends ProgressAdapter {
 
 	//[start] Getters
 	
-	public P2PNetworkGraph getFullGraph() {
-		return fullGraph;
+	public ReferencedNetworkGraph getGraph() {
+		return new ReferencedNetworkGraph(fullGraph);
 	}
 	//[end] Getters
 	
@@ -82,7 +82,7 @@ public class LogEventListBuilder extends ProgressAdapter {
 				LogEvent gev = new LogEvent(str); //create the log event
 				
 				if (gev.isConstructing()){ //construct the fullGraph as we go
-					fullGraph.graphConstructionEvent(gev);
+					fullGraph.graphEvent(gev);
 				}
 				
 				createColouringEvents(gev,colouringEvents,queryPeers, tempGraph); //add in colouring events if needed

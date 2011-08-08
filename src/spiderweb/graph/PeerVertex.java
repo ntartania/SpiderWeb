@@ -28,6 +28,7 @@ public class PeerVertex extends P2PVertex {
 	//[start] Private Attributes
 	private List<Integer> outgoingQueries; //List of the queries that this peer has sent.
 	private List<Integer> incomingQueries; //List of the queries that have reached this peer.
+	private String name;
 	//[end] Private Attributes
 	
 	//[start] Constructors
@@ -40,6 +41,7 @@ public class PeerVertex extends P2PVertex {
 		super(key);
 		outgoingQueries = new LinkedList<Integer>();
 		incomingQueries = new LinkedList<Integer>();
+		name = "P"+super.toString();
 	}
 	
 	/**
@@ -148,7 +150,7 @@ public class PeerVertex extends P2PVertex {
 	
 	@Override
 	public String toString() {
-		return "P"+super.toString();
+		return name;
 	}
 	//[end] Overridden Methods
 }

@@ -21,6 +21,8 @@ package spiderweb.graph;
  */
 public class DocumentVertex extends P2PVertex {
 	
+	private String name;
+	
 	//[start] Constructors
 	
 	/**
@@ -33,6 +35,7 @@ public class DocumentVertex extends P2PVertex {
 		//this.publisher = null; //remove this line
 		this.label = new Integer(key.intValue() % 1000);
 		//this.queryHit = false;
+		name = "D"+super.toString();
 	}
 	
 	/**
@@ -74,7 +77,7 @@ public class DocumentVertex extends P2PVertex {
 	
 	@Override
 	public String toString() {
-		return "D"+super.toString();
+		return name;
 	}
 	//[end] Overridden Methods
 }
