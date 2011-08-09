@@ -144,12 +144,14 @@ public class GraphPopupMenu extends JPopupMenu {
 			}
 			newLayout.setInitializer(currentViewer.getGraphLayout());
 			newLayout.setSize(currentViewer.getSize());
+			
+			//animate between one layout and the next
 			LayoutTransition<P2PVertex,P2PConnection> transition =
 				new LayoutTransition<P2PVertex,P2PConnection>(currentViewer, currentLayout, newLayout);
 			Animator transitionAnimator = new Animator(transition);
-			transitionAnimator.start();
+			transitionAnimator.start(); 
 			
-			stopAnimateTimer.schedule(new StopAnimateTask(transitionAnimator, newLayout), 5000);
+			stopAnimateTimer.schedule(new StopAnimateTask<P2PVertex,P2PConnection>(transitionAnimator, newLayout), 5000);
 			
 			currentViewer.getRenderContext().getMultiLayerTransformer().setToIdentity();
 			currentViewer.repaint();
@@ -167,21 +169,32 @@ public class GraphPopupMenu extends JPopupMenu {
 		setEnabled(false);
 	}
 
-	private class StopAnimateTask extends TimerTask {
+	/**
+	 * task class which stops the layout transition animator and locks the verices on the layout.
+	 * 
+	 * 
+	 * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+	 */
+	private class StopAnimateTask<V, E> extends TimerTask {
 
 		Animator animatorToStop;
-		Layout<P2PVertex,P2PConnection> layoutToFreeze;
+		Layout<V, E> layoutToLock;
 		
-		public StopAnimateTask(Animator animatorToStop, Layout<P2PVertex,P2PConnection> layoutToFreeze) {
+		/**
+		 * 
+		 * @param animatorToStop
+		 * @param layoutToLock
+		 */
+		public StopAnimateTask(Animator animatorToStop, Layout<V,E> layoutToLock) {
 			this.animatorToStop = animatorToStop;
-			this.layoutToFreeze = layoutToFreeze;
+			this.layoutToLock = layoutToLock;
 		}
 		
 		@Override
 		public void run() {
 			animatorToStop.stop();
-			for(P2PVertex v : layoutToFreeze.getGraph().getVertices()) {
-				layoutToFreeze.lock(v, true);
+			for(V v : layoutToLock.getGraph().getVertices()) {
+				layoutToLock.lock(v, true);
 			}
 		}
 		
