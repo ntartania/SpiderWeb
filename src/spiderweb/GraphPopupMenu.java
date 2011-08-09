@@ -66,7 +66,7 @@ public class GraphPopupMenu extends JPopupMenu {
 		radialTreeLayout = new JMenuItem("Radial Tree Layout");
 		balloonLayout = new JMenuItem("Balloon Layout"); //Layouts for collapsed document view
 		treeLayout = new JMenuItem("Tree Layout");
-		treeSeparator = new JMenuItem("Tree Type Layouts");
+		treeSeparator = new JMenuItem("Tree Type Layouts:");
 		treeSeparator.setEnabled(false);
 
 		picking.addActionListener(listener);
@@ -143,7 +143,9 @@ public class GraphPopupMenu extends JPopupMenu {
 				newLayout = new CircleLayout<P2PVertex,P2PConnection>(graph);
 			}
 			newLayout.setInitializer(currentViewer.getGraphLayout());
-			newLayout.setSize(currentViewer.getSize());
+			if(!newLayout.getClass().equals(TreeLayout.class)) { //Tree layout cannot call setSize()
+				newLayout.setSize(currentViewer.getSize());
+			}
 			
 			//animate between one layout and the next
 			LayoutTransition<P2PVertex,P2PConnection> transition =
