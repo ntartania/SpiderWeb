@@ -51,6 +51,7 @@ import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -800,7 +801,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
     }
     //[end] Tabs Listener
 	
-	//[start] Relaxer and mouse context listener
+	//[start] mouse context listener
 	 /**
 	 * an actionlistener that defines the use of a button to stop the spring-layout processing
 	 * @author adavoust
@@ -811,15 +812,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		@Override 
 		public void mousePressed(MouseEvent e) {
 			currentViewer = (PersonalizedVisualizationViewer) e.getComponent();
-			if (e.isPopupTrigger()) {
-                popupMenu.showPopupMenu(e.getX(), e.getY());
-            }
-        }
-
-        @Override
-        public void mouseReleased(MouseEvent e) {
-            //Windows only shows the popup menu on right-click release.  Silly Windows
-            if (System.getProperty("os.name").toLowerCase().startsWith("windows") && e.isPopupTrigger()){
+			if (SwingUtilities.isRightMouseButton(e)) {
                 popupMenu.showPopupMenu(e.getX(), e.getY());
             }
         }
@@ -829,7 +822,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
         }
     
 	}
-	//[end] Relaxer and mouse context listener
+	//[end] mouse context listener
 
 	//[start] Fast Reverse Button
 	class FastReverseButtonListener implements ActionListener {

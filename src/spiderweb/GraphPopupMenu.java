@@ -10,11 +10,15 @@
 package spiderweb;
 
 import edu.uci.ics.jung.algorithms.layout.*;
+import edu.uci.ics.jung.visualization.VisualizationViewer;
 import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
 import edu.uci.ics.jung.visualization.control.ModalGraphMouse.Mode;
+import edu.uci.ics.jung.visualization.layout.LayoutTransition;
+import edu.uci.ics.jung.visualization.util.Animator;
 
-import java.awt.Component;
 import java.awt.event.ActionListener;
+import java.util.TimerTask;
+import java.util.Timer;
 
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -40,21 +44,30 @@ public class GraphPopupMenu extends JPopupMenu {
 	private DefaultModalGraphMouse<P2PVertex,P2PConnection> gm;
 	private P2PGraphViewer applet;
 
-	JMenuItem balloonLayout = new JMenuItem("Balloon Layout");
-	JMenuItem treeLayout = new JMenuItem("Tree Layout");
-
+	private JMenuItem balloonLayout;
+	private JMenuItem treeLayout;
+	private JMenuItem radialTreeLayout;
+	private JMenuItem treeSeparator;
+	
+	Timer stopAnimateTimer;
+	
 	public GraphPopupMenu(P2PGraphViewer applet, final DefaultModalGraphMouse<P2PVertex,P2PConnection> gm, 
 			ActionListener listener) {
 		this.applet = applet;
 		this.gm = gm;
 		JMenuItem picking = new JMenuItem("Picking");
 		JMenuItem transforming = new JMenuItem("Transforming");
-		JMenuItem kkLayout = new JMenuItem("KK Layout");
+		JMenuItem circleLayout = new JMenuItem("Circle Layout");
 		JMenuItem frLayout = new JMenuItem("FR Layout");
 		JMenuItem isomLayout = new JMenuItem("ISOM Layout");
-		JMenuItem circleLayout = new JMenuItem("Circle Layout");
-		balloonLayout = new JMenuItem("Balloon Layout");
+		JMenuItem kkLayout = new JMenuItem("KK Layout");
+		JMenuItem springLayout = new JMenuItem("Spring Layout");
+		
+		radialTreeLayout = new JMenuItem("Radial Tree Layout");
+		balloonLayout = new JMenuItem("Balloon Layout"); //Layouts for collapsed document view
 		treeLayout = new JMenuItem("Tree Layout");
+		treeSeparator = new JMenuItem("Tree Type Layouts");
+		treeSeparator.setEnabled(false);
 
 		picking.addActionListener(listener);
 		transforming.addActionListener(listener);
@@ -62,8 +75,10 @@ public class GraphPopupMenu extends JPopupMenu {
 		frLayout.addActionListener(listener);
 		isomLayout.addActionListener(listener);
 		circleLayout.addActionListener(listener);
+		springLayout.addActionListener(listener);
 		balloonLayout.addActionListener(listener);
 		treeLayout.addActionListener(listener);
+		radialTreeLayout.addActionListener(listener);
 
 		add("Mouse Mode:").setEnabled(false);
 		add(picking);
@@ -74,7 +89,9 @@ public class GraphPopupMenu extends JPopupMenu {
 		add(frLayout);
 		add(isomLayout);
 		add(kkLayout);
+		add(springLayout);
 
+		stopAnimateTimer = new Timer("freeze layout timer", true);
 	}
 
 	/**
@@ -84,12 +101,16 @@ public class GraphPopupMenu extends JPopupMenu {
 		setEnabled(true);
 		PersonalizedVisualizationViewer currentViewer = applet.getCurrentViewer();
 		if(!currentViewer.getName().equals("Collapsed Document View")) {
+			remove(treeSeparator);
 			remove(balloonLayout);
 			remove(treeLayout);
+			remove(radialTreeLayout);
 		}
 		else {
+			add(treeSeparator);
 			add(balloonLayout);
 			add(treeLayout);
+			add(radialTreeLayout);
 		}
 		show(currentViewer, x, y);
 	}
@@ -100,29 +121,39 @@ public class GraphPopupMenu extends JPopupMenu {
 	 */
 	public void popupMenuEvent(String text) {
 		if (text.contains(("Layout"))) {
-			PersonalizedVisualizationViewer currentViewer = applet.getCurrentViewer();
-			Layout<P2PVertex,P2PConnection> graphLayout = null;
+			VisualizationViewer<P2PVertex,P2PConnection> currentViewer = applet.getCurrentViewer();
+			Layout<P2PVertex,P2PConnection> currentLayout = currentViewer.getGraphLayout();
+			Layout<P2PVertex,P2PConnection> newLayout = null;
 			P2PNetworkGraph graph = applet.getGraph().getReferenceGraph();
 			if (text.equals("FR Layout")) {
-				graphLayout = new FRLayout<P2PVertex,P2PConnection>(graph, currentViewer.getSize());
+				newLayout = new FRLayout<P2PVertex,P2PConnection>(graph, currentViewer.getSize());
 			} else if (text.equals("ISOM Layout")) {
-				graphLayout = new ISOMLayout<P2PVertex,P2PConnection>(graph);
+				newLayout = new ISOMLayout<P2PVertex,P2PConnection>(graph);
 			} else if (text.equals("KK Layout")) {
-				graphLayout = new KKLayout<P2PVertex,P2PConnection>(graph);
+				newLayout = new KKLayout<P2PVertex,P2PConnection>(graph);
+			} else if (text.equals("Spring Layout")) {
+				newLayout = new SpringLayout2<P2PVertex,P2PConnection>(graph);
 			} else if (text.equals("Balloon Layout")) {
-				graphLayout = new BalloonLayout<P2PVertex, P2PConnection>(P2PNetworkGraph.makeTreeGraph(graph));
-				//graphLayout.setInitializer(new P2PVertexPlacer(layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
+				newLayout = new BalloonLayout<P2PVertex, P2PConnection>(P2PNetworkGraph.makeTreeGraph(graph));
+			} else if (text.equals("Radial Tree Layout")) {
+				newLayout = new RadialTreeLayout<P2PVertex,P2PConnection>(P2PNetworkGraph.makeTreeGraph(graph));
 			} else if (text.equals("Tree Layout")) {
-				graphLayout = new TreeLayout<P2PVertex,P2PConnection>(P2PNetworkGraph.makeTreeGraph(graph));
-			} else {
-				graphLayout = new CircleLayout<P2PVertex,P2PConnection>(graph);
+				newLayout = new TreeLayout<P2PVertex,P2PConnection>(P2PNetworkGraph.makeTreeGraph(graph));
+			} else { //use circle layout as default as it is fast
+				newLayout = new CircleLayout<P2PVertex,P2PConnection>(graph);
 			}
-			currentViewer.getModel().setGraphLayout(graphLayout);
+			newLayout.setInitializer(currentViewer.getGraphLayout());
+			newLayout.setSize(currentViewer.getSize());
+			LayoutTransition<P2PVertex,P2PConnection> transition =
+				new LayoutTransition<P2PVertex,P2PConnection>(currentViewer, currentLayout, newLayout);
+			Animator transitionAnimator = new Animator(transition);
+			transitionAnimator.start();
 			
-			for(P2PVertex v : graphLayout.getGraph().getVertices()) {
-				graphLayout.lock(v, true);
-			} // the lock all method does not exist in the layout interface
-			//graphLayout.lock(true);
+			stopAnimateTimer.schedule(new StopAnimateTask(transitionAnimator, newLayout), 5000);
+			
+			currentViewer.getRenderContext().getMultiLayerTransformer().setToIdentity();
+			currentViewer.repaint();
+			
 		} else if (text.equals("Picking")) {
 			gm.setMode(Mode.PICKING);
 		} else if (text.equals("Transforming")) {
@@ -136,4 +167,23 @@ public class GraphPopupMenu extends JPopupMenu {
 		setEnabled(false);
 	}
 
+	private class StopAnimateTask extends TimerTask {
+
+		Animator animatorToStop;
+		Layout<P2PVertex,P2PConnection> layoutToFreeze;
+		
+		public StopAnimateTask(Animator animatorToStop, Layout<P2PVertex,P2PConnection> layoutToFreeze) {
+			this.animatorToStop = animatorToStop;
+			this.layoutToFreeze = layoutToFreeze;
+		}
+		
+		@Override
+		public void run() {
+			animatorToStop.stop();
+			for(P2PVertex v : layoutToFreeze.getGraph().getVertices()) {
+				layoutToFreeze.lock(v, true);
+			}
+		}
+		
+	}
 }
