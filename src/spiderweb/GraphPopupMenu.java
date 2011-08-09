@@ -1,7 +1,7 @@
 /*
  * File:         GraphPopupMenu.java
  * Created:      05/08/2011
- * Last Changed: Date: 5/08/2011 
+ * Last Changed: Date: 9/08/2011 
  * Author:       Andrew O'Hara
  * 				 Matthew Smith
  * 
@@ -172,8 +172,12 @@ public class GraphPopupMenu extends JPopupMenu {
 	/**
 	 * task class which stops the layout transition animator and locks the verices on the layout.
 	 * 
-	 * 
+	 * This class can run as a java.util.Timer Timer Task 
 	 * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+	 * @param <V> The type of graph Vertex used in the layout
+	 * @param <E> The type of graph Edge used in the layout
+	 * @see java.util.Timer
+	 * @see java.util.TimerTask
 	 */
 	private class StopAnimateTask<V, E> extends TimerTask {
 
@@ -181,9 +185,9 @@ public class GraphPopupMenu extends JPopupMenu {
 		Layout<V, E> layoutToLock;
 		
 		/**
-		 * 
-		 * @param animatorToStop
-		 * @param layoutToLock
+		 * This Task stops the animator and locks all the vertices in graph for the passed layout.
+		 * @param animatorToStop The Layout Animator used for the transition
+		 * @param layoutToLock The new layout being transitioned to
 		 */
 		public StopAnimateTask(Animator animatorToStop, Layout<V,E> layoutToLock) {
 			this.animatorToStop = animatorToStop;
