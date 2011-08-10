@@ -39,7 +39,8 @@ public class EventPlayer implements ActionListener{
 	private int fastMultiplier = 10;
 
 	private PlayState state;
-
+	private PlayState prevState;
+	
 	private List<LogEvent> myEventList;
 
 	private List<EventPlayerListener> my_listeners;
@@ -62,6 +63,7 @@ public class EventPlayer implements ActionListener{
 		myEventList = eventlist;
 		current_index = 0; 
 		state = PlayState.FORWARD;
+		prevState = PlayState.FORWARD;
 		//timeCounter = new TimeCounter(speed,eventlist.getFirst().getTime(),eventlist.getFirst().getTime(),eventlist.getLast().getTime());
 		timeCounter = new TimeCounter(speed,0,0,eventlist.get(eventlist.size()-1).getTime());
 		my_listeners = new LinkedList<EventPlayerListener>();
@@ -75,6 +77,7 @@ public class EventPlayer implements ActionListener{
 		myEventList = new ArrayList<LogEvent>();
 		current_index = 0; 
 		state = PlayState.PAUSE;
+		prevState = PlayState.PAUSE;
 		timeCounter = new TimeCounter(0,0,0,0);
 		my_listeners = new LinkedList<EventPlayerListener>();
 		playable = false;
@@ -183,7 +186,7 @@ public class EventPlayer implements ActionListener{
 			epl.playbackFastReverse();
 		}
 		if(state != PlayState.FASTREVERSE) {
-			PlayState prevState = state;
+			prevState = state;
 			state = PlayState.FASTREVERSE;
 			timeCounter.setIncrement(-speed*fastMultiplier);
 			wakeup(prevState);
@@ -195,7 +198,7 @@ public class EventPlayer implements ActionListener{
 			epl.playbackReverse();
 		}
 		if(state != PlayState.REVERSE) {
-			PlayState prevState = state;
+			prevState = state;
 			state = PlayState.REVERSE;
 			timeCounter.setIncrement(-speed);
 			wakeup(prevState);
@@ -219,7 +222,7 @@ public class EventPlayer implements ActionListener{
 			epl.playbackForward();
 		}
 		if(state != PlayState.FORWARD) {
-			PlayState prevState = state;
+			prevState = state;
 			state = PlayState.FORWARD;
 			timeCounter.setIncrement(speed);
 			wakeup(prevState);
@@ -241,6 +244,7 @@ public class EventPlayer implements ActionListener{
 			epl.playbackPause();
 		}
 		if(state != PlayState.PAUSE) {
+			prevState = state;
 			state = PlayState.PAUSE;
 			notify();
 			//schedule.stop();
@@ -576,6 +580,11 @@ public class EventPlayer implements ActionListener{
 		myEventList.addAll(events);
 		playbackSlider.setMaximum((int) myEventList.get(myEventList.size()-1).getTime());
 		timeCounter.setUpperBound(myEventList.get(myEventList.size()-1).getTime());
+		if(state.equals(PlayState.PAUSE)) {
+			for(EventPlayerListener epl : my_listeners) {
+				epl.playbackPause();
+			}
+		}
 	}
 
 	public long getCurrentTime() {

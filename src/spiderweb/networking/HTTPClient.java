@@ -62,17 +62,26 @@ public class HTTPClient implements ActionListener{
 	
 	public void startNetwork(String serverURL) {
 		this.serverURL = serverURL;
-		try {
-			getGraph();
-			connected = true;
-		} catch (Exception e) {
-			connected = false;
-			JOptionPane.showMessageDialog(null, "Could not open connection.", "Error", JOptionPane.ERROR_MESSAGE);
-			//e.printStackTrace();
-		}
-		if(connected) {
-			networkScheduler.start();
-		}
+		Thread starterThread = new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				
+				try {
+					getGraph();
+					connected = true;
+				} catch (Exception e) {
+					connected = false;
+					JOptionPane.showMessageDialog(null, "Could not open connection.", "Error", JOptionPane.ERROR_MESSAGE);
+					//e.printStackTrace();
+				}
+				if(connected) {
+					networkScheduler.start();
+				}
+			}
+			
+		});
+		starterThread.start();
 	}
 	
 	public void closeNetwork() {

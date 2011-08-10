@@ -206,9 +206,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 				
 				if(option != null ) {
 					if(option.startsWith("http://")){
-						//networkClient.closeNetwork();
 						networkClient.startNetwork(option);
-						//client.addNetworkListener();
 					}
 					else {
 						JOptionPane.showMessageDialog(null, "Invalid URL", "Error", JOptionPane.ERROR_MESSAGE);
@@ -777,10 +775,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	
 	@Override
 	public void doRepaint() {
-		fullViewViewer.repaint();
-		collapsedDocumentViewViewer.repaint();
-		collapsedPeerViewViewer.repaint();
-		collapsedPeerAndDocumentViewViewer.repaint();
+		currentViewer.repaint();
 	}
 	
 	//[end] EventPlayer Handlers
@@ -992,12 +987,13 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	@Override
 	public synchronized void incomingLogEvents(InputStream inStream) {
 		try {
-			eventThread.pause();
+			
 			List<LogEvent> events;
 			synchronized(graph.getReferenceGraph()) {
 				events = P2PNetworkGraphLoader.buildLogs(inStream, networkClient, graph);
 			}
-			if(!events.isEmpty()) {				
+			if(!events.isEmpty()) {	
+				//eventThread.pause();
 				for(int i=0;i<events.size();i++) {
 					graph.getReferenceGraph().robustGraphEvent(events,i); //apply events to graph
 				}//any events that didn't match up with the current graph will have been handled and new events created to compensate.
