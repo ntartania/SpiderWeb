@@ -202,15 +202,12 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			public void actionPerformed(ActionEvent arg0) {
 				pauseButton.doClick();
 				
-				String option = (String)JOptionPane.showInputDialog(null, "Enter a URL:", "http://134.117.60.66:8080/graphServer");
+				String url = ConnectDialog.getConnectURL();
 				
-				if(option != null ) {
-					if(option.startsWith("http://")){
-						networkClient.startNetwork(option);
-					}
-					else {
-						JOptionPane.showMessageDialog(null, "Invalid URL", "Error", JOptionPane.ERROR_MESSAGE);
-					}
+				//String url = (String)JOptionPane.showInputDialog(null, "Enter a URL:", "http://134.117.60.66:8080/graphServer");
+				
+				if(!url.equals(ConnectDialog.CANCELED)){
+					networkClient.startNetwork(url);
 				}
 				//else cancel option, don't do anything
 			}	
