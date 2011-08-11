@@ -9,6 +9,10 @@ import java.awt.event.MouseAdapter;
 import spiderweb.graph.P2PConnection;
 import spiderweb.graph.P2PNetworkGraph;
 import spiderweb.graph.P2PVertex;
+import spiderweb.visualizer.transformers.P2PEdgeShapeTransformer;
+import spiderweb.visualizer.transformers.P2PEdgeStrokeTransformer;
+import spiderweb.visualizer.transformers.P2PVertexFillPaintTransformer;
+import spiderweb.visualizer.transformers.P2PVertexShapeTransformer;
 
 import edu.uci.ics.jung.algorithms.layout.Layout;
 import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
@@ -24,7 +28,8 @@ public class PersonalizedVisualizationViewer extends edu.uci.ics.jung.visualizat
 
 	/**eclipse generated Serial UID*/
 	private static final long serialVersionUID = 3695469692236559338L;
-
+	
+	P2PNetworkGraph referenceGraph;
 
 	/**
 	 * 
@@ -40,6 +45,8 @@ public class PersonalizedVisualizationViewer extends edu.uci.ics.jung.visualizat
         super(layout, new Dimension(width, height));
         // the default mouse makes the mouse usable as a picking tool (pick, drag vertices & edges) or as a transforming tool (pan, zoom)
         setGraphMouse(gm);
+        
+        this.referenceGraph = referenceGraph;
 
         //the vertex labeler will use the tostring method which is fine, the Agent class has an appropriate toString() method implementation
         getRenderContext().setVertexLabelTransformer(new ToStringLabeller<P2PVertex>());
@@ -77,7 +84,7 @@ public class PersonalizedVisualizationViewer extends edu.uci.ics.jung.visualizat
 			EdgeShapeType P2PEdgeShape, EdgeShapeType P2DocEdgeShape, EdgeShapeType Doc2PDocEdgeShape, EdgeShapeType P2PDocEdgeShape) {
 		
 		//add my own vertex shape & colour fill transformers
-		getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer(peerShape,documentShape, peerDocumentShape));
+		getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer<P2PVertex, P2PConnection>(referenceGraph, peerShape, documentShape, peerDocumentShape));
 		// note :the colour depends on being picked.
 		
 		//make the p2p edges different from the peer to doc edges 

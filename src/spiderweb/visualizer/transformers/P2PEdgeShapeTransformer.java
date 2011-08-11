@@ -7,10 +7,11 @@
  * 
  * This code was produced at Carleton University 2011
  */
-package spiderweb.visualizer;
+package spiderweb.visualizer.transformers;
 
 import spiderweb.graph.P2PConnection;
 import spiderweb.graph.P2PVertex;
+import spiderweb.visualizer.EdgeShapeType;
 
 import java.awt.Shape;
 

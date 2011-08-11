@@ -9,7 +9,7 @@
  * Takes ideas from the JUNG Project
  * @see http://jung.sourceforge.net/
  */
-package spiderweb.visualizer;
+package spiderweb.visualizer.transformers;
 
 import java.awt.Dimension;
 import java.awt.geom.Point2D;

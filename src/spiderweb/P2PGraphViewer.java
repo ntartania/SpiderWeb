@@ -2,7 +2,7 @@
  * File:         P2PGraphVeiwer.java
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
- * Last Changed: Date: 20/07/2011 
+ * Last Changed: Date: 11/08/2011 
  * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
  * 
  * This code was produced at Carleton University 2011
@@ -14,6 +14,11 @@ import spiderweb.graph.*;
 import spiderweb.visualizer.*;
 import spiderweb.graph.savingandloading.*;
 import spiderweb.visualizer.eventplayer.*;
+import spiderweb.visualizer.transformers.P2PEdgeShapeTransformer;
+import spiderweb.visualizer.transformers.P2PEdgeStrokeTransformer;
+import spiderweb.visualizer.transformers.P2PVertexFillPaintTransformer;
+import spiderweb.visualizer.transformers.P2PVertexPlacer;
+import spiderweb.visualizer.transformers.P2PVertexShapeTransformer;
 
 import spiderweb.networking.*;
 
@@ -45,12 +50,9 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
-import javax.swing.JTable;
-import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -118,7 +120,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	//[end] Private Variables
 	
 	//[start] Protected Variables
-	protected JTable logList;
+	protected LogEventTable eventTable;
 	protected JTabbedPane tabsPane;
 	protected JButton fastForwardButton;
 	protected JButton forwardButton;
@@ -282,9 +284,9 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 					JCheckBoxMenuItem button = (JCheckBoxMenuItem) ae.getSource();
                     if (button.isSelected()) { //Add the log table
                         JSplitPane p = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-                        p.setResizeWeight(1);
+                        p.setResizeWeight(0.75);
                         p.add(mainPane);
-                        p.add(initializeLogList(myGraphEvolution));
+                        p.add(eventTable.getInPanel());
                         p.setDividerSize(3);
 
                         getContentPane().add(p);
@@ -307,56 +309,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		return bar;
 	}
 	//[end] File Menu
-	
-	//[start] Table Panel
-	private JPanel initializeLogList(List<LogEvent> logEvents) {
-		for(LoadingListener l : loadingListeners) {
-			l.loadingStarted(logEvents.size(), "Log List");
-		}
 		
-		Object[][] table = new Object[logEvents.size()][4];
-		int i=0;
-		for(LogEvent evt : logEvents) {
-			table[i] = evt.toArray();
-			i++;
-			for(LoadingListener l : loadingListeners) {
-				l.loadingProgress(i);
-			}
-		}
-		Object[] titles = { "Time", "Type", "Param 1", "Param 2" };
-		
-		
-		logList = new JTable(table, titles);
-		
-		logList.setBackground(Color.LIGHT_GRAY);
-		logList.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
-		logList.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-		logList.setEnabled(false);
-		logList.setColumnSelectionAllowed(false);
-		logList.setVisible(true);
-		
-		for(LoadingListener l : loadingListeners) {
-			l.loadingProgress(logEvents.size()+1);
-		}
-		
-		JScrollPane listScroller = new JScrollPane(logList);
-		listScroller.setWheelScrollingEnabled(true);
-		listScroller.setBorder(BorderFactory.createLoweredBevelBorder());
-		listScroller.setSize(logList.getWidth(),logList.getHeight());
-		
-		JPanel tablePanel = new JPanel(new GridLayout(1,1));
-		tablePanel.add(listScroller);
-		//tablePanel.setBackground(Color.GRAY);
-		tablePanel.setBorder(BorderFactory.createTitledBorder("Log Events"));
-		
-		for(LoadingListener l : loadingListeners) {
-			l.loadingComplete();
-		}
-		
-		return tablePanel;
-	}
-	//[end] Table Panel
-	
 	//[start] South Panel
 	/**
 	 * Helper Method for initializing the Buttons and slider for the South Panel.
@@ -575,8 +528,8 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		collapsedDocumentViewViewer.setName("Collapsed Document View");		
 		collapsedDocumentViewViewer.getRenderContext().setVertexFillPaintTransformer(new P2PVertexFillPaintTransformer(
 				collapsedDocumentViewViewer.getPickedVertexState(),Color.RED, Color.YELLOW, Color.MAGENTA, Color.RED, Color.RED, Color.BLUE));
-		collapsedDocumentViewViewer.getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer(
-				VertexShapeType.ELLIPSE, VertexShapeType.PENTAGON, VertexShapeType.ELLIPSE, 
+		collapsedDocumentViewViewer.getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer<P2PVertex, P2PConnection>(
+				graph.getReferenceGraph(), VertexShapeType.ELLIPSE, VertexShapeType.PENTAGON, VertexShapeType.ELLIPSE, 
 				P2PVertexShapeTransformer.PEER_SIZE, P2PVertexShapeTransformer.DOC_SIZE, P2PVertexShapeTransformer.PEER_SIZE));
 		collapsedDocumentViewViewer.getRenderContext().setEdgeStrokeTransformer(new P2PEdgeStrokeTransformer()); //stroke width
 		collapsedDocumentViewViewer.getRenderContext().setEdgeShapeTransformer(new P2PEdgeShapeTransformer(EdgeShapeType.QUAD_CURVE,
@@ -624,30 +577,27 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			l.loadingProgress(4);
 		}
 		
+		
 		if(myGraphEvolution.isEmpty()) {
-			SliderListener s = new SliderListener();
-			
 			playbackSlider.setMaximum(0);
-			playbackSlider.addChangeListener(s);
-			playbackSlider.addMouseListener(s);
 			
 			/// create the event player
 			eventThread = new EventPlayer(graph);
-			eventThread.addEventPlayerListener(this);
 		}
 		else {
-			SliderListener s = new SliderListener();
-			//playbackSlider.setMinimum((int)myGraphEvolution.getFirst().getTime());
-			playbackSlider.setMinimum(0);
 			playbackSlider.setMaximum((int)myGraphEvolution.get(myGraphEvolution.size()-1).getTime());
-			playbackSlider.addChangeListener(s);
-			playbackSlider.addMouseListener(s);
-			
 			
 			/// create the event player
 			eventThread = new EventPlayer(graph, myGraphEvolution, playbackSlider);
-			eventThread.addEventPlayerListener(this);
 		}
+		eventThread.addEventPlayerListener(this);
+		eventTable = new LogEventTable(myGraphEvolution, eventThread);
+		
+		SliderListener s = new SliderListener();
+		playbackSlider.addChangeListener(s);
+		playbackSlider.addChangeListener(eventTable);
+		playbackSlider.addMouseListener(s);
+		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(5);
 		}
@@ -673,6 +623,9 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		fastForwardButton.setEnabled(true);
 		playbackSlider.setEnabled(true);
 		fastSpeedSlider.setEnabled(true);
+		
+		
+		
 		
 		layout.lock(true);
 		doRepaint();
@@ -892,16 +845,8 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		public void stateChanged(ChangeEvent ce) {
 			JSlider source = (JSlider)ce.getSource();
 			eventThread.goToTime(source.getValue());
-			if(logList != null) { //if log list is initialized and showing
-				if(logList.isVisible()) {
-					logList.clearSelection();
-					logList.addRowSelectionInterval(0, eventThread.getCurrentIndex()-1);
-					logList.scrollRectToVisible(logList.getCellRect(eventThread.getCurrentIndex()-1, 0, true));
-				}
-			}
 		}
-
-
+		
 		@Override
 		public void mousePressed(MouseEvent e) {
 			if(((JSlider)(e.getSource())).isEnabled()){
@@ -996,6 +941,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 				}//any events that didn't match up with the current graph will have been handled and new events created to compensate.
 				events.add(LogEvent.getEndEvent(events.get(events.size()-1)));
 				eventThread.addEvents(events);
+				eventTable.addEvents(events);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();

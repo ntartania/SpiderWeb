@@ -7,7 +7,7 @@
  * 
  * This code was produced at Carleton University 2011
  */
-package spiderweb.visualizer;
+package spiderweb.visualizer.transformers;
 
 //import edu.uci.ics.jung.algorithms.layout.SpringLayout.LengthFunction;
 import org.apache.commons.collections15.Transformer;

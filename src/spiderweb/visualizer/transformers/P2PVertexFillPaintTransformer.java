@@ -7,7 +7,7 @@
  * 
  * This code was produced at Carleton University 2011
  */
-package spiderweb.visualizer;
+package spiderweb.visualizer.transformers;
 
 import java.awt.Color;
 import java.awt.Paint;

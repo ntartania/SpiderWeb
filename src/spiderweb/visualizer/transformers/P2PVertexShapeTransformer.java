@@ -3,21 +3,22 @@
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
  * Last Changed: Date: 21/07/2011 
- * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * Author:       >Matthew Smith
+ * 				 Alan Davoust
  * 
  * This code was produced at Carleton University 2011
  */
-package spiderweb.visualizer;
+package spiderweb.visualizer.transformers;
 
 import java.awt.Shape;
 
 import org.apache.commons.collections15.Transformer;
-import org.apache.commons.collections15.functors.ConstantTransformer;
 
-import spiderweb.graph.P2PVertex;
 import spiderweb.graph.PeerDocumentVertex;
 import spiderweb.graph.PeerVertex;
+import spiderweb.visualizer.VertexShapeType;
 
+import edu.uci.ics.jung.graph.Graph;
 import edu.uci.ics.jung.visualization.decorators.AbstractVertexShapeTransformer;
 
 /**
@@ -25,8 +26,8 @@ import edu.uci.ics.jung.visualization.decorators.AbstractVertexShapeTransformer;
  * @author  adavoust
  * @param  <V >
  */
-public class P2PVertexShapeTransformer extends AbstractVertexShapeTransformer<P2PVertex> 
-		implements Transformer<P2PVertex,Shape>
+public class P2PVertexShapeTransformer<V, E> extends AbstractVertexShapeTransformer<V> 
+		implements Transformer<V,Shape>
 {
 	public static final int DOC_SIZE = 20;
 	public static final int PEER_SIZE = 25;
@@ -36,26 +37,25 @@ public class P2PVertexShapeTransformer extends AbstractVertexShapeTransformer<P2
 	private VertexShapeType documentShape;
 	private VertexShapeType peerDocumentShape;
 	
-	    @SuppressWarnings({ "rawtypes", "unchecked" })
-		public P2PVertexShapeTransformer(VertexShapeType peerShape, VertexShapeType documentShape, VertexShapeType peerDocumentShape) 
+	private P2PVertexSizeTransformer<V, E> sizeTransformer;
+	
+		public P2PVertexShapeTransformer(Graph<V,E> graphIn, VertexShapeType peerShape, 
+				VertexShapeType documentShape, VertexShapeType peerDocumentShape) 
 	    {
-	    	super ( new P2PVertexSizeFunction(DOC_SIZE,PEER_SIZE,PEER_DOC_SIZE), new ConstantTransformer(1.0f));
+			this(graphIn, peerShape, documentShape, peerDocumentShape, PEER_SIZE, DOC_SIZE, PEER_DOC_SIZE);
+	    }
+	    
+		public P2PVertexShapeTransformer(Graph<V,E> graphIn, VertexShapeType peerShape, VertexShapeType documentShape, 
+				VertexShapeType peerDocumentShape, int peerSize, int documentSize, int peerDocumentSize) 
+	    {	    	
+	    	sizeTransformer = new P2PVertexSizeTransformer<V, E>(peerSize,documentSize,peerDocumentSize, graphIn);
+	    	setSizeTransformer(sizeTransformer);
 	    	this.peerShape = peerShape;
 	    	this.documentShape = documentShape;
 	    	this.peerDocumentShape = peerDocumentShape;
 	    }
 	    
-	    @SuppressWarnings({ "rawtypes", "unchecked" })
-		public P2PVertexShapeTransformer(VertexShapeType peerShape, VertexShapeType documentShape, VertexShapeType peerDocumentShape,
-										 int peerSize, int documentSize, int peerDocumentSize) 
-	    {
-	    	super ( new P2PVertexSizeFunction(peerSize,documentSize,peerDocumentSize), new ConstantTransformer(1.0f));
-	    	this.peerShape = peerShape;
-	    	this.documentShape = documentShape;
-	    	this.peerDocumentShape = peerDocumentShape;
-	    }
-	    
-	    public Shape transform(P2PVertex v)
+	    public Shape transform(V v)
 	    {
 	    		if (v instanceof PeerVertex) {
 	    			return shapeChooser(v, peerShape);
@@ -69,7 +69,7 @@ public class P2PVertexShapeTransformer extends AbstractVertexShapeTransformer<P2
 	    		}
 	    }
 	    
-	    private Shape shapeChooser (P2PVertex v, VertexShapeType chosenShape) {
+	    private Shape shapeChooser (V v, VertexShapeType chosenShape) {
 	    	//factory.getEllipse(v);
 	    	switch(chosenShape) {
 		    	case ELLIPSE: 
@@ -86,6 +86,8 @@ public class P2PVertexShapeTransformer extends AbstractVertexShapeTransformer<P2
 	    	}
 	    	return factory.getRectangle(v);
 	    }
-	
-
+	    
+	    public void setScale(boolean scale) {
+	    	sizeTransformer.setScale(scale);
+	    }
 }
