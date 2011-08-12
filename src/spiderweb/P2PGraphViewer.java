@@ -273,19 +273,23 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		
 		//[start] Window Menu
 		JMenu window = new JMenu("Window");
-		JCheckBoxMenuItem logTable = new JCheckBoxMenuItem("Show Log Table");
-		logTable.addActionListener(new ActionListener() {
+		
+		//[start] Log Table Entry
+		JCheckBoxMenuItem logTableItem = new JCheckBoxMenuItem("Show Log Table");
+		logTableItem.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent ae) {
 				if(myGraphEvolution != null) { //graph has been initialized
 					
 					JCheckBoxMenuItem button = (JCheckBoxMenuItem) ae.getSource();
                     if (button.isSelected()) { //Add the log table
                         JSplitPane p = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-                        p.setResizeWeight(0.75);
+                        p.setResizeWeight(0.80);
                         p.add(mainPane);
                         p.add(eventTable.getInPanel());
                         p.setDividerSize(3);
 
+                        //getContentPane().removeAll();
+                        //getContentPane().add(mainPane);
                         getContentPane().add(p);
                         validate();
                     } else { //Remove the log table
@@ -296,7 +300,38 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 				}
 			}	
 		});
-		window.add(logTable);
+		window.add(logTableItem);
+		//[end] Log Table Entry
+		
+		//[start] Visual Options Entry
+		JCheckBoxMenuItem visualOptionsItem = new JCheckBoxMenuItem("Show Visual Options Pane");
+		visualOptionsItem.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent ae) {
+				if(myGraphEvolution != null) { //graph has been initialized
+					
+					JCheckBoxMenuItem button = (JCheckBoxMenuItem) ae.getSource();
+                    if (button.isSelected()) { //Add the log table
+                        JSplitPane p = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+                        p.setResizeWeight(0.80);
+                        p.add(mainPane);
+                        p.add(currentViewer.getOptionsPanel());
+                        p.setDividerSize(3);
+                        
+                        //getContentPane().removeAll();
+                        //getContentPane().add(mainPane);
+                        getContentPane().add(p);
+                        validate();
+                    } else { //Remove the log table
+                        getContentPane().removeAll();
+                        getContentPane().add(mainPane);
+                        validate();
+                    }
+				}
+			}	
+		});
+		window.add(visualOptionsItem);
+		//[end] Log Table Entry
+		
 		//[end] Window Menu
 		
 		JMenuBar bar = new JMenuBar();
@@ -684,7 +719,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	
 	//[start] Load Listener
 	class LoadListener implements ActionListener {
-	
+			
 		public void actionPerformed(ActionEvent arg0) {
 			Thread loadingThread = new Thread(new Runnable() {
 				
@@ -707,7 +742,6 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 						}
 						myGraphEvolution = loader.getLogList();
 						graph = loader.getGraph();
-						//dynamicGraph = loader.getDynamicP2PNetworkGraph();
 						startGraph();
 						eventThread.setRobustMode(false);
 					}

@@ -158,6 +158,6 @@ public class LogEventTable extends JTable implements ChangeListener, ActionListe
 	 * helper method for scrolling the table to the latest event to happen.
 	 */
 	private void scrollToLatest() {
-		scrollRectToVisible(getCellRect(player.getCurrentIndex(), 0, true));
+		scrollRectToVisible(getCellRect(player.getCurrentIndex()+10, 0, true));
 	}
 }
