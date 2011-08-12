@@ -18,31 +18,12 @@ package spiderweb.visualizer.eventplayer;
  * @version Date: 20/07/2011 
  */
 public interface EventPlayerListener {
-	
-	/**
-	 * Notify that the PlayState is now FASTREVERSE.
-	 */
-	public void playbackFastReverse();
 
 	/**
-	 * Notify that the PlayState is now REVERSE.
+	 * The PlayState of the event player has changed to the passed state.
+	 * @param state The new PlayState of the event player
 	 */
-	public void playbackReverse();
-
-	/**
-	 * Notify that the PlayState is now PAUSE.
-	 */
-	public void playbackPause();
-
-	/**
-	 * Notify that the PlayState is now FORWARD.
-	 */
-	public void playbackForward();
-
-	/**
-	 * Notify that the PlayState is now FASTFORWARD.
-	 */
-	public void playbackFastForward();
+	public void stateChanged(PlayState state);
 
 	/**
 	 * Notify that a repaint call is needed.

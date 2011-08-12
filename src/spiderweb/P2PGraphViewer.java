@@ -27,8 +27,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -40,9 +38,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import javax.swing.AbstractButton;
-import javax.swing.BorderFactory;
 import javax.swing.JApplet;
-import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -122,13 +118,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	//[start] Protected Variables
 	protected LogEventTable eventTable;
 	protected JTabbedPane tabsPane;
-	protected JButton fastForwardButton;
-	protected JButton forwardButton;
-	protected JButton pauseButton;
-	protected JButton reverseButton;
-	protected JButton fastReverseButton;
-	protected JSlider fastSpeedSlider;
-	protected JSlider playbackSlider;
+	protected PlaybackPanel playbackPanel;
 
 	protected EventPlayer eventThread;
 	//[end] Protected Variables
@@ -202,7 +192,9 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		JMenuItem connect = new JMenuItem("Connect to..");
 		connect.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				pauseButton.doClick();
+				if(eventThread != null) {
+					eventThread.pause();
+				}
 				
 				String url = ConnectDialog.getConnectURL();
 				
@@ -220,21 +212,24 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		JMenuItem save = new JMenuItem("Save");
 		save.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				pauseButton.doClick();
-				int option = JOptionPane.showConfirmDialog(null, "Would you like to save the first 500 log events after this graph snapshot", 
-						"Save", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+				if(myGraphEvolution != null) {
+					eventThread.pause();
 				
-				if(option == JOptionPane.YES_OPTION) {
-					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(graph.getDynamicGraph(),eventThread.getSaveEvents(), eventThread.getCurrentTime());
-					saver.addProgressListener(new LoadingBar());
-					saver.doSave();
+					int option = JOptionPane.showConfirmDialog(null, "Would you like to save the first 500 log events after this graph snapshot", 
+							"Save", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+					
+					if(option == JOptionPane.YES_OPTION) {
+						P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(graph.getDynamicGraph(),eventThread.getSaveEvents(), eventThread.getCurrentTime());
+						saver.addProgressListener(playbackPanel);
+						saver.doSave();
+					}
+					else if(option == JOptionPane.NO_OPTION) {
+						P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(graph.getDynamicGraph());
+						saver.addProgressListener(playbackPanel);
+						saver.doSave();
+					}
+					//else cancel option, don't do anything
 				}
-				else if(option == JOptionPane.NO_OPTION) {
-					P2PNetworkGraphSaver saver = new P2PNetworkGraphSaver(graph.getDynamicGraph());
-					saver.addProgressListener(new LoadingBar());
-					saver.doSave();
-				}
-				//else cancel option, don't do anything
 			}	
 		});
 		//[end] Save Entry
@@ -248,7 +243,9 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		JMenuItem exit = new JMenuItem("Exit");
 		exit.addActionListener(new ActionListener() {	
 			public void actionPerformed(ActionEvent arg0) {
-				pauseButton.doClick();
+				if(eventThread != null) {
+					eventThread.pause();
+				}
 				int option = JOptionPane.showConfirmDialog(null, "Would you like to save before quitting?", "Save", 
 						JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
 				
@@ -309,78 +306,6 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		return bar;
 	}
 	//[end] File Menu
-		
-	//[start] South Panel
-	/**
-	 * Helper Method for initializing the Buttons and slider for the South Panel.
-	 * @return The South Panel, laid out properly, to be displayed.
-	 */
-	private JPanel initializeSouthPanel() {
-		
-		fastSpeedSlider = new JSlider(JSlider.HORIZONTAL,0,100,25);
-		fastSpeedSlider.addChangeListener(new SpeedSliderListener());
-		fastSpeedSlider.setMajorTickSpacing((fastSpeedSlider.getMaximum()-fastSpeedSlider.getMinimum())/4);
-		fastSpeedSlider.setFont(new Font("Arial",Font.PLAIN,8));
-		fastSpeedSlider.setPaintTicks(false);
-		fastSpeedSlider.setPaintLabels(true);
-		//fastSpeedSlider.setBackground(Color.DARK_GRAY);
-		fastSpeedSlider.setForeground(Color.BLACK);
-		fastSpeedSlider.setBorder(BorderFactory.createTitledBorder("Quick Playback Speed"));
-		fastSpeedSlider.setEnabled(false);
-		
-		fastReverseButton = new JButton("<|<|");
-		fastReverseButton.addActionListener(new FastReverseButtonListener()); 
-		fastReverseButton.setEnabled(false);
-		
-		reverseButton = new JButton("<|");
-		reverseButton.addActionListener(new ReverseButtonListener());
-		reverseButton.setEnabled(false);
-		
-		pauseButton = new JButton("||");
-		pauseButton.addActionListener(new PauseButtonListener()); 
-		pauseButton.setEnabled(false);
-		
-		forwardButton = new JButton("|>");
-		forwardButton.addActionListener(new ForwardButtonListener());
-		forwardButton.setEnabled(false);
-		
-		fastForwardButton = new JButton("|>|>");
-		fastForwardButton.addActionListener(new FastForwardButtonListener());
-		fastForwardButton.setEnabled(false);
-		
-		playbackSlider = new JSlider(JSlider.HORIZONTAL,0,100,0);
-		
-		//playbackSlider.setBackground(Color.LIGHT_GRAY);
-		playbackSlider.setEnabled(false);
-		
-		GridBagLayout southLayout = new GridBagLayout();
-		GridBagConstraints southConstraints = new GridBagConstraints();
-		
-		
-		JPanel buttonPanel = new JPanel();
-		//buttonPanel.setBackground(Color.LIGHT_GRAY);
-		buttonPanel.setLayout(southLayout);
-		
-		buttonPanel.add(fastReverseButton);
-		buttonPanel.add(reverseButton);
-		buttonPanel.add(pauseButton);
-		buttonPanel.add(forwardButton);
-		buttonPanel.add(fastForwardButton);
-		southConstraints.gridwidth = GridBagConstraints.REMAINDER;//make each item take up a whole line
-		southLayout.setConstraints(fastSpeedSlider, southConstraints);
-		buttonPanel.add(fastSpeedSlider);
-		
-		
-		JPanel south = new JPanel();
-		//south.setBackground(Color.LIGHT_GRAY);
-		south.setLayout(new GridLayout(2,1));
-		south.setBorder(BorderFactory.createTitledBorder("Playback Options"));
-		south.add(buttonPanel);
-		south.add(playbackSlider);
-		
-		return south;
-	}
-	//[end] South Panel
 	
 	//[start] West Panel
 	/**
@@ -459,11 +384,13 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		
 		JPanel graphsPanel = new JPanel(new GridLayout(1,1));
 		graphsPanel.add(tabsPane);
-				
+		
+		playbackPanel = new PlaybackPanel();
+		
 		JSplitPane p = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		p.setResizeWeight(1);
 		p.add(graphsPanel);
-		p.add(initializeSouthPanel());
+		p.add(playbackPanel);
 		p.setDividerSize(0);
 		p.setEnabled(false);
 		
@@ -478,7 +405,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		mainPane = p;
 		
 		//startGraph();
-		loadingListeners.add(new LoadingBar());
+		loadingListeners.add(playbackPanel);
 	}
 	//[end] init method
 
@@ -579,24 +506,24 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		
 		
 		if(myGraphEvolution.isEmpty()) {
-			playbackSlider.setMaximum(0);
+			playbackPanel.getPlaybackSlider().setMaximum(0);
 			
 			/// create the event player
 			eventThread = new EventPlayer(graph);
 		}
 		else {
-			playbackSlider.setMaximum((int)myGraphEvolution.get(myGraphEvolution.size()-1).getTime());
+			playbackPanel.getPlaybackSlider().setMaximum((int)myGraphEvolution.get(myGraphEvolution.size()-1).getTime());
 			
 			/// create the event player
-			eventThread = new EventPlayer(graph, myGraphEvolution, playbackSlider);
+			eventThread = new EventPlayer(graph, myGraphEvolution, playbackPanel.getPlaybackSlider());
 		}
 		eventThread.addEventPlayerListener(this);
 		eventTable = new LogEventTable(myGraphEvolution, eventThread);
 		
 		SliderListener s = new SliderListener();
-		playbackSlider.addChangeListener(s);
-		playbackSlider.addChangeListener(eventTable);
-		playbackSlider.addMouseListener(s);
+		playbackPanel.getPlaybackSlider().addChangeListener(s);
+		playbackPanel.getPlaybackSlider().addChangeListener(eventTable);
+		playbackPanel.getPlaybackSlider().addMouseListener(s);
 		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(5);
@@ -616,20 +543,11 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			l.loadingComplete();
 		}
 		
-		fastReverseButton.setEnabled(true);
-		reverseButton.setEnabled(true);
-		pauseButton.setEnabled(true);
-		forwardButton.setEnabled(false);
-		fastForwardButton.setEnabled(true);
-		playbackSlider.setEnabled(true);
-		fastSpeedSlider.setEnabled(true);
-		
-		
-		
+		playbackPanel.startPlayback(eventThread);
 		
 		layout.lock(true);
 		doRepaint();
-		eventThread.run();
+		eventThread.beginPlayback();
 	}
 	//[end] Init Graph
 	
@@ -669,58 +587,8 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	//[start] EventPlayer Handlers
 	
 	@Override
-	public void playbackFastReverse() {
-		fastReverseButton.setEnabled(false);
-		reverseButton.setEnabled(true);
-		pauseButton.setEnabled(true);
-		forwardButton.setEnabled(true);
-		fastForwardButton.setEnabled(true);
-	}
-
-	@Override
-	public void playbackReverse() {
-		fastReverseButton.setEnabled(true);
-		reverseButton.setEnabled(false);
-		pauseButton.setEnabled(true);
-		forwardButton.setEnabled(true);
-		fastForwardButton.setEnabled(true);
-	}
-
-	@Override
-	public void playbackPause() {
-		if(eventThread.atFront()) {
-			fastReverseButton.setEnabled(false);
-			reverseButton.setEnabled(false);
-		} else {
-			fastReverseButton.setEnabled(true);
-			reverseButton.setEnabled(true);
-		}
-		pauseButton.setEnabled(false);
-		if(eventThread.atBack()) {
-			forwardButton.setEnabled(false);
-			fastForwardButton.setEnabled(false);
-		} else {
-			forwardButton.setEnabled(true);
-			fastForwardButton.setEnabled(true);
-		}
-	}
-
-	@Override
-	public void playbackForward() {
-		fastReverseButton.setEnabled(true);
-		reverseButton.setEnabled(true);
-		pauseButton.setEnabled(true);
-		forwardButton.setEnabled(false);
-		fastForwardButton.setEnabled(true);
-	}
-
-	@Override
-	public void playbackFastForward() {
-		fastReverseButton.setEnabled(true);
-		reverseButton.setEnabled(true);
-		pauseButton.setEnabled(true);
-		forwardButton.setEnabled(true);
-		fastForwardButton.setEnabled(false);
+	public void stateChanged(PlayState state) {
+		playbackPanel.updateButtons(state);
 	}
 	
 	@Override
@@ -740,7 +608,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
     public class TabChangeListener implements ChangeListener{
 
         public void stateChanged(ChangeEvent e) {
-            currentViewer = (PersonalizedVisualizationViewer) ((JTabbedPane) tabsPane).getSelectedComponent();
+        	currentViewer = (PersonalizedVisualizationViewer) ((JTabbedPane) tabsPane).getSelectedComponent();
         }
 
     }
@@ -768,70 +636,6 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
     
 	}
 	//[end] mouse context listener
-
-	//[start] Fast Reverse Button
-	class FastReverseButtonListener implements ActionListener {
-		
-		public void actionPerformed(ActionEvent ae) {
-			eventThread.fastReverse();
-		}
-	}
-	//[end] Fast Reverse Button
-	
-	//[start] Reverse Button
-	/**
-	 * An ActionListener that defines the action of the reverse button for the applet
-	 * @author Matthew
-	 * @version May 2011
-	 */
-	class ReverseButtonListener implements ActionListener {
-		
-		/**
-		 * Method called when the reverse button has an action performed(clicked)
-		 * Tells eventThread to traverse the graph placement in reverse.
-		 * @param ae	The ActionEvent that triggered the listener
-		 */
-		public void actionPerformed(ActionEvent ae) {
-			eventThread.reverse();
-		}
-	
-	}
-	//[end] Reverse Button
-	
-	//[start] Pause Button
-	class PauseButtonListener implements ActionListener {
-		public void actionPerformed(ActionEvent ae) {
-			eventThread.pause();
-		}
-	}
-	//[end] Pause Button
-	
-	//[start] Forward Button
-	class ForwardButtonListener implements ActionListener {
-		public void actionPerformed(ActionEvent ae) {
-			eventThread.forward();
-		}
-	}
-	//[end] Forward Button
-	
-	//[start] Fast Forward Button
-	class FastForwardButtonListener implements ActionListener {
-		public void actionPerformed(ActionEvent ae) {			
-			eventThread.fastForward();
-		}
-	}
-	//[end] Fast Forward Button
-	
-	//[start] Speed Slider
-	class SpeedSliderListener implements ChangeListener {
-
-		@Override
-		public void stateChanged(ChangeEvent arg0) {
-			eventThread.setFastSpeed(((JSlider)arg0.getSource()).getValue());
-		}
-		
-	}
-	//[end] Speed Slider
 	
 	//[start] Playback Slider
 	/**
@@ -878,33 +682,24 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	}
 	//[end] Playback Slider
 	
-	
 	//[start] Load Listener
 	class LoadListener implements ActionListener {
 	
 		public void actionPerformed(ActionEvent arg0) {
-			
-			pauseButton.doClick();
 			Thread loadingThread = new Thread(new Runnable() {
 				
 				@Override
 				public void run() {
 					
 					P2PNetworkGraphLoader loader = new P2PNetworkGraphLoader();
-					loader.addProgressListener(new LoadingBar());
+					loader.addProgressListener(playbackPanel);
 					if(loader.doLoad()) {
 						if(myGraphEvolution != null) {
+							eventThread.pause();
 							myGraphEvolution.clear();
 							eventThread.stopPlayback();
-							fastReverseButton.setEnabled(false);
-							reverseButton.setEnabled(false);
-							pauseButton.setEnabled(false);
-							forwardButton.setEnabled(false);
-							fastForwardButton.setEnabled(false);
-							playbackSlider.setEnabled(false);
-							playbackSlider.setValue(0);
+							playbackPanel.stopPlayback();
 							tabsPane.setEnabled(false);
-							fastSpeedSlider.setEnabled(false);
 							
 							//When loading a new Graph, if the collapsed document view has a tree layout it crashes because of setsize()
 							AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(graph.getReferenceGraph());
@@ -957,15 +752,8 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			if(myGraphEvolution != null) {
 				myGraphEvolution.clear();
 				eventThread.stopPlayback();
-				fastReverseButton.setEnabled(false);
-				reverseButton.setEnabled(false);
-				pauseButton.setEnabled(false);
-				forwardButton.setEnabled(false);
-				fastForwardButton.setEnabled(false);
-				playbackSlider.setEnabled(false);
-				playbackSlider.setValue(0);
+				playbackPanel.stopPlayback();
 				tabsPane.setEnabled(false);
-				fastSpeedSlider.setEnabled(false);
 				
 				//When loading a new Graph, if the collapsed document view has a tree layout it crashes because of setsize()
 				AbstractLayout<P2PVertex, P2PConnection> graphLayout = new CircleLayout<P2PVertex, P2PConnection>(graph.getReferenceGraph());

@@ -6,6 +6,8 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 
+import javax.swing.JPanel;
+
 import spiderweb.graph.P2PConnection;
 import spiderweb.graph.P2PNetworkGraph;
 import spiderweb.graph.P2PVertex;
@@ -92,4 +94,10 @@ public class PersonalizedVisualizationViewer extends edu.uci.ics.jung.visualizat
 		getRenderContext().setEdgeShapeTransformer(new P2PEdgeShapeTransformer(P2PEdgeShape,P2DocEdgeShape,Doc2PDocEdgeShape,P2PDocEdgeShape)); //stroke width
 		
 	}
+    
+    public JPanel getOptionsPanel() {
+    	JPanel optionsPanel =  new JPanel();
+    	
+    	return optionsPanel;
+    }
 }

@@ -69,6 +69,8 @@ public class EventPlayer implements ActionListener{
 		my_listeners = new LinkedList<EventPlayerListener>();
 		myTimeNow = timeCounter.getLowerBound();
 		playable=true;
+		
+		
 	}
 
 	public EventPlayer(ReferencedNetworkGraph graph){
@@ -81,6 +83,10 @@ public class EventPlayer implements ActionListener{
 		timeCounter = new TimeCounter(0,0,0,0);
 		my_listeners = new LinkedList<EventPlayerListener>();
 		playable = false;
+		
+		for(EventPlayerListener epl : my_listeners) {
+			epl.stateChanged(PlayState.PAUSE);
+		}
 	}
 
 	/**
@@ -183,7 +189,7 @@ public class EventPlayer implements ActionListener{
 	 */
 	public void fastReverse() {
 		for(EventPlayerListener epl : my_listeners) {
-			epl.playbackFastReverse();
+			epl.stateChanged(PlayState.FASTREVERSE);
 		}
 		if(state != PlayState.FASTREVERSE) {
 			prevState = state;
@@ -195,7 +201,7 @@ public class EventPlayer implements ActionListener{
 
 	public void reverse() {
 		for(EventPlayerListener epl : my_listeners) {
-			epl.playbackReverse();
+			epl.stateChanged(PlayState.REVERSE);
 		}
 		if(state != PlayState.REVERSE) {
 			prevState = state;
@@ -207,7 +213,7 @@ public class EventPlayer implements ActionListener{
 
 	public void fastForward(){
 		for(EventPlayerListener epl : my_listeners) {
-			epl.playbackFastForward();
+			epl.stateChanged(PlayState.FASTFORWARD);
 		}
 		if(state != PlayState.FASTFORWARD) {
 			PlayState prevState = state;
@@ -219,7 +225,7 @@ public class EventPlayer implements ActionListener{
 
 	public void forward(){
 		for(EventPlayerListener epl : my_listeners) {
-			epl.playbackForward();
+			epl.stateChanged(PlayState.FORWARD);
 		}
 		if(state != PlayState.FORWARD) {
 			prevState = state;
@@ -241,7 +247,7 @@ public class EventPlayer implements ActionListener{
 
 	public synchronized void pause(){
 		for(EventPlayerListener epl : my_listeners) {
-			epl.playbackPause();
+			epl.stateChanged(PlayState.PAUSE);
 		}
 		if(state != PlayState.PAUSE) {
 			prevState = state;
@@ -330,8 +336,12 @@ public class EventPlayer implements ActionListener{
 	//[end]
 
 
-	public void run() {
+	public void beginPlayback() {
 
+		for(EventPlayerListener epl : my_listeners) {
+			epl.stateChanged(state);
+		}
+		
 		schedule = new Timer(speed,this);
 		schedule.start();
 
@@ -582,7 +592,7 @@ public class EventPlayer implements ActionListener{
 		timeCounter.setUpperBound(myEventList.get(myEventList.size()-1).getTime());
 		if(state.equals(PlayState.PAUSE)) {
 			for(EventPlayerListener epl : my_listeners) {
-				epl.playbackPause();
+				epl.stateChanged(PlayState.PAUSE);
 			}
 		}
 	}
