@@ -34,7 +34,7 @@ public class P2PVertexSizeTransformer<V, E> implements Transformer<V,Integer>{
 	
 	protected Graph<V, E> graph;
 	
-	private boolean scale = true;
+	private boolean scale = false;
 	
 	/**
 	 * Constructor
@@ -72,7 +72,7 @@ public class P2PVertexSizeTransformer<V, E> implements Transformer<V,Integer>{
 		}
 	}
 	
-	public void setScale(boolean scale) {
+	public void setScaling(boolean scale) {
     	this.scale = scale;
     }	    
 }

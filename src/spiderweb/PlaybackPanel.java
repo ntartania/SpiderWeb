@@ -1,3 +1,12 @@
+/*
+ * File:         PlaybackPanel.java
+ * Project:		 Spiderweb Network Graph Visualizer
+ * Created:      11/08/2011
+ * Last Changed: Date: 12/08/2011 
+ * Author:       Matthew Smith
+ * 
+ * This code was produced at Carleton University 2011
+ */
 package spiderweb;
 
 import java.awt.BorderLayout;
@@ -8,6 +17,8 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -22,33 +33,47 @@ import spiderweb.graph.savingandloading.LoadingListener;
 import spiderweb.visualizer.eventplayer.EventPlayer;
 import spiderweb.visualizer.eventplayer.PlayState;
 
+/**
+ * PlaybackPanel is a component which contains the buttons and sliders that affect 
+ * the playing of the events in the event player. 
+ * It also has a loading bar for when a new item is being loaded and progress needs to be shown.
+ * 
+ * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * @version Date: 12/08/2011 
+ */
 public class PlaybackPanel extends JPanel implements ActionListener, ChangeListener, LoadingListener {
 
 	/**eclipse generated serial UID*/
 	private static final long serialVersionUID = -4379461440497103002L;
 	
+	//Buttons that represent the direction and speed of the event playback
 	protected JButton fastForwardButton;
 	protected JButton forwardButton;
 	protected JButton pauseButton;
 	protected JButton reverseButton;
 	protected JButton fastReverseButton;
+	
+	//sliders to represent the speed and where through the playback the current event is.
 	protected JSlider fastSpeedSlider;
 	protected JSlider playbackSlider;
 	
+	//The loading bar
 	protected JProgressBar progressBar;
 	
+	//the main panel which includes everything except the loading bar
+	//(easier to add the loading bar to this without disturbing the rest of the components)
 	protected JPanel mainPanel;
 	
 	/**A playback listener would be cleaner (event player listening to this class)*/
-	private EventPlayer player;
+	protected EventPlayer player;
 	
 	/**
-	 * Helper Method for initializing the Buttons and slider for the South Panel.
-	 * @return The South Panel, laid out properly, to be displayed.
+	 * PlaybackPanel is a component which contains the buttons and sliders that affect 
+	 * the playing of the events in the event player. 
+	 * As well the panel is a loading listener and will display a progress bar when an item is loading.
 	 */
-	public PlaybackPanel() {		
+	public PlaybackPanel() {
 		fastSpeedSlider = new JSlider(JSlider.HORIZONTAL,0,100,25);
-		
 		fastSpeedSlider.setMajorTickSpacing((fastSpeedSlider.getMaximum()-fastSpeedSlider.getMinimum())/4);
 		fastSpeedSlider.setFont(new Font("Arial",Font.PLAIN,8));
 		fastSpeedSlider.setPaintTicks(false);
@@ -122,6 +147,10 @@ public class PlaybackPanel extends JPanel implements ActionListener, ChangeListe
 		pauseButton.addActionListener(this); 
 		forwardButton.addActionListener(this); 
 		fastForwardButton.addActionListener(this);
+		
+		SliderListener s = new SliderListener();
+		playbackSlider.addChangeListener(s);
+		playbackSlider.addMouseListener(s);
 	}
 	
 	/**
@@ -247,18 +276,7 @@ public class PlaybackPanel extends JPanel implements ActionListener, ChangeListe
 		progressBar.setStringPainted(true);
 		
 		add(progressBar, BorderLayout.NORTH);
-	}
-
-	/**
-	 * sets the progress bar back to zero, the maximum to the loading amount
-	 * and sets the text to the new item loading
-	 */
-	@Override
-	public void loadingChanged(int loadingAmount, String whatIsLoading) {
-		progressBar.setMaximum(loadingAmount);
-		progressBar.setValue(0);
-		progressBar.setName(whatIsLoading);
-		progressBar.setString(whatIsLoading+": 0%");
+		validate();
 	}
 
 	/**
@@ -277,4 +295,48 @@ public class PlaybackPanel extends JPanel implements ActionListener, ChangeListe
 	public void loadingComplete() {
 		remove(progressBar);
 	}
+
+
+	class SliderListener extends MouseAdapter implements ChangeListener {
+
+		PlayState prevState = PlayState.PAUSE;
+		
+		@Override
+		public void stateChanged(ChangeEvent ce) {
+			if(player !=null) {
+				JSlider source = (JSlider)ce.getSource();
+				player.goToTime(source.getValue());
+			}
+		}
+		
+		@Override
+		public void mousePressed(MouseEvent e) {
+			if(((JSlider)(e.getSource())).isEnabled()){
+				prevState = player.getPlayState();
+				player.pause();
+			}
+		}
+
+		@Override
+		public void mouseReleased(MouseEvent e) {
+			if(((JSlider)(e.getSource())).isEnabled()){
+				if(prevState == PlayState.FASTREVERSE) {
+					player.fastReverse();
+				}
+				else if (prevState == PlayState.REVERSE) {
+					player.reverse();
+				}
+				else if (prevState == PlayState.FORWARD) {
+					player.forward();
+				}
+				else if (prevState == PlayState.FASTFORWARD) {
+					player.fastForward();
+				}
+				else if (prevState == PlayState.PAUSE) {
+					player.pause();
+				}
+			}
+		}
+	}
+
 }

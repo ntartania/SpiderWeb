@@ -87,7 +87,7 @@ public class P2PVertexShapeTransformer<V, E> extends AbstractVertexShapeTransfor
 	    	return factory.getRectangle(v);
 	    }
 	    
-	    public void setScale(boolean scale) {
-	    	sizeTransformer.setScale(scale);
+	    public void setScaling(boolean scale) {
+	    	sizeTransformer.setScaling(scale);
 	    }
 }

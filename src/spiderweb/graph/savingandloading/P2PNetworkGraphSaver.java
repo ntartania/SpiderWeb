@@ -137,7 +137,7 @@ public class P2PNetworkGraphSaver extends ProgressAdapter {
 	        //[start] Create vertices
 	        Element nodemap = new Element("nodemap");
 	        count=0;
-	        taskChanged(peers.size(), "Peer Vertices");
+	        taskStarted(peers.size(), "Peer Vertices");
 			for(PeerVertex peer : peers) { //write out all the peer information
 				Element node = new Element("node");
 		        node.setAttribute("type", "PeerVertex");
@@ -151,7 +151,7 @@ public class P2PNetworkGraphSaver extends ProgressAdapter {
 		        count++;
 			}
 			count=0;
-	        taskChanged(documents.size(), "Document Vertices");
+			taskStarted(documents.size(), "Document Vertices");
 			for(DocumentVertex doc : documents) {//write out all the document information
 				Element node = new Element("node");
 		        node.setAttribute("type", "DocumentVertex");
@@ -171,7 +171,7 @@ public class P2PNetworkGraphSaver extends ProgressAdapter {
 			//[start] Create Edges
 			Element edgemap = new Element("edgemap");
 			count=0;
-	        taskChanged(edges.size(), "Edges");
+			taskStarted(edges.size(), "Edges");
 			for(P2PConnection e : edges) {//write out all the edge information
 				Element edge = new Element("edge");
 				
@@ -216,7 +216,7 @@ public class P2PNetworkGraphSaver extends ProgressAdapter {
 			//[start] Creating Log Event Elements
 			Element logEventsElement = new Element("logevents");
 			int count=0;
-	        taskChanged(logList.size(), "LogEvents");
+			taskStarted(logList.size(), "LogEvents");
 			for(LogEvent ev : logList) {
 				Element event = new Element("event");
 				event.setAttribute("type", ev.getType());

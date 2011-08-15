@@ -27,7 +27,7 @@ import javax.swing.JPopupMenu;
 import spiderweb.graph.P2PConnection;
 import spiderweb.graph.P2PNetworkGraph;
 import spiderweb.graph.P2PVertex;
-import spiderweb.visualizer.PersonalizedVisualizationViewer;
+import spiderweb.visualizer.NetworkGraphVisualizer;;
 
 /**
  * Initializes the right-click menu components and event handlers (Does not contain the listeners)
@@ -99,7 +99,7 @@ public class GraphPopupMenu extends JPopupMenu {
 	 */
 	public void showPopupMenu(int x, int y) {
 		setEnabled(true);
-		PersonalizedVisualizationViewer currentViewer = applet.getCurrentViewer();
+		NetworkGraphVisualizer currentViewer = applet.getVisualizer();
 		if(!currentViewer.getName().equals("Collapsed Document View")) {
 			remove(treeSeparator);
 			remove(balloonLayout);
@@ -121,7 +121,7 @@ public class GraphPopupMenu extends JPopupMenu {
 	 */
 	public void popupMenuEvent(String text) {
 		if (text.contains(("Layout"))) {
-			VisualizationViewer<P2PVertex,P2PConnection> currentViewer = applet.getCurrentViewer();
+			VisualizationViewer<P2PVertex,P2PConnection> currentViewer = applet.getVisualizer();
 			Layout<P2PVertex,P2PConnection> currentLayout = currentViewer.getGraphLayout();
 			Layout<P2PVertex,P2PConnection> newLayout = null;
 			P2PNetworkGraph graph = applet.getGraph().getReferenceGraph();

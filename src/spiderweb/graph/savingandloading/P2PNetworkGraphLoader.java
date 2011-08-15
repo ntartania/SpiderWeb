@@ -102,7 +102,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 	private void buildGraphVertices(Element nodeMap, P2PNetworkGraph startGraph) {
 		int counter = 0;
 		//Tell the listeners what is going to be loaded and how much
-		taskChanged(nodeMap.getChildren().size(), "Vertices"); 
+		taskStarted(nodeMap.getChildren().size(), "Vertices"); 
 
 		for(Object o : nodeMap.getChildren()) {
 			Element elem = (Element)o;
@@ -126,7 +126,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 		int counter = 0;
 		int edgeCounter=0;
 		//Tell the listeners what is going to be loaded and how much
-		taskChanged(edgeMap.getChildren().size(), "Edges");
+		taskStarted(edgeMap.getChildren().size(), "Edges");
 		
 		for(Object o : edgeMap.getChildren()) {
 			Element elem = (Element)o;
@@ -169,7 +169,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 	
 	private void buildLogEvents(Element logElem, P2PNetworkGraph startGraph, int edgeCounter) {
 		if(logElem != null) {
-			taskChanged(logElem.getChildren().size(), "Events");
+			taskStarted(logElem.getChildren().size(), "Events");
 			int counter=0;
 			for(Object o : logElem.getChildren()) {
 
@@ -275,7 +275,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 			Element networkElem = networkDoc.getRootElement();
 			Element logElem = networkElem.getChild("logevents");
 			if(logElem != null) {
-				taskChanged(logElem.getChildren().size(), "Events");
+				taskStarted(logElem.getChildren().size(), "Events");
 				for(Object o : logElem.getChildren()) {
 
 					Element event = (Element)o;

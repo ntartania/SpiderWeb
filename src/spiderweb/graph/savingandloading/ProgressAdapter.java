@@ -86,11 +86,11 @@ public abstract class ProgressAdapter {
 	 * @param numberLines	the new value that is going to be loaded
 	 * @param whatIsLoading	the name of the task which the progress has changed to
 	 */
-	protected void taskChanged(int numberLines, String whatIsLoading) {
+	/*protected void taskChanged(int numberLines, String whatIsLoading) {
 		for(LoadingListener l : progressListeners) {
 			l.loadingChanged(numberLines, whatIsLoading);
 		}
-	}
+	}*/
 
 	/**
 	 * Informs all LoadingListeners in the list that the task who's progress was being monitored is complete

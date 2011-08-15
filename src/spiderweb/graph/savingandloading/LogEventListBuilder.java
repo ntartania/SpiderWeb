@@ -69,7 +69,7 @@ public class LogEventListBuilder extends ProgressAdapter {
 			//[end] Create local variables for the creation of the list
 			
 			//notify the listeners that the log events have begun loading
-			taskChanged(totalLines, "LogEvents");
+			taskStarted(totalLines, "LogEvents");
 						
 			//[start] Loop reading the file and creating the list
 			logEvents.add(LogEvent.getStartEvent()); //a start event to know when to stop playback of a reversing graph

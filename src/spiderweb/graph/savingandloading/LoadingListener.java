@@ -32,18 +32,6 @@ public interface LoadingListener {
 	public void loadingStarted(int loadingAmount, String whatIsLoading);
 	
 	/**
-	 * The thing that is loading has changed, update the amount that 
-	 * needs to be loaded and update the String of what is loading.
-	 * 
-	 * The loading amount can be any arbitrary number, the progress 
-	 * from the loadingProgress method will be used to calculate a 
-	 * percentage of the loadingAmount.
-	 * @param loadingAmount	The new maximum value that needs to be loaded
-	 * @param whatIsLoading	A String identifier of what will be loading.
-	 */
-	public void loadingChanged(int loadingAmount, String whatIsLoading);
-	
-	/**
 	 * Updates the Progress through the maximum loadingAmount to calculate
 	 * a percentage of how far through loading it is.
 	 * 
