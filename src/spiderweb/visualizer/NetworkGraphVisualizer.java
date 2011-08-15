@@ -156,18 +156,7 @@ public class NetworkGraphVisualizer extends VisualizationViewer<P2PVertex,P2PCon
     	scaleButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
-				
-				Transformer<P2PVertex, Shape> shapeTransformer = getRenderContext().getVertexShapeTransformer();
-				if(shapeTransformer.getClass().equals(P2PVertexShapeTransformer.class)) {
-					P2PVertexShapeTransformer<P2PVertex, P2PConnection> scalableTransformer = (P2PVertexShapeTransformer<P2PVertex, P2PConnection> )shapeTransformer;
-					if(((JCheckBox)ae.getSource()).isSelected()) {
-						scalableTransformer.setScaling(true);
-					}
-					else {
-						scalableTransformer.setScaling(false);
-					}
-				}
-				repaint();
+				setScaling(((JCheckBox)ae.getSource()).isSelected());
 			}
     	});
     	visualInfo.add(scaleButton);
@@ -190,6 +179,7 @@ public class NetworkGraphVisualizer extends VisualizationViewer<P2PVertex,P2PCon
 		
 
 		getRenderContext().setVertexIncludePredicate(new ExclusiveVertexInOtherGraphPredicate(graph.getDynamicGraph(),PeerVertex.class));
+		setScaling();
 		repaint();
     }
     
@@ -202,6 +192,7 @@ public class NetworkGraphVisualizer extends VisualizationViewer<P2PVertex,P2PCon
 				EdgeShapeType.CUBIC_CURVE,
 				EdgeShapeType.LINE,
 				EdgeShapeType.LINE);
+		setScaling();
 		repaint();
     }
     
@@ -215,6 +206,7 @@ public class NetworkGraphVisualizer extends VisualizationViewer<P2PVertex,P2PCon
 				EdgeShapeType.CUBIC_CURVE,
 				EdgeShapeType.LINE,
 				EdgeShapeType.LINE);
+		setScaling();
 		repaint();
     }
     
@@ -228,6 +220,27 @@ public class NetworkGraphVisualizer extends VisualizationViewer<P2PVertex,P2PCon
 				EdgeShapeType.CUBIC_CURVE,
 				EdgeShapeType.LINE,
 				EdgeShapeType.LINE);
+        setScaling();
         repaint();
+    }
+    
+    public void setScaling(boolean scale) {
+    	Transformer<P2PVertex, Shape> shapeTransformer = getRenderContext().getVertexShapeTransformer();
+		if(shapeTransformer.getClass().equals(P2PVertexShapeTransformer.class)) {
+			P2PVertexShapeTransformer<P2PVertex, P2PConnection> scalableTransformer = 
+				(P2PVertexShapeTransformer<P2PVertex, P2PConnection>)shapeTransformer;
+			if(scale) {
+				scalableTransformer.setScaling(true);
+				scaleVertices = true;
+			}
+			else {
+				scalableTransformer.setScaling(false);
+				scaleVertices = false;
+			}
+		}
+		repaint();
+    }
+    private void setScaling() {
+    	setScaling(scaleVertices);
     }
 }
