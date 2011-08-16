@@ -2,7 +2,7 @@
  * File:         NetworkGraphVisualizer.java
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      09/08/2011
- * Last Changed: Date: 13/08/2011 
+ * Last Changed: Date: 16/08/2011 
  * Author:       Andrew O'Hara
  * 				 Matthew Smith
  * 

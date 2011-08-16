@@ -29,7 +29,7 @@ public class VertexIsInTheOtherGraphPredicate implements
 	@Override
 	public boolean evaluate(Context<Graph<P2PVertex, P2PConnection>, P2PVertex> context) {
 		
-		return (othergraph.containsVertex(context.element));
+		return (othergraph.containsVertex(context.element) && !context.element.isHidden());
 		
 	}
 	

@@ -44,16 +44,13 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 	private ReferencedNetworkGraph graph;
 	
 
-	//[start] Constructor
 	public P2PNetworkGraphLoader() {
 		super();
 		logList = new ArrayList<LogEvent>();
 		graph = new ReferencedNetworkGraph();
 		
 	}
-	//[end] Constructor
 
-	//[start] Loading Method
 	/**
 	 * @return <code>true</code> if file loaded successfully
 	 */
@@ -95,9 +92,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 		}
 		return false;
 	}
-	//[end] Loading Method
 
-	//[start] Graph Builder
 	
 	private void buildGraphVertices(Element nodeMap, P2PNetworkGraph startGraph) {
 		int counter = 0;
@@ -350,9 +345,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 			}
 		}
 	}
-	//[end] Graph Builder
 
-	//[start] Getters
 
 	public List<LogEvent> getLogList() {
 		return logList;
@@ -360,14 +353,20 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 	public ReferencedNetworkGraph getGraph() {
 		return graph;
 	}
-	//[end] Getters
 
-	//[start] Static Methods
+	/**
+	 * Brings up a JFileChooser for the choice of selecting a file to open for loading.
+	 * 
+	 * Filters the files visible by the passed extensions and brings up error dialogs if
+	 * an incorrect file type is selected, or an error occurs.
+	 * @param filterDescription The description of what file extensions are being filtered
+	 * @param acceptedExtensions The file extensions to filter
+	 * @return a <code>File</code> containing the information to load to the graph.
+	 */
 	public static File chooseLoadFile(String filterDescription, String[] acceptedExtensions) {
 		JFileChooser fileNamer = new JFileChooser();
 		fileNamer.setFileFilter(new ExtensionFileFilter(filterDescription, acceptedExtensions));
 		int returnVal = fileNamer.showOpenDialog(null);
-
 
 		if (returnVal == JFileChooser.APPROVE_OPTION) {
 			for(String extension : acceptedExtensions) {
@@ -418,7 +417,6 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 		loader.addEventsToGraph(doc, requestTime);
 		return loader.logList;
 	}
-	//[end] Static Methods
 
 }
 

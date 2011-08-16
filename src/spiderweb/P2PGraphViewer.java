@@ -2,7 +2,7 @@
  * File:         P2PGraphVeiwer.java
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
- * Last Changed: Date: 11/08/2011 
+ * Last Changed: Date: 16/08/2011 
  * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
  * 				 Alan Davoust
  * 				 Andrew O'Hara
@@ -24,7 +24,6 @@ import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
 
-import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JApplet;
@@ -44,6 +43,7 @@ import spiderweb.graph.LogEvent;
 import spiderweb.graph.P2PConnection;
 import spiderweb.graph.P2PVertex;
 import spiderweb.graph.ReferencedNetworkGraph;
+import spiderweb.graph.savingandloading.DocumentGraphLoader;
 import spiderweb.graph.savingandloading.LoadingListener;
 import spiderweb.graph.savingandloading.P2PNetworkGraphLoader;
 import spiderweb.graph.savingandloading.P2PNetworkGraphSaver;
@@ -124,9 +124,13 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			JMenuItem load = new JMenuItem("Load");
 			load.addActionListener(new LoadListener());
 			
+			JMenuItem loadDocumentGraph = new JMenuItem("Load Document Graph");
+			loadDocumentGraph.addActionListener(new LoadDocumentGraphListener());
+			
 			file.addSeparator();
 			file.add(save);
 			file.add(load);
+			file.add(loadDocumentGraph);
 		}
 		{ //Exit Entry
 			JMenuItem exit = new JMenuItem("Exit");
@@ -274,10 +278,11 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 
 		DefaultModalGraphMouse<P2PVertex,P2PConnection> gm = new DefaultModalGraphMouse<P2PVertex,P2PConnection>(); 
 		MouseClickListener clickListener = new MouseClickListener();
-		popupMenu = new GraphPopupMenu(this, gm, clickListener);
 
 		visualizer = NetworkGraphVisualizer.getPersonalizedVisualizer(layout, gm, graph, graphsPanel.getWidth(), graphsPanel.getHeight());
 		visualizer.addMouseListener(clickListener);//This listener handles the mouse clicks to see if a popup event was done
+		
+		popupMenu = new GraphPopupMenu(visualizer, gm);
 		
 		for(LoadingListener l : loadingListeners) {
 			l.loadingProgress(1);
@@ -342,7 +347,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		visualizer.repaint();
 	}
 
-	private class MouseClickListener extends MouseAdapter implements ActionListener {
+	private class MouseClickListener extends MouseAdapter {
 
 		@Override 
 		public void mousePressed(MouseEvent e) {
@@ -350,11 +355,6 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 				popupMenu.showPopupMenu(e.getX(), e.getY());
 			}
 		}
-
-		public void actionPerformed(ActionEvent e) {
-			popupMenu.popupMenuEvent(((AbstractButton)e.getSource()).getText());
-		}
-
 	}
 
 	class LoadListener implements ActionListener {
@@ -383,6 +383,40 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 						graph = loader.getGraph();
 						startGraph();
 						eventThread.setRobustMode(false);
+					}
+				}
+			});
+			loadingThread.start();
+		}
+	}
+	
+	class LoadDocumentGraphListener implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent arg0) {
+			Thread loadingThread = new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+					if(eventThread !=null) {
+						eventThread.pause();
+					}
+					DocumentGraphLoader loader = new DocumentGraphLoader();
+					loader.addProgressListener(playbackPanel);
+					if(loader.doLoad()) {
+						getContentPane().removeAll();
+						getContentPane().add(mainPane);
+						validate();
+						if(logEvents != null) {
+							graphsPanel.removeAll();
+							logEvents.clear();
+							eventThread.stopPlayback();
+							playbackPanel.stopPlayback();
+						}
+						logEvents = loader.getLogList();
+						graph = loader.getGraph();
+						startGraph();
+						eventThread.setRobustMode(false);
+						visualizer.setCollapsedDocumentView();
 					}
 				}
 			});

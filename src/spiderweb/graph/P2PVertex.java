@@ -18,7 +18,7 @@ package spiderweb.graph;
 public abstract class P2PVertex implements Comparable<P2PVertex> {
 	
 	//[start] Private Attributes
-
+	protected boolean hide; //determines whether to show this vertex or not (used in the right click show/hide)
 	protected Integer label; //the label will be drawn over the vertex on the graph
 	protected Integer key; //the identifier which defines this vertex
 	//[end] Private Attributes	
@@ -58,6 +58,22 @@ public abstract class P2PVertex implements Comparable<P2PVertex> {
 	 */
 	public Integer getKey(){
 		return key;
+	}
+	
+	/**
+	 * Sets whether this vertex should be hidden or not.
+	 * @param hidden <code>true</code> if the vertex should be hidden.
+	 */
+	public void setHidden(boolean hidden) {
+		this.hide = hidden;
+	}
+	
+	/**
+	 * Returns whether or not this vertex should show in the visualizer.
+	 * @return <code>true</code> if the vertex is hidden.
+	 */
+	public boolean isHidden() {
+		return hide;
 	}
 	//[end] Getters and Setters
 	

@@ -1,7 +1,7 @@
 /*
  * File:         GraphPopupMenu.java
  * Created:      05/08/2011
- * Last Changed: Date: 9/08/2011 
+ * Last Changed: Date: 16/08/2011 
  * Author:       Andrew O'Hara
  * 				 Matthew Smith
  * 
@@ -10,16 +10,17 @@
 package spiderweb;
 
 import edu.uci.ics.jung.algorithms.layout.*;
-import edu.uci.ics.jung.visualization.VisualizationViewer;
 import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
 import edu.uci.ics.jung.visualization.control.ModalGraphMouse.Mode;
 import edu.uci.ics.jung.visualization.layout.LayoutTransition;
 import edu.uci.ics.jung.visualization.util.Animator;
 
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.TimerTask;
 import java.util.Timer;
 
+import javax.swing.AbstractButton;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
@@ -36,27 +37,28 @@ import spiderweb.visualizer.NetworkGraphVisualizer;;
  * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
  * @version Date: 05/08/2011
  */
-public class GraphPopupMenu extends JPopupMenu {
+public class GraphPopupMenu extends JPopupMenu implements ActionListener {
 
 	/**eclipse generated Serial UID*/
 	private static final long serialVersionUID = 1429587389581580356L;
 
 	private DefaultModalGraphMouse<P2PVertex,P2PConnection> gm;
-	private P2PGraphViewer applet;
+	private NetworkGraphVisualizer visualizer;
 
 	private JMenuItem balloonLayout;
 	private JMenuItem treeLayout;
 	private JMenuItem radialTreeLayout;
 	private JMenuItem treeSeparator;
 	
-	Timer stopAnimateTimer;
+	private Timer stopAnimateTimer;
 	
-	public GraphPopupMenu(P2PGraphViewer applet, final DefaultModalGraphMouse<P2PVertex,P2PConnection> gm, 
-			ActionListener listener) {
-		this.applet = applet;
+	public GraphPopupMenu(NetworkGraphVisualizer visualizer, final DefaultModalGraphMouse<P2PVertex,P2PConnection> gm) {
+		this.visualizer = visualizer;
 		this.gm = gm;
 		JMenuItem picking = new JMenuItem("Picking");
 		JMenuItem transforming = new JMenuItem("Transforming");
+		JMenuItem hideSelected = new JMenuItem("Hide Selected");
+		JMenuItem showAll = new JMenuItem("Show All");
 		JMenuItem circleLayout = new JMenuItem("Circle Layout");
 		JMenuItem frLayout = new JMenuItem("FR Layout");
 		JMenuItem isomLayout = new JMenuItem("ISOM Layout");
@@ -69,21 +71,29 @@ public class GraphPopupMenu extends JPopupMenu {
 		treeSeparator = new JMenuItem("Tree Type Layouts:");
 		treeSeparator.setEnabled(false);
 
-		picking.addActionListener(listener);
-		transforming.addActionListener(listener);
-		kkLayout.addActionListener(listener);
-		frLayout.addActionListener(listener);
-		isomLayout.addActionListener(listener);
-		circleLayout.addActionListener(listener);
-		springLayout.addActionListener(listener);
-		balloonLayout.addActionListener(listener);
-		treeLayout.addActionListener(listener);
-		radialTreeLayout.addActionListener(listener);
+		picking.addActionListener(this);
+		transforming.addActionListener(this);
+		hideSelected.addActionListener(this);
+		showAll.addActionListener(this);
+		kkLayout.addActionListener(this);
+		frLayout.addActionListener(this);
+		isomLayout.addActionListener(this);
+		circleLayout.addActionListener(this);
+		springLayout.addActionListener(this);
+		balloonLayout.addActionListener(this);
+		treeLayout.addActionListener(this);
+		radialTreeLayout.addActionListener(this);
 
 		add("Mouse Mode:").setEnabled(false);
 		add(picking);
 		add(transforming);
 		addSeparator();
+		
+		add("Vertex Hiding:").setEnabled(false);
+		add(hideSelected);
+		add(showAll);
+		addSeparator();
+		
 		add("Set Layout:").setEnabled(false);
 		add(circleLayout);
 		add(frLayout);
@@ -99,8 +109,7 @@ public class GraphPopupMenu extends JPopupMenu {
 	 */
 	public void showPopupMenu(int x, int y) {
 		setEnabled(true);
-		NetworkGraphVisualizer currentViewer = applet.getVisualizer();
-		if(!currentViewer.getName().equals("Collapsed Document View")) {
+		if(!visualizer.getName().equals("Collapsed Document View")) {
 			remove(treeSeparator);
 			remove(balloonLayout);
 			remove(treeLayout);
@@ -112,7 +121,7 @@ public class GraphPopupMenu extends JPopupMenu {
 			add(treeLayout);
 			add(radialTreeLayout);
 		}
-		show(currentViewer, x, y);
+		show(visualizer, x, y);
 	}
 
 	/**
@@ -121,12 +130,11 @@ public class GraphPopupMenu extends JPopupMenu {
 	 */
 	public void popupMenuEvent(String text) {
 		if (text.contains(("Layout"))) {
-			VisualizationViewer<P2PVertex,P2PConnection> currentViewer = applet.getVisualizer();
-			Layout<P2PVertex,P2PConnection> currentLayout = currentViewer.getGraphLayout();
+			Layout<P2PVertex,P2PConnection> currentLayout = visualizer.getGraphLayout();
 			Layout<P2PVertex,P2PConnection> newLayout = null;
-			P2PNetworkGraph graph = applet.getGraph().getReferenceGraph();
+			P2PNetworkGraph graph = (P2PNetworkGraph) visualizer.getGraphLayout().getGraph();
 			if (text.equals("FR Layout")) {
-				newLayout = new FRLayout<P2PVertex,P2PConnection>(graph, currentViewer.getSize());
+				newLayout = new FRLayout<P2PVertex,P2PConnection>(graph, visualizer.getSize());
 			} else if (text.equals("ISOM Layout")) {
 				newLayout = new ISOMLayout<P2PVertex,P2PConnection>(graph);
 			} else if (text.equals("KK Layout")) {
@@ -142,31 +150,43 @@ public class GraphPopupMenu extends JPopupMenu {
 			} else { //use circle layout as default as it is fast
 				newLayout = new CircleLayout<P2PVertex,P2PConnection>(graph);
 			}
-			newLayout.setInitializer(currentViewer.getGraphLayout());
+			newLayout.setInitializer(visualizer.getGraphLayout());
 			if(!newLayout.getClass().equals(TreeLayout.class)) { //Tree layout cannot call setSize()
-				newLayout.setSize(currentViewer.getSize());
+				newLayout.setSize(visualizer.getSize());
 			}
 			
 			//animate between one layout and the next
 			LayoutTransition<P2PVertex,P2PConnection> transition =
-				new LayoutTransition<P2PVertex,P2PConnection>(currentViewer, currentLayout, newLayout);
+				new LayoutTransition<P2PVertex,P2PConnection>(visualizer, currentLayout, newLayout);
 			Animator transitionAnimator = new Animator(transition);
 			transitionAnimator.start(); 
 			
 			stopAnimateTimer.schedule(new StopAnimateTask<P2PVertex,P2PConnection>(transitionAnimator, newLayout), 5000);
 			
-			currentViewer.getRenderContext().getMultiLayerTransformer().setToIdentity();
-			currentViewer.repaint();
-			
-		} else if (text.equals("Picking")) {
+			visualizer.getRenderContext().getMultiLayerTransformer().setToIdentity();
+		} 
+		else if (text.equals("Picking")) {
 			gm.setMode(Mode.PICKING);
-		} else if (text.equals("Transforming")) {
+		} 
+		else if (text.equals("Transforming")) {
 			gm.setMode(Mode.TRANSFORMING);
-		} else {
+		} 
+		else if (text.equals("Hide Selected")) {
+			for(P2PVertex v : visualizer.getPickedVertexState().getPicked()) {
+				v.setHidden(true);
+			}
+		}
+		else if (text.equals("Show All")) {
+			for(P2PVertex v : visualizer.getGraphLayout().getGraph().getVertices()) {
+				v.setHidden(false);
+			}
+		}
+		else {
 			JOptionPane.showMessageDialog(this, "GraphPopupMenu.popupMenuEvent(): "+text, "Uncaught menu action",
 					JOptionPane.ERROR_MESSAGE);
 			return;
 		}
+		visualizer.repaint();
 		setVisible(false);
 		setEnabled(false);
 	}
@@ -204,5 +224,11 @@ public class GraphPopupMenu extends JPopupMenu {
 			}
 		}
 		
+	}
+
+	@Override
+	public void actionPerformed(ActionEvent e) {
+		String buttonText = ((AbstractButton)e.getSource()).getText();
+		popupMenuEvent(buttonText);
 	}
 }
