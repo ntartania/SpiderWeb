@@ -51,6 +51,7 @@ import spiderweb.networking.ConnectDialog;
 import spiderweb.networking.HTTPClient;
 import spiderweb.networking.NetworkGraphListener;
 import spiderweb.visualizer.NetworkGraphVisualizer;
+import spiderweb.visualizer.ViewState;
 import spiderweb.visualizer.eventplayer.EventPlayer;
 import spiderweb.visualizer.eventplayer.EventPlayerListener;
 import spiderweb.visualizer.eventplayer.PlayState;
@@ -179,7 +180,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 						JRadioButtonMenuItem button = (JRadioButtonMenuItem) ae.getSource();
 						if (button.isSelected()) { //Add the log table
 							JSplitPane p = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-							p.setResizeWeight(0.80);
+							p.setResizeWeight(0.8f);
 							p.add(mainPane);
 							p.add(eventTable.getInPanel());
 							p.setDividerSize(3);
@@ -206,7 +207,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 						JRadioButtonMenuItem button = (JRadioButtonMenuItem) ae.getSource();
 						if (button.isSelected()) { //Add the log table
 							JSplitPane p = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-							p.setResizeWeight(1);
+							p.setResizeWeight(0.75f);
 							p.add(mainPane);
 							p.add(visualizer.getOptionsPanel());
 							p.setDividerSize(3);
@@ -416,7 +417,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 						graph = loader.getGraph();
 						startGraph();
 						eventThread.setRobustMode(false);
-						visualizer.setCollapsedDocumentView();
+						visualizer.setView(ViewState.CollapsedDocumentView);
 					}
 				}
 			});

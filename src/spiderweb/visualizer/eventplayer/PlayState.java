@@ -3,7 +3,7 @@
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
  * Last Changed: Date: 20/07/2011 
- * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * Author:       Matthew Smith
  * 
  * This code was produced at Carleton University 2011
  */
