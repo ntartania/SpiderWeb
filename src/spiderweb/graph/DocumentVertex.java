@@ -3,7 +3,7 @@
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
  * Last Changed: Date: 20/07/2011 
- * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * Author:       Matthew Smith
  * 
  * This code was produced at Carleton University 2011
  */
@@ -21,13 +21,14 @@ package spiderweb.graph;
  */
 public class DocumentVertex extends P2PVertex {
 	
-	private String name;
-	
-	//[start] Constructors
+	/** 
+	 * The name which represents this document 
+	 * (so no concatination has to take place when calling <code>toString()</code>
+	 */
+	protected String name;
 	
 	/**
 	 * Creates a vertex which represents a Document in the P2P network visualization.
-	 * @param publisher	The key of the Peer which published this document.
 	 * @param key	The key value of this document.
 	 */
 	public DocumentVertex(Integer key) {
@@ -46,9 +47,7 @@ public class DocumentVertex extends P2PVertex {
 		super((vertex.getClass().equals(DocumentVertex.class) ? vertex.getKey().intValue():1000+vertex.getKey().intValue()));
 		this.label = new Integer(vertex.getKey()%1000);
 	}
-	//[end] Constructors
 	
-	//[start] Getters and Setters
 	/**
 	 * Gets Document's number as an Integer.
 	 * @return The Integer of the Document Number.
@@ -56,9 +55,7 @@ public class DocumentVertex extends P2PVertex {
 	public Integer getDocumentNumber() {
 		return key % 1000;
 	}
-	//[end] Getters and Setters
 	
-	//[start] Overridden Methods
 	@Override
 	public boolean equals(Object other){
 		if(other instanceof DocumentVertex) {
@@ -79,5 +76,4 @@ public class DocumentVertex extends P2PVertex {
 	public String toString() {
 		return name;
 	}
-	//[end] Overridden Methods
 }

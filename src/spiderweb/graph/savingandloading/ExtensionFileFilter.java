@@ -44,7 +44,7 @@ import javax.swing.filechooser.FileFilter;
  * supported in a future Swing release.
  * 
  * @author  Ian F. Darwin at java2s.com
- * @see http://www.java2s.com/Code/Java/Swing-JFC/AsimpleFileFilterclassthatworksbyfilenameextension.htm
+ * http://www.java2s.com/Code/Java/Swing-JFC/AsimpleFileFilterclassthatworksbyfilenameextension.htm
  */
 public class ExtensionFileFilter extends FileFilter {
 

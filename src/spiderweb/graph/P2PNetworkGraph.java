@@ -3,7 +3,7 @@
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
  * Last Changed: Date: 05/08/2011 
- * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * Author:       Matthew Smith
  * 
  * This code was produced at Carleton University 2011
  */
@@ -20,27 +20,46 @@ import edu.uci.ics.jung.graph.DirectedSparseGraph;
 import edu.uci.ics.jung.graph.Forest;
 import edu.uci.ics.jung.graph.Graph;
 
+/**
+ * P2PNetworkGraph represents a graph which has 
+ * 
+ * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * @version Date: 05/08/2011 
+ */
 public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnection> implements Graph<P2PVertex, P2PConnection> {
 
+	/**eclipse generated serialUID*/
 	private static final long serialVersionUID = -5569894854823217541L;
-
+	
+	//used in counting the number of edges that are in the graph
 	private int edgecounter = 0;
 
+	/**
+	 * 
+	 */
 	public P2PNetworkGraph() {
 		super();
 	}
 
+	/**
+	 * adds a new <code>PeerVertex</code> with the passed peer number as its identifier
+	 * @param peernumber the new <code>PeerVertex</code>'s identifier
+	 */
 	protected void addPeer(int peernumber){
 		P2PVertex v1 = new PeerVertex(peernumber);
 		super.addVertex(v1);
 	}
 
+	/**
+	 * removes the <code>PeerVertex</code> corresponding to the passed peer number;
+	 * also removes any <code>PeerDocumentVertex</code> that are attached to this peer.
+	 * @param peernum the identifier of the <code>PeerVertex</code> to remove.
+	 */
 	protected void removePeer(int peernum){
 		P2PVertex peer = new PeerVertex(peernum);
 		Collection<P2PConnection> edgeset = getIncidentEdges(peer);
 		Set<PeerDocumentVertex> docsToRemove = new TreeSet<PeerDocumentVertex>();
-		//TODO use an iterator?
-		//TODO use removeDocument
+
 		for (P2PConnection e: edgeset){
 			P2PVertex node = getOpposite(peer, e); //node is what the edge connects the peer to  
 			if (node instanceof PeerDocumentVertex)//if that node is a document
@@ -198,7 +217,7 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 
 	/**
 	 * Returns the edge that connects the vertex which the peer number peerFrom represents to the vertex which document number docnumber represents.
-	 * @param peerFrom	Peer that the edge emerges from (vertex 1)
+	 * @param peer	Peer that the edge emerges from (vertex 1)
 	 * @param docnumber	Document that the edge terminates at (vertex 2)
 	 * @return			The edge that connects the two peers.
 	 */
@@ -208,7 +227,7 @@ public class P2PNetworkGraph extends DirectedSparseGraph<P2PVertex, P2PConnectio
 
 	/**
 	 * Returns the edge that connects the vertex which the peer number peerFrom represents to the vertex which document number docnumber represents.
-	 * @param peerFrom	Peer that the edge emerges from (vertex 1)
+	 * @param peer	Peer that the edge emerges from (vertex 1)
 	 * @param docnumber	Document that the edge terminates at (vertex 2)
 	 * @return			The edge that connects the two peers.
 	 */

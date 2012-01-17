@@ -105,12 +105,12 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 
 			if(type.equals("PeerVertex")) {
 				int key = Integer.parseInt(elem.getChild("key").getText());
-				graph.getReferenceGraph().addVertex(new PeerVertex(key));
+				graph.getFullGraph().addVertex(new PeerVertex(key));
 				startGraph.addVertex(new PeerVertex(key));
 			}
 			else if(type.equals("DocumentVertex")) {
 				int key = Integer.parseInt(elem.getChild("key").getText());
-				graph.getReferenceGraph().addVertex(new DocumentVertex(key));
+				graph.getFullGraph().addVertex(new DocumentVertex(key));
 				startGraph.addVertex(new DocumentVertex(key));
 			}
 			progress(++counter);
@@ -130,31 +130,31 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 			if(type.equals("PeerToPeer")) { //Peer to Peer
 				int v1Key = Integer.parseInt(elem.getChild("v1").getText());
 				int v2Key = Integer.parseInt(elem.getChild("v2").getText());
-				P2PVertex peer1 = graph.getReferenceGraph().getVertexInGraph(new PeerVertex(v1Key));
-				P2PVertex peer2 = graph.getReferenceGraph().getVertexInGraph(new PeerVertex(v2Key));
+				P2PVertex peer1 = graph.getFullGraph().getVertexInGraph(new PeerVertex(v1Key));
+				P2PVertex peer2 = graph.getFullGraph().getVertexInGraph(new PeerVertex(v2Key));
 				startGraph.addEdge(new P2PConnection(P2PConnection.P2P,edgeCounter), peer1, peer2);
-				graph.getReferenceGraph().addEdge(new P2PConnection(P2PConnection.P2P,edgeCounter), peer1, peer2);
+				graph.getFullGraph().addEdge(new P2PConnection(P2PConnection.P2P,edgeCounter), peer1, peer2);
 				edgeCounter++;
 			}
 			else if(type.equals("PeerToDocument")) { //Peer to Document
 				int v1Key = Integer.parseInt(elem.getChild("v1").getText());
 				int v2Key = Integer.parseInt(elem.getChild("v2").getText())%1000;
-				P2PVertex document = graph.getReferenceGraph().getVertexInGraph(new DocumentVertex(v2Key));
-				P2PVertex peer = graph.getReferenceGraph().getVertexInGraph(new PeerVertex(v1Key));
+				P2PVertex document = graph.getFullGraph().getVertexInGraph(new DocumentVertex(v2Key));
+				P2PVertex peer = graph.getFullGraph().getVertexInGraph(new PeerVertex(v1Key));
 				Pair<P2PVertex> pair = new Pair<P2PVertex>(peer, document);
 				startGraph.addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter),pair);
-				graph.getReferenceGraph().addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter),pair);
+				graph.getFullGraph().addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter),pair);
 				edgeCounter++;
 
 				PeerDocumentVertex pdv = new PeerDocumentVertex(v1Key, v2Key);
-				graph.getReferenceGraph().addVertex(pdv);
+				graph.getFullGraph().addVertex(pdv);
 				startGraph.addVertex(pdv);
 				startGraph.addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter),peer,pdv);
-				graph.getReferenceGraph().addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter),peer,pdv);
+				graph.getFullGraph().addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter),peer,pdv);
 				edgeCounter++;
 
 				startGraph.addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter),pdv,document);
-				graph.getReferenceGraph().addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter),pdv,document);
+				graph.getFullGraph().addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter),pdv,document);
 				edgeCounter++;
 			}
 			progress(++counter);
@@ -186,50 +186,50 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 				LogEvent evt = new LogEvent(timeDifference, type, paramOne, paramTwo, paramThree);
 				if(evt.isConstructing()) {
 					if (evt.getType().equals("online")){
-						graph.getReferenceGraph().addVertex(new PeerVertex(evt.getParam(1)));
+						graph.getFullGraph().addVertex(new PeerVertex(evt.getParam(1)));
 					} else if(evt.getType().equals("connect")){
-						P2PVertex from = graph.getReferenceGraph().getVertexInGraph(new PeerVertex(evt.getParam(1)));
-						P2PVertex to = graph.getReferenceGraph().getVertexInGraph(new PeerVertex(evt.getParam(2)));
-						if(graph.getReferenceGraph().findEdge(to, from) == null) {
+						P2PVertex from = graph.getFullGraph().getVertexInGraph(new PeerVertex(evt.getParam(1)));
+						P2PVertex to = graph.getFullGraph().getVertexInGraph(new PeerVertex(evt.getParam(2)));
+						if(graph.getFullGraph().findEdge(to, from) == null) {
 							P2PConnection edgeOne = new P2PConnection(P2PConnection.P2P,edgeCounter);
 							edgeCounter++;
 							P2PConnection edgeTwo = new P2PConnection(P2PConnection.P2P,edgeCounter);
 							edgeCounter++;
-							graph.getReferenceGraph().addEdge(edgeOne, from, to);
-							graph.getReferenceGraph().addEdge(edgeTwo, to, from);
+							graph.getFullGraph().addEdge(edgeOne, from, to);
+							graph.getFullGraph().addEdge(edgeTwo, to, from);
 						}
 						// else the edge already exists
 					} else if(evt.getType().equals("publish")){
 						P2PVertex document = new DocumentVertex(evt.getParam(2));
 						P2PVertex peerDocument = new PeerDocumentVertex(evt.getParam(1), evt.getParam(2));
-						P2PVertex peer = graph.getReferenceGraph().getVertexInGraph(new PeerVertex(evt.getParam(1)));
+						P2PVertex peer = graph.getFullGraph().getVertexInGraph(new PeerVertex(evt.getParam(1)));
 
-						if(!graph.getReferenceGraph().containsVertex(document)) {
-							graph.getReferenceGraph().addVertex(document);
+						if(!graph.getFullGraph().containsVertex(document)) {
+							graph.getFullGraph().addVertex(document);
 						}
 						else {
-							document = graph.getReferenceGraph().getVertexInGraph(document);
+							document = graph.getFullGraph().getVertexInGraph(document);
 						}
-						graph.getReferenceGraph().addVertex(peerDocument);
+						graph.getFullGraph().addVertex(peerDocument);
 
-						if(graph.getReferenceGraph().findEdge(peer, document) == null) {
-							graph.getReferenceGraph().addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter), peer, document);
+						if(graph.getFullGraph().findEdge(peer, document) == null) {
+							graph.getFullGraph().addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter), peer, document);
 							edgeCounter++;
 						}
-						if(graph.getReferenceGraph().findEdge(peer, peerDocument) == null) {
-							graph.getReferenceGraph().addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter), peer, peerDocument);
+						if(graph.getFullGraph().findEdge(peer, peerDocument) == null) {
+							graph.getFullGraph().addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter), peer, peerDocument);
 							edgeCounter++;
 						}
-						if(graph.getReferenceGraph().findEdge(peerDocument, document) == null) {
-							graph.getReferenceGraph().addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter), peerDocument, document);
+						if(graph.getFullGraph().findEdge(peerDocument, document) == null) {
+							graph.getFullGraph().addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter), peerDocument, document);
 							edgeCounter++;
 						}
 					}
 					else if(evt.getType().equals("linkdocument")){
-						P2PVertex documentOne = graph.getReferenceGraph().getVertexInGraph(new DocumentVertex(evt.getParam(1)));
-						P2PVertex documentTwo = graph.getReferenceGraph().getVertexInGraph(new DocumentVertex(evt.getParam(2)));
-						if(graph.getReferenceGraph().findEdge(documentOne, documentTwo) == null) {
-							graph.getReferenceGraph().addEdge(new P2PConnection(P2PConnection.DOC2DOC,edgeCounter), documentOne, documentTwo);
+						P2PVertex documentOne = graph.getFullGraph().getVertexInGraph(new DocumentVertex(evt.getParam(1)));
+						P2PVertex documentTwo = graph.getFullGraph().getVertexInGraph(new DocumentVertex(evt.getParam(2)));
+						if(graph.getFullGraph().findEdge(documentOne, documentTwo) == null) {
+							graph.getFullGraph().addEdge(new P2PConnection(P2PConnection.DOC2DOC,edgeCounter), documentOne, documentTwo);
 							edgeCounter++;
 						}
 					}
@@ -266,7 +266,7 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 
 	private void addEventsToGraph(Document networkDoc, long timeOffset) {
 		if(networkDoc.getRootElement().getName().equals("network")) {
-			int edgeCounter=graph.getReferenceGraph().getEdgeCount();
+			int edgeCounter=graph.getFullGraph().getEdgeCount();
 			Element networkElem = networkDoc.getRootElement();
 			Element logElem = networkElem.getChild("logevents");
 			if(logElem != null) {
@@ -292,50 +292,50 @@ public class P2PNetworkGraphLoader extends ProgressAdapter{
 					LogEvent evt = new LogEvent(eventTime, type, paramOne, paramTwo, paramThree);
 					if(evt.isConstructing()) {
 						if (evt.getType().equals("online")){
-							graph.getReferenceGraph().addVertex(new PeerVertex(evt.getParam(1)));
+							graph.getFullGraph().addVertex(new PeerVertex(evt.getParam(1)));
 						} else if(evt.getType().equals("connect")){
-							P2PVertex from = graph.getReferenceGraph().getVertexInGraph(new PeerVertex(evt.getParam(1)));
-							P2PVertex to = graph.getReferenceGraph().getVertexInGraph(new PeerVertex(evt.getParam(2)));
-							if(graph.getReferenceGraph().findEdge(to, from) == null) {
+							P2PVertex from = graph.getFullGraph().getVertexInGraph(new PeerVertex(evt.getParam(1)));
+							P2PVertex to = graph.getFullGraph().getVertexInGraph(new PeerVertex(evt.getParam(2)));
+							if(graph.getFullGraph().findEdge(to, from) == null) {
 								P2PConnection edgeOne = new P2PConnection(P2PConnection.P2P,edgeCounter);
 								edgeCounter++;
 								P2PConnection edgeTwo = new P2PConnection(P2PConnection.P2P,edgeCounter);
 								edgeCounter++;
-								graph.getReferenceGraph().addEdge(edgeOne, from, to);
-								graph.getReferenceGraph().addEdge(edgeTwo, to, from);
+								graph.getFullGraph().addEdge(edgeOne, from, to);
+								graph.getFullGraph().addEdge(edgeTwo, to, from);
 							}
 							// else the edge already exists
 						} else if(evt.getType().equals("publish")){
 							P2PVertex document = new DocumentVertex(evt.getParam(2));
 							P2PVertex peerDocument = new PeerDocumentVertex(evt.getParam(1), evt.getParam(2));
-							P2PVertex peer = graph.getReferenceGraph().getVertexInGraph(new PeerVertex(evt.getParam(1)));
+							P2PVertex peer = graph.getFullGraph().getVertexInGraph(new PeerVertex(evt.getParam(1)));
 
-							if(!graph.getReferenceGraph().containsVertex(document)) {
-								graph.getReferenceGraph().addVertex(document);
+							if(!graph.getFullGraph().containsVertex(document)) {
+								graph.getFullGraph().addVertex(document);
 							}
 							else {
-								document = graph.getReferenceGraph().getVertexInGraph(document);
+								document = graph.getFullGraph().getVertexInGraph(document);
 							}
-							graph.getReferenceGraph().addVertex(peerDocument);
+							graph.getFullGraph().addVertex(peerDocument);
 
-							if(graph.getReferenceGraph().findEdge(peer, document) == null) {
-								graph.getReferenceGraph().addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter), peer, document);
+							if(graph.getFullGraph().findEdge(peer, document) == null) {
+								graph.getFullGraph().addEdge(new P2PConnection(P2PConnection.P2DOC,edgeCounter), peer, document);
 								edgeCounter++;
 							}
-							if(graph.getReferenceGraph().findEdge(peer, peerDocument) == null) {
-								graph.getReferenceGraph().addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter), peer, peerDocument);
+							if(graph.getFullGraph().findEdge(peer, peerDocument) == null) {
+								graph.getFullGraph().addEdge(new P2PConnection(P2PConnection.P2PDOC,edgeCounter), peer, peerDocument);
 								edgeCounter++;
 							}
-							if(graph.getReferenceGraph().findEdge(peerDocument, document) == null) {
-								graph.getReferenceGraph().addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter), peerDocument, document);
+							if(graph.getFullGraph().findEdge(peerDocument, document) == null) {
+								graph.getFullGraph().addEdge(new P2PConnection(P2PConnection.DOC2PDOC,edgeCounter), peerDocument, document);
 								edgeCounter++;
 							}
 						}
 						else if(evt.getType().equals("linkdocument")){
-							P2PVertex documentOne = graph.getReferenceGraph().getVertexInGraph(new DocumentVertex(evt.getParam(1)));
-							P2PVertex documentTwo = graph.getReferenceGraph().getVertexInGraph(new DocumentVertex(evt.getParam(2)));
-							if(graph.getReferenceGraph().findEdge(documentOne, documentTwo) == null) {
-								graph.getReferenceGraph().addEdge(new P2PConnection(P2PConnection.DOC2DOC,edgeCounter), documentOne, documentTwo);
+							P2PVertex documentOne = graph.getFullGraph().getVertexInGraph(new DocumentVertex(evt.getParam(1)));
+							P2PVertex documentTwo = graph.getFullGraph().getVertexInGraph(new DocumentVertex(evt.getParam(2)));
+							if(graph.getFullGraph().findEdge(documentOne, documentTwo) == null) {
+								graph.getFullGraph().addEdge(new P2PConnection(P2PConnection.DOC2DOC,edgeCounter), documentOne, documentTwo);
 								edgeCounter++;
 							}
 						}

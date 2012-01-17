@@ -2,17 +2,24 @@
  * File:         P2PConnection.java
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
- * Last Changed: Date: 21/07/2011 
- * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * Last Changed: Date: 29/08/2011 
+ * Author:       Matthew Smith
+ * 				 Alan Davoust
  * 
  * This code was produced at Carleton University 2011
  */
 package spiderweb.graph;
 
 /**
- * @author  Matty
+ * P2PConnection represents the edge between two vertices on the graph.
+ * The connection has different states which the transformer will draw 
+ * the connection as different sizes and shapes to differentiate.
+ * 
+ * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * @author Alan Davoust
+ * @version Date: 29/08/2011 
  */
-public class P2PConnection/* implements Comparable<P2PConnection> */{
+public class P2PConnection {
 
 	public static final int P2P = 0;
 	public static final int P2DOC = 10;
@@ -23,19 +30,18 @@ public class P2PConnection/* implements Comparable<P2PConnection> */{
 	public static final int ANSWERING = 2;
 	public static final int MATCHING_DOC = 11;
 	private int mytypeandstate;
-	//private P2PVertex peer;
+	
 	private Integer key;
 	private String edgeName;
 	
-	//not sure how useful this will be
-	public static P2PConnection connectPeers(Integer p1, Integer p2, int count){
-		return new P2PConnection (P2P, new Integer(count));
-	}
-	
-	/** constructor
+	/**
+	 * P2PConnection represents the edge between two vertices on the graph.
+	 * The connection has different states which the transformer will draw 
+	 * the connection as different sizes and shapes to differentiate.
 	 * 
-	 * @param type either P2P (edge between two peers) or P2DOC (edge between a peer and a document)
-	 * @param key
+	 * @param type either <code>P2PConnection.P2P</code> (edge between two peers) or 
+	 * 		<code>P2PConnection.P2DOC</code> (edge between a peer and a document)
+	 * @param key the <code>Integer</code> key this edge is in the graph.
 	 */
 	public P2PConnection(int type, Integer key){
 		mytypeandstate = type;
@@ -44,7 +50,8 @@ public class P2PConnection/* implements Comparable<P2PConnection> */{
 	}
 	
 	/**
-	 * @return
+	 * Returns the key value of the edge.
+	 * @return the <code>Integer</code> key value of the edge
 	 */
 	public Integer getKey(){
 		return key;
@@ -85,23 +92,31 @@ public class P2PConnection/* implements Comparable<P2PConnection> */{
 		return (getType() == DOC2PDOC);
 	}
 	
-	/** change state to "query"*/ 
+	/** 
+	 * change state to "query"
+	 */ 
 	public void query(){
 		if (mytypeandstate==P2P)
 			mytypeandstate=QUERYING;
 	}
 	
 	/**
-	 * change from whatever it was to just being a doc
+	 * If the Edge is in a querying state, turn it back to a normal P2P State.
 	 */
-	public void normalState(){
-		if (isP2P())
+	public void backToNormal() {
+		if (isQuerying())
 			mytypeandstate=P2P;
-		else
-			mytypeandstate=P2DOC;
 		
 	}
 	
+	/**
+	 * return whether or not the edge is in a query state.
+	 * @return <code>true</code> if the edge is in a query state
+	 */
+	public boolean isQuerying() {
+		return (mytypeandstate==QUERYING);
+	}
+
 	@Override
 	public boolean equals(Object other){
 		if(other instanceof P2PConnection)
@@ -116,25 +131,10 @@ public class P2PConnection/* implements Comparable<P2PConnection> */{
 	}
 	
 	@Override
-	/*public int compareTo(P2PConnection other) {
-		if(other instanceof P2PConnection)
-			return (key.compareTo(((P2PConnection)other).getKey()));
-		else 
-		return 0; // there's a problem anyway : can only compare two P2PConnection objects
-	}*/
-
 	public String toString(){
 		return edgeName;
 	}
-	public boolean isQuerying() {
-		
-		return (mytypeandstate ==QUERYING);
-	}
-
-	public void backToNormal() {
-		if (isQuerying())
-			mytypeandstate=P2P;
-		
-	}
+	
+	
 
 }

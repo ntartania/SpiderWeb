@@ -139,14 +139,14 @@ public class TimeCounter implements ActionListener {
 	
 	/**
 	 * Set the lower bound of the time counter.
-	 * @param bound The new lower bound
+	 * @param lowerBound The new lower bound
 	 */
 	public void setLowerBound(long lowerBound) {
 		this.lowerBound = lowerBound;
 	}
 	/**
 	 * Set the upper bound of the time counter.
-	 * @param bound The new upper bound.
+	 * @param upperBound The new upper bound.
 	 */
 	public void setUpperBound(long upperBound) {
 		this.upperBound = upperBound;

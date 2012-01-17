@@ -57,6 +57,12 @@ public class EventPlayer implements ActionListener{
 	private boolean playable; //for when a graph is loaded without any events
 	private boolean robustMode=false;
 
+	/**
+	 * TODO:
+	 * @param graph
+	 * @param eventlist
+	 * @param playbackSlider
+	 */
 	public EventPlayer(ReferencedNetworkGraph graph, List<LogEvent> eventlist, JSlider playbackSlider){
 		this.graph = graph;
 		this.playbackSlider = playbackSlider;
@@ -73,6 +79,10 @@ public class EventPlayer implements ActionListener{
 		
 	}
 
+	/**
+	 * TODO:
+	 * @param graph
+	 */
 	public EventPlayer(ReferencedNetworkGraph graph){
 		this.graph = graph;
 		this.playbackSlider = null;
@@ -113,13 +123,29 @@ public class EventPlayer implements ActionListener{
 		return robustMode;
 	}
 
-	public void addEventPlayerListener(EventPlayerListener epl) {
-		my_listeners.add(epl);
+	/**
+	 * adds a <code>EventPlayerListener</code> to the player.
+	 * @param listener the <code>EventPlayerListener</code> to be removed
+	 */
+	public void addEventPlayerListener(EventPlayerListener listener) {
+		my_listeners.add(listener);
 	}
 
-	public void setFastSpeed(int value) {
-		if(value!=fastMultiplier) {
-			fastMultiplier = value;
+	/**
+	 * Removes a <code>EventPlayerListener</code> from the player.
+	 * @param listener the <code>EventPlayerListener</code> to be removed
+	 */
+	public void removeEventPlayerListener(EventPlayerListener listener) {
+		my_listeners.remove(listener);
+	}
+	
+	/**
+	 * Sets the speed multiplier of the fast playback
+	 * @param multiplier the new speed multiplier.
+	 */
+	public void setSpeedMultiplier(int multiplier) {
+		if(multiplier!=fastMultiplier) {
+			fastMultiplier = multiplier;
 			if(state == PlayState.FASTFORWARD) {
 				timeCounter.setIncrement(speed*fastMultiplier);
 			} else if(state == PlayState.FASTREVERSE) {
@@ -128,15 +154,22 @@ public class EventPlayer implements ActionListener{
 		}
 	}
 
+	/**
+	 * Returns the current <code>PlayState</code> of the player
+	 * @return the player's current <code>PlayState</code>
+	 */
 	public PlayState getPlayState() {
 		return state;
 	}
 
+	/**
+	 * Returns the current index through the list of events the player is presently at.
+	 * @return
+	 */
 	public int getCurrentIndex() {
 		return current_index;
 	}
 
-	//[start] Playback Properties
 	/**
 	 * Returns whether or not the graph is playing forward or backwards.
 	 * @return <code>true</code> if the Play State is forward or fast forward.
@@ -152,8 +185,8 @@ public class EventPlayer implements ActionListener{
 		return ((state == PlayState.FASTFORWARD) || (state == PlayState.FASTREVERSE));
 	}
 	/**
-	 * 
-	 * @return
+	 * Returns whether or not the playback is at the start of the list of events.
+	 * @return <code>true</code> if the playback is on the first event.
 	 */
 	public boolean atFront() {
 		if(timeCounter.getTime() == timeCounter.getLowerBound()) {
@@ -162,8 +195,8 @@ public class EventPlayer implements ActionListener{
 		return false;
 	}
 	/**
-	 * 
-	 * @return
+	 * Returns whether or not the playback is at the end of the list of events.
+	 * @return <code>true</code> if the playback is on the last event.
 	 */
 	public boolean atBack() {
 		if (timeCounter.getTime() == timeCounter.getUpperBound()) {
@@ -172,8 +205,8 @@ public class EventPlayer implements ActionListener{
 		return false;
 	}
 	/**
-	 * 
-	 * @return
+	 * Returns whether or not the playback is at the start or at the end of the list of events.
+	 * @return <code>true</code> if the playback is on the first or last event.
 	 */
 	public boolean atAnEnd() {
 		if(atFront() || atBack()) {
@@ -181,9 +214,7 @@ public class EventPlayer implements ActionListener{
 		}
 		return false;
 	}
-	//[end]
 
-	//[start] State Change handlers for button clicks.
 	/**
 	 * 
 	 */
@@ -253,10 +284,6 @@ public class EventPlayer implements ActionListener{
 			prevState = state;
 			state = PlayState.PAUSE;
 			notify();
-			//schedule.stop();
-			/*for(EventPlayerListener epl : my_listeners) {
-				epl.doRepaint();
-			}*/
 		}
 	}
 
@@ -270,13 +297,6 @@ public class EventPlayer implements ActionListener{
 			state = PlayState.FORWARD;
 		}
 
-		/*for( LogEvent evt : getLogEventsUntil(value) ) {
-			handleLogEvent(evt);
-		}*/
-		/*for(EventPlayerListener epl : my_listeners) {
-			epl.doRepaint();
-		}*/
-
 		timeCounter.setTime(value);
 		state = prevState;
 	}
@@ -285,55 +305,52 @@ public class EventPlayer implements ActionListener{
 		wakeup(state);
 		schedule.stop();
 	}
-	//[end]
 
-	//[start] Graph Editors for highlighting and changing colours
 	/**
 	 * Visualize a query
 	 * @param peer
 	 */
 	public void doQuery(int peer, int queryString, int queryMessageID){
-		graph.getReferenceGraph().getPeer(peer).query(queryMessageID);
+		graph.getFullGraph().getPeer(peer).query(queryMessageID);
 	}
 
 	public void undoQuery(int peer, int queryString, int queryMessageID){
-		graph.getReferenceGraph().getPeer(peer).endQuery(queryMessageID);
+		graph.getFullGraph().getPeer(peer).endQuery(queryMessageID);
 	}
 
 
 	public void doQueryEdge(int peerFrom, int peerTo) {
-		graph.getReferenceGraph().findPeerConnection(peerFrom, peerTo).query();
+		graph.getFullGraph().findPeerConnection(peerFrom, peerTo).query();
 	}
 
 	public void undoQueryEdge(int peerFrom, int peerTo) {
-		graph.getReferenceGraph().findPeerConnection(peerFrom, peerTo).backToNormal();
+		graph.getFullGraph().findPeerConnection(peerFrom, peerTo).backToNormal();
 	}
 
 	/**
 	 * Visualize a query reaches peer event (bold edges)
 	 * @param peer
-	 * @param q
+	 * @param queryMessageID
 	 */
 	public void doQueryReachesPeer(int peer, int queryMessageID){
-		graph.getReferenceGraph().getPeer(peer).receiveQuery(queryMessageID);
+		graph.getFullGraph().getPeer(peer).receiveQuery(queryMessageID);
 	}
 	/**
 	 * Visualize a query reaches peer event (bold edges)
 	 * @param peer
 	 */
 	public void undoQueryReachesPeer(int peer, int queryMessageID){
-		graph.getReferenceGraph().getPeer(peer).endReceivedQuery(queryMessageID);
+		graph.getFullGraph().getPeer(peer).endReceivedQuery(queryMessageID);
 	}
 
 
 	public void doQueryHit(int peerNumber, int documentNumber, int queryMessageID) {
-		graph.getReferenceGraph().getPeerDocument(peerNumber, documentNumber).setQueryHit(true);
+		graph.getFullGraph().getPeerDocument(peerNumber, documentNumber).setQueryHit(true);
 	}
 
 	public void undoQueryHit(int peerNumber, int documentNumber, int queryMessageID) {
-		graph.getReferenceGraph().getPeerDocument(peerNumber, documentNumber).setQueryHit(false);
+		graph.getFullGraph().getPeerDocument(peerNumber, documentNumber).setQueryHit(false);
 	}
-	//[end]
 
 
 	public void beginPlayback() {
@@ -347,7 +364,6 @@ public class EventPlayer implements ActionListener{
 
 	}
 
-	//[start] Graph Event Getting & Handling
 	/**
 	 * current_index is always the next event with time greater than the simulation time.
 	 * 
@@ -535,7 +551,6 @@ public class EventPlayer implements ActionListener{
 			System.err.println(evt);
 		}
 	}
-	//[end] Graph Event Handling
 
 	@Override
 	public void actionPerformed(ActionEvent arg0) {
@@ -575,6 +590,10 @@ public class EventPlayer implements ActionListener{
 		}
 	}
 
+	/**
+	 * returns all the events after the current index for saving
+	 * @return <code>List</code> of LogEvents for saving to an xml file.
+	 */
 	public List<LogEvent> getSaveEvents() {
 		ListIterator<LogEvent> i = myEventList.listIterator(current_index);
 		List<LogEvent> events = new LinkedList<LogEvent>();
@@ -584,6 +603,10 @@ public class EventPlayer implements ActionListener{
 		return events;
 	}
 
+	/**
+	 * Adds the passed list of <code>LogEvent</code>s to the event player
+	 * @param events List of <code>LogEvent</code>s to add.
+	 */
 	public synchronized void addEvents(List<LogEvent> events) {
 		//current_index--;
 		myEventList.remove(myEventList.size()-1);
@@ -597,6 +620,10 @@ public class EventPlayer implements ActionListener{
 		}
 	}
 
+	/**
+	 * Returns the current time of the player through the playback.
+	 * @return the player's time.
+	 */
 	public long getCurrentTime() {
 		return myTimeNow;
 	}

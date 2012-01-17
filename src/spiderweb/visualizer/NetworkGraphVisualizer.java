@@ -12,11 +12,8 @@ package spiderweb.visualizer;
 
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Shape;
 
 import javax.swing.JPanel;
-
-import org.apache.commons.collections15.Transformer;
 
 import spiderweb.graph.DocumentVertex;
 import spiderweb.graph.P2PConnection;
@@ -51,7 +48,6 @@ public class NetworkGraphVisualizer extends VisualizationViewer<P2PVertex,P2PCon
 	private static final long serialVersionUID = 3695469692236559338L;
 
 	private ReferencedNetworkGraph graph;
-	private boolean scaleVertices;
 
 	private VisualOptionsPanel optionsPanel;
 	private ViewState currentView;
@@ -67,13 +63,11 @@ public class NetworkGraphVisualizer extends VisualizationViewer<P2PVertex,P2PCon
 
 		this.graph = graph;
 
-		scaleVertices = false;
-
 		optionsPanel = new VisualOptionsPanel();
 		optionsPanel.addViewListener(this);
 		
 		//
-		includePredicate = new OptionsPredicate(graph.getDynamicGraph());
+		includePredicate = new OptionsPredicate(graph);
 		getRenderContext().setVertexIncludePredicate(includePredicate);
 
 		//the vertex labeler uses the toString method and displays the label at the center of the vertex
@@ -96,7 +90,7 @@ public class NetworkGraphVisualizer extends VisualizationViewer<P2PVertex,P2PCon
 		visualizer.currentView = ViewState.CollapsedPeerView;
 		visualizer.optionsPanel.setView(visualizer.currentView); //will trigger the event to switch the view of the visualizer
 
-		
+		visualizer.optionsPanel.addPredicateListener(visualizer.includePredicate);
 
 
 		visualizer.setForeground(Color.WHITE);
@@ -109,7 +103,7 @@ public class NetworkGraphVisualizer extends VisualizationViewer<P2PVertex,P2PCon
 			EdgeShapeType P2PEdgeShape, EdgeShapeType P2DocEdgeShape, EdgeShapeType Doc2PDocEdgeShape, EdgeShapeType P2PDocEdgeShape) {
 
 		//add my own vertex shape & colour fill transformers
-		getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer<P2PVertex, P2PConnection>(graph.getReferenceGraph(), peerShape, documentShape, peerDocumentShape));
+		getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer<P2PVertex, P2PConnection>(graph.getFullGraph(), peerShape, documentShape, peerDocumentShape));
 		// note :the colour depends on being picked.
 
 		//make the p2p edges different from the peer to doc edges 
@@ -146,7 +140,6 @@ public class NetworkGraphVisualizer extends VisualizationViewer<P2PVertex,P2PCon
 			setExcludeType(PeerDocumentVertex.class);
 			break;
 		}
-		setScaling();
 		repaint();
 	}
 
@@ -157,7 +150,7 @@ public class NetworkGraphVisualizer extends VisualizationViewer<P2PVertex,P2PCon
 				getPickedVertexState(),Color.RED, Color.YELLOW, Color.MAGENTA, Color.RED, Color.RED, Color.BLUE));
 
 		getRenderContext().setVertexShapeTransformer(new P2PVertexShapeTransformer<P2PVertex, P2PConnection>(
-				graph.getReferenceGraph(), VertexShapeType.ELLIPSE, VertexShapeType.PENTAGON, VertexShapeType.ELLIPSE, 
+				graph.getFullGraph(), VertexShapeType.ELLIPSE, VertexShapeType.PENTAGON, VertexShapeType.ELLIPSE, 
 				P2PVertexShapeTransformer.PEER_SIZE, P2PVertexShapeTransformer.DOC_SIZE, P2PVertexShapeTransformer.PEER_SIZE));
 
 		getRenderContext().setEdgeShapeTransformer(new P2PEdgeShapeTransformer(EdgeShapeType.QUAD_CURVE,
@@ -174,32 +167,6 @@ public class NetworkGraphVisualizer extends VisualizationViewer<P2PVertex,P2PCon
 				EdgeShapeType.CUBIC_CURVE,
 				EdgeShapeType.LINE,
 				EdgeShapeType.LINE);
-	}
-	
-	
-
-	/**
-	 * want to do this with a listener, so not going to document
-	 * @param scale
-	 */
-	public void setScaling(boolean scale) {
-		scaleVertices = scale;
-
-		Transformer<P2PVertex, Shape> shapeTransformer = getRenderContext().getVertexShapeTransformer();
-		if(shapeTransformer.getClass().equals(P2PVertexShapeTransformer.class)) {
-			P2PVertexShapeTransformer<P2PVertex, P2PConnection> scalableTransformer = 
-				(P2PVertexShapeTransformer<P2PVertex, P2PConnection>)shapeTransformer;
-
-			scalableTransformer.setScaling(scaleVertices);
-		}
-		repaint();
-	}
-
-	/**
-	 * Helper to set the scaling to the current value of scaleVertices
-	 */
-	private void setScaling() {
-		setScaling(scaleVertices);
 	}
 
 	@Override

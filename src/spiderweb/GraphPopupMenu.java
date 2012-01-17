@@ -31,27 +31,32 @@ import spiderweb.graph.P2PVertex;
 import spiderweb.visualizer.NetworkGraphVisualizer;;
 
 /**
- * Initializes the right-click menu components and event handlers (Does not contain the listeners)
+ * 
  * 
  * @author Andrew O'Hara
  * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
- * @version Date: 05/08/2011
+ * @version Date: 22/08/2011
  */
 public class GraphPopupMenu extends JPopupMenu implements ActionListener {
 
 	/**eclipse generated Serial UID*/
 	private static final long serialVersionUID = 1429587389581580356L;
 
-	private DefaultModalGraphMouse<P2PVertex,P2PConnection> gm;
-	private NetworkGraphVisualizer visualizer;
+	protected DefaultModalGraphMouse<P2PVertex,P2PConnection> gm;
+	protected NetworkGraphVisualizer visualizer;
 
-	private JMenuItem balloonLayout;
-	private JMenuItem treeLayout;
-	private JMenuItem radialTreeLayout;
-	private JMenuItem treeSeparator;
+	protected JMenuItem balloonLayout;
+	protected JMenuItem treeLayout;
+	protected JMenuItem radialTreeLayout;
+	protected JMenuItem treeSeparator;
 	
 	private Timer stopAnimateTimer;
 	
+	/**
+	 * Initializes the right-click menu components and event handlers
+	 * @param visualizer the <code>NetworkGraphVisualizer</code> to
+	 * @param gm the graphMouse
+	 */
 	public GraphPopupMenu(NetworkGraphVisualizer visualizer, final DefaultModalGraphMouse<P2PVertex,P2PConnection> gm) {
 		this.visualizer = visualizer;
 		this.gm = gm;
@@ -191,6 +196,12 @@ public class GraphPopupMenu extends JPopupMenu implements ActionListener {
 		setEnabled(false);
 	}
 
+	@Override
+	public void actionPerformed(ActionEvent e) {
+		String buttonText = ((AbstractButton)e.getSource()).getText();
+		popupMenuEvent(buttonText);
+	}
+
 	/**
 	 * task class which stops the layout transition animator and locks the verices on the layout.
 	 * 
@@ -203,8 +214,8 @@ public class GraphPopupMenu extends JPopupMenu implements ActionListener {
 	 */
 	private class StopAnimateTask<V, E> extends TimerTask {
 
-		Animator animatorToStop;
-		Layout<V, E> layoutToLock;
+		private Animator animatorToStop;
+		private Layout<V, E> layoutToLock;
 		
 		/**
 		 * This Task stops the animator and locks all the vertices in graph for the passed layout.
@@ -224,11 +235,5 @@ public class GraphPopupMenu extends JPopupMenu implements ActionListener {
 			}
 		}
 		
-	}
-
-	@Override
-	public void actionPerformed(ActionEvent e) {
-		String buttonText = ((AbstractButton)e.getSource()).getText();
-		popupMenuEvent(buttonText);
 	}
 }

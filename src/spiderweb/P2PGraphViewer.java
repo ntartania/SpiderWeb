@@ -2,8 +2,8 @@
  * File:         P2PGraphVeiwer.java
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
- * Last Changed: Date: 16/08/2011 
- * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * Last Changed: Date: 29/08/2011 
+ * Author:       Matthew Smith
  * 				 Alan Davoust
  * 				 Andrew O'Hara
  * 
@@ -61,13 +61,15 @@ import edu.uci.ics.jung.algorithms.layout.FRLayout2;
 import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
 
 /**
- * P2PGraphViewer is the main program which contains the swing application 
- * and maintains all the visualizers and event players.
+ * P2PGraphViewer contains the main entry point and contains the
+ * primary functionality and glue which holds together the SpiderWeb project's
+ * application. P2PGraphViewer contains the primary swing components 
+ * and maintains any graphs, graph visualizers and event players.
  * 
  * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
  * @author Alan Davoust
  * @author Andrew O'Hara
- * @version Date: 12/08/2011 
+ * @version Date: 29/08/2011 
  */
 public class P2PGraphViewer extends JApplet implements EventPlayerListener, NetworkGraphListener {
 	/**eclipse generated serial UID*/
@@ -93,11 +95,22 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	protected ReferencedNetworkGraph graph;
 	protected NetworkGraphVisualizer visualizer;
 
+	/**
+	 * P2PGraphViewer contains the main entry point and contains the
+	 * primary functionality and glue which holds together the SpiderWeb project's
+	 * application. P2PGraphViewer contains the primary swing components 
+	 * and maintains any graphs, graph visualizers and event players.
+	 */
 	public P2PGraphViewer() {
 		init();
 		start();
 	}
 
+	/**
+	 * Helper method creates the 'file' menu bar at the top of the screen; adds each 
+	 * component to its respective sub menu and defines their action when pressed.
+	 * @return <code>JMenuBar</code> Containing the 'file' menu bar for SpiderWeb
+	 */
 	private JMenuBar createFileMenu() {
 		JMenu file = new JMenu("File");
 		{ //Connect Entry
@@ -234,6 +247,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		return bar;
 	}
 
+	@Override
 	public void init() {
 		setPreferredSize(new Dimension(DEFWIDTH, DEFHEIGHT));
 
@@ -269,8 +283,12 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		loadingListeners.add(playbackPanel);
 	}
 
-	public void startGraph() {
-		AbstractLayout<P2PVertex, P2PConnection> layout = new FRLayout2<P2PVertex, P2PConnection>(graph.getReferenceGraph());
+	/**
+	 * Helper Method initializes and starts all the nessisary components that 
+	 * are used for the playback of a Network Graph
+	 */
+	private void startGraph() {
+		AbstractLayout<P2PVertex, P2PConnection> layout = new FRLayout2<P2PVertex, P2PConnection>(graph.getFullGraph());
 		layout.setInitializer(new P2PVertexPlacer(layout, new Dimension(DEFWIDTH,DEFHEIGHT)));
 
 		for(LoadingListener l : loadingListeners) {
@@ -329,10 +347,18 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		eventThread.beginPlayback();
 	}
 
+	/**
+	 * Returns the application's <code>ReferencedNetworkGraph</code>
+	 * @return <code>ReferencedNetworkGraph</code> being displayed in this application.
+	 */
 	public ReferencedNetworkGraph getGraph() {
 		return graph;
 	}
 
+	/**
+	 * Returns the application's <code>NetworkGraphVisualizer</code>
+	 * @return <code>NetworkGraphVisualizer</code> being displayed in this application.
+	 */
 	public NetworkGraphVisualizer getVisualizer() {
 		return visualizer;
 	}
@@ -348,6 +374,12 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		visualizer.repaint();
 	}
 
+	/**
+	 * Listener for checking when the mouse has triggered the right click context menu.
+	 * 
+	 * @author Andrew O'Hara
+	 * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+	 */
 	private class MouseClickListener extends MouseAdapter {
 
 		@Override 
@@ -358,6 +390,11 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		}
 	}
 
+	/**
+	 * Listener for Loading a new file to be played in the viewer/player.
+	 * 
+	 * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+	 */
 	class LoadListener implements ActionListener {
 
 		public void actionPerformed(ActionEvent arg0) {
@@ -391,9 +428,15 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		}
 	}
 	
+	/**
+	 * Loader for loading a special type of document graph file for displaying in the viewer/player.
+	 * 
+	 * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+	 */
 	class LoadDocumentGraphListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
+			// a thread to load the graph on so it is not on Swing's event dispatch thread.
 			Thread loadingThread = new Thread(new Runnable() {
 
 				@Override
@@ -425,7 +468,13 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		}
 	}
 
+	/**
+	 * Listener for saving the currently viewed graph to an xml file.
+	 * 
+	 * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+	 */
 	class SaveListener implements ActionListener {
+		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			if(logEvents != null) {
 				eventThread.pause();
@@ -453,13 +502,13 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		try {
 
 			List<LogEvent> events;
-			synchronized(graph.getReferenceGraph()) {
+			synchronized(graph.getFullGraph()) {
 				events = P2PNetworkGraphLoader.buildLogs(inStream, networkClient, graph);
 			}
 			if(!events.isEmpty()) {	
 				//eventThread.pause();
 				for(int i=0;i<events.size();i++) {
-					graph.getReferenceGraph().robustGraphEvent(events,i); //apply events to graph
+					graph.getFullGraph().robustGraphEvent(events,i); //apply events to graph
 				}//any events that didn't match up with the current graph will have been handled and new events created to compensate.
 				events.add(LogEvent.getEndEvent(events.get(events.size()-1)));
 				eventThread.addEvents(events);

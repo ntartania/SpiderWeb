@@ -259,7 +259,7 @@ public class PlaybackPanel extends JPanel implements ActionListener, ChangeListe
 	 */
 	@Override
 	public void stateChanged(ChangeEvent ce) {
-		player.setFastSpeed(((JSlider)ce.getSource()).getValue());
+		player.setSpeedMultiplier(((JSlider)ce.getSource()).getValue());
 	}
 
 	/**
@@ -297,6 +297,11 @@ public class PlaybackPanel extends JPanel implements ActionListener, ChangeListe
 	}
 
 
+	/**
+	 * Listener for handling any event which takes place in the playbck panel.
+	 * 
+	 * @author <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+	 */
 	class SliderListener extends MouseAdapter implements ChangeListener {
 
 		PlayState prevState = PlayState.PAUSE;

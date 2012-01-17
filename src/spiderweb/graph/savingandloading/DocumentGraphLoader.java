@@ -121,13 +121,14 @@ public class DocumentGraphLoader extends ProgressAdapter{
 
 	/**
 	 * Method counts the number of lines a passed File has and returns the value.
+	 * 
+	 * Created by user martinus from stack overflow
 	 * @param fileToCount The File to count the number of lines in.
 	 * @return The number of lines a file contains.
 	 * @throws IOException 	IOException - If the first byte cannot be read for any reason other than the end of the file, 
 	 * 						if the input stream has been closed, or if some other I/O error occurs. 
 	 * 						FileNotFoundException - if the file does not exist, is a directory rather than a regular file, 
 	 * 						or for some other reason cannot be opened for reading. 
-	 * @author martinus from stack overflow
 	 */
 	public static int countLines(File fileToCount) throws IOException {
 		InputStream is = new BufferedInputStream(new FileInputStream(fileToCount));

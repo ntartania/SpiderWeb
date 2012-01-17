@@ -3,7 +3,7 @@
  * Project:		 Spiderweb Network Graph Visualizer
  * Created:      01/06/2011
  * Last Changed: Date: 20/07/2011 
- * Author:       <A HREF="mailto:smith_matthew@live.com">Matthew Smith</A>
+ * Author:       Matthew Smith
  * 
  * This code was produced at Carleton University 2011
  */
@@ -19,7 +19,8 @@ package spiderweb.graph;
 public class LogEvent implements Comparable<LogEvent>{
 	
 	/* (non-javaDoc) 
-	 * Types of Events
+	 * Types of Events:
+	 * 
 	 * start
 	 * end
 	 * 
@@ -50,8 +51,9 @@ public class LogEvent implements Comparable<LogEvent>{
 
 	/**
 	 * constructor for an event as represented by a line in a (processed) log file
-	 * 
+	 * <pre>
 	 * possible lines :
+	 * 
 	 * timemillisec:[online |offline]:peernumber
 	 * timemillisec:[publish | remove]:peernumber documentnumber
 	 * timemillisec:query:peernumber:querynumber:queryid
@@ -59,7 +61,8 @@ public class LogEvent implements Comparable<LogEvent>{
 	 * timemillisec:queryhit:peernumber:docnumber:queryid
 	 * timemillisec:[connect | disconnect]:peer1:peer2
 	 * timemillisec:[linkdocument | delinkdocument]:doc1:doc2
-	 * @param str The string to parse into a Log Event
+	 * </pre>
+	 * @param rawEvent The string to parse into a Log Event
 	 */
 	public LogEvent(String rawEvent){
 
@@ -100,10 +103,10 @@ public class LogEvent implements Comparable<LogEvent>{
 	}
 	
 	/**
-	 * Create a new LogEvent that depends on a LogEvent which created it.
+	 * Create a new opposing LogEvent that depends on a LogEvent which created it.
 	 * @param creator	The LogEvent which triggered the colouringEvent
-	 * @param colouring	True if the event is to colour, false if it is a decolouring event
-	 * @return a new LogEvent with parameters to colour 
+	 * @param delay the amount of time after the creator for this event to occur
+	 * @return a new LogEvent with parameters to undo what it's creator did 
 	 */
 	public static LogEvent createOpposingLogEvent(LogEvent creator,int delay)
 	{
@@ -173,7 +176,7 @@ public class LogEvent implements Comparable<LogEvent>{
 	
 	/**
 	 * Returns <code>true</code> if the event type has a second parameter.
-	 * @return<code>true</code> if the event type has a second parameter.
+	 * @return <code>true</code> if the event type has a second parameter.
 	 */
 	public boolean hasParamTwo() {
 		return typeHasParamTwo(this.type);
@@ -181,7 +184,7 @@ public class LogEvent implements Comparable<LogEvent>{
 	
 	/**
 	 * Returns <code>true</code> if the event type has a second parameter.
-	 * @return<code>true</code> if the event type has a second parameter.
+	 * @return <code>true</code> if the event type has a second parameter.
 	 */
 	public static boolean typeHasParamTwo(String eventType) {
 		return !(eventType.equals("online")||eventType.equals("offline"));
@@ -189,7 +192,7 @@ public class LogEvent implements Comparable<LogEvent>{
 	
 	/**
 	 * Returns <code>true</code> if the event type has a third parameter.
-	 * @return<code>true</code> if the event type has a third parameter.
+	 * @return <code>true</code> if the event type has a third parameter.
 	 */
 	public boolean hasParamThree() {
 		return typeHasParamThree(this.type);
@@ -197,7 +200,7 @@ public class LogEvent implements Comparable<LogEvent>{
 	
 	/**
 	 * Returns <code>true</code> if the event type has a third parameter.
-	 * @return<code>true</code> if the event type has a third parameter.
+	 * @return <code>true</code> if the event type has a third parameter.
 	 */
 	public static boolean typeHasParamThree(String eventType) {
 		return (eventType.equals("query") || eventType.equals("queryhit"));
