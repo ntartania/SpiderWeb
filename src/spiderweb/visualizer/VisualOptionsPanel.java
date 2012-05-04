@@ -274,7 +274,7 @@ public class VisualOptionsPanel extends JPanel implements ActionListener, Change
 		regex.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
 		regex.setText("some sort of regular expression?");
 		temperalQueryPanel.add(regex, BorderLayout.SOUTH);
-
+		
 		return temperalQueryPanel;
 	}
 
