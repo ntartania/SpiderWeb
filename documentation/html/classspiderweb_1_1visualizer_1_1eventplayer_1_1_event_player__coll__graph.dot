@@ -1,0 +1,26 @@
+digraph G
+{
+  edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
+  node [fontname="Helvetica",fontsize="10",shape=record];
+  rankdir=LR;
+  Node1 [label="spiderweb.visualizer.eventplayer.EventPlayer",height=0.2,width=0.4,color="black", fillcolor="grey75", style="filled" fontcolor="black"];
+  Node2 -> Node1 [dir=back,color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node2 [label="ActionListener",height=0.2,width=0.4,color="grey75", fillcolor="white", style="filled"];
+  Node3 -> Node1 [dir=back,color="darkorchid3",fontsize="10",style="dashed",label="dynamicGraph\nfullGraph",fontname="Helvetica"];
+  Node3 [label="spiderweb.graph.P2PNetworkGraph",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$classspiderweb_1_1graph_1_1_p2_p_network_graph.html"];
+  Node4 -> Node3 [dir=back,color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node4 [label="edu::uci::ics::jung::graph::DirectedSparseGraph\< P2PVertex, P2PConnection \>",height=0.2,width=0.4,color="grey75", fillcolor="white", style="filled"];
+  Node5 -> Node3 [dir=back,color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node5 [label="edu::uci::ics::jung::graph::Graph\< P2PVertex, P2PConnection \>",height=0.2,width=0.4,color="grey75", fillcolor="white", style="filled"];
+  Node6 -> Node1 [dir=back,color="darkorchid3",fontsize="10",style="dashed",label="timeCounter",fontname="Helvetica"];
+  Node6 [label="spiderweb.visualizer.eventplayer.TimeCounter",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$classspiderweb_1_1visualizer_1_1eventplayer_1_1_time_counter.html"];
+  Node2 -> Node6 [dir=back,color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node7 -> Node1 [dir=back,color="darkorchid3",fontsize="10",style="dashed",label="playbackSlider",fontname="Helvetica"];
+  Node7 [label="JSlider",height=0.2,width=0.4,color="grey75", fillcolor="white", style="filled"];
+  Node8 -> Node1 [dir=back,color="darkorchid3",fontsize="10",style="dashed",label="schedule",fontname="Helvetica"];
+  Node8 [label="Timer",height=0.2,width=0.4,color="grey75", fillcolor="white", style="filled"];
+  Node9 -> Node1 [dir=back,color="darkorchid3",fontsize="10",style="dashed",label="myEventList",fontname="Helvetica"];
+  Node9 [label="LinkedList\< LogEvent \>",height=0.2,width=0.4,color="grey75", fillcolor="white", style="filled"];
+  Node10 -> Node1 [dir=back,color="darkorchid3",fontsize="10",style="dashed",label="my_listeners",fontname="Helvetica"];
+  Node10 [label="List\< EventPlayerListener \>",height=0.2,width=0.4,color="grey75", fillcolor="white", style="filled"];
+}
