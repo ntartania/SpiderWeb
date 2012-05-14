@@ -485,60 +485,60 @@ public class EventPlayer implements ActionListener{
 			if (evt.isStructural()){ //if the event is to modify the structure of the graph
 				graph.graphEvent(evt,forward);
 			} else { //other events: queries
-				String what = evt.getType();
+				String evtType = evt.getType();
 				int val1 = evt.getParam(1);
 				int val2 = evt.getParam(2);
 				int val3 = evt.getParam(3);
-				if(what.equals("query")) {
+				if(evtType.equals("query")) {
 					if(forward) {
 						doQuery(val1, val2, val3);
 					} else {
 						undoQuery(val1,val2, val3);
 					}
 				}
-				else if (what.equals("unquery")) {
+				else if (evtType.equals("unquery")) {
 					if(forward) {
 						undoQuery(val1,val2, val3);
 					} else {
 						doQuery(val1, val2, val3);
 					}
 				}
-				else if (what.equals("queryhit")) {
+				else if (evtType.equals("queryhit")) {
 					if(forward) {
 						doQueryHit(val1, val2, val3);
 					} else {
 						undoQueryHit(val1, val2, val3);
 					}
 				}
-				else if (what.equals("unqueryhit")) {
+				else if (evtType.equals("unqueryhit")) {
 					if(forward) {
 						undoQueryHit(val1, val2, val3);
 					} else {
 						doQueryHit(val1, val2, val3);
 					}
 				}
-				else if (what.equals("queryreachespeer")) {
+				else if (evtType.equals("queryreachespeer")) {
 					if(forward) {
 						doQueryReachesPeer(val1,val2);
 					} else {
 						undoQueryReachesPeer(val1,val2);
 					}
 				}
-				else if (what.equals("unqueryreachespeer")) {
+				else if (evtType.equals("unqueryreachespeer")) {
 					if(forward) {
 						undoQueryReachesPeer(val1,val2);
 					} else {
 						doQueryReachesPeer(val1,val2);
 					}
 				}
-				else if (what.equals("queryedge")) {
+				else if (evtType.equals("queryedge")) {
 					if(forward) {
 						doQueryEdge(val1,val2);
 					} else {
 						undoQueryEdge(val1,val2);
 					}
 				}
-				else if (what.equals("unqueryedge")) {
+				else if (evtType.equals("unqueryedge")) {
 					if(forward) {
 						undoQueryEdge(val1,val2);
 					} else {

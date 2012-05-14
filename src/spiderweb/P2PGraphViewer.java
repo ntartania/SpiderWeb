@@ -50,6 +50,7 @@ import spiderweb.graph.savingandloading.P2PNetworkGraphSaver;
 import spiderweb.networking.ConnectDialog;
 import spiderweb.networking.HTTPClient;
 import spiderweb.networking.NetworkGraphListener;
+import spiderweb.visualizer.GraphStatisticsPanel;
 import spiderweb.visualizer.NetworkGraphVisualizer;
 import spiderweb.visualizer.ViewState;
 import spiderweb.visualizer.eventplayer.EventPlayer;
@@ -83,6 +84,7 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 	protected List<LoadingListener> loadingListeners;
 	
 	protected LogEventTable eventTable;
+	protected GraphStatisticsPanel graphStatisticsPane;
 	protected JPanel graphsPanel;
 	protected PlaybackPanel playbackPanel;
 	protected EventPlayer eventThread;
@@ -212,6 +214,33 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 			window.add(logTableItem);
 			windowGroup.add(logTableItem);
 		}
+		{ //GraphStatistics
+			JRadioButtonMenuItem logTableItem = new JRadioButtonMenuItem("Show Graph Statistics");
+			logTableItem.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent ae) {
+					if(logEvents != null) { //graph has been initialized
+						JRadioButtonMenuItem button = (JRadioButtonMenuItem) ae.getSource();
+						if (button.isSelected()) { //Add the statistics pane
+							JSplitPane p = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+							p.setResizeWeight(0.8f);
+							p.add(mainPane);
+							p.add(graphStatisticsPane);
+							p.setDividerSize(3);
+	
+							getContentPane().removeAll();
+							getContentPane().add(p);
+							validate();
+						} else { //Remove the log table
+							getContentPane().removeAll();
+							getContentPane().add(mainPane);
+							validate();
+						}
+					}
+				}	
+			});
+			window.add(logTableItem);
+			windowGroup.add(logTableItem);
+		}
 		{ //Visual Options Entry
 			JRadioButtonMenuItem visualOptionsItem = new JRadioButtonMenuItem("Show Visual Options Pane");
 			visualOptionsItem.addActionListener(new ActionListener() {
@@ -321,6 +350,8 @@ public class P2PGraphViewer extends JApplet implements EventPlayerListener, Netw
 		}
 		eventThread.addEventPlayerListener(this);
 		eventTable = new LogEventTable(logEvents, eventThread);
+		
+		graphStatisticsPane = new GraphStatisticsPanel(graph.getFullGraph());
 
 
 		playbackPanel.getPlaybackSlider().addChangeListener(eventTable);

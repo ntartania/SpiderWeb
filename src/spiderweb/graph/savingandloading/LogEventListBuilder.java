@@ -30,7 +30,7 @@ import java.util.List;
 public class LogEventListBuilder extends ProgressAdapter {
 	
 	//[start] private variables
-	private P2PNetworkGraph fullGraph;
+	private P2PNetworkGraph fullGraph; //Every Vertex and Edge over time
 	private ArrayList<LogEvent> logEvents;
 	//[end] private variables
 	
@@ -57,7 +57,7 @@ public class LogEventListBuilder extends ProgressAdapter {
 		
 		try {
 			//[start] Create local variables for the creation of the list
-			P2PNetworkGraph tempGraph = new P2PNetworkGraph();
+			P2PNetworkGraph tempGraph = new P2PNetworkGraph(); // current connections including disconnects
 			String str; //will contain each log event as it is read.
 			List<LogEvent> colouringEvents = new ArrayList<LogEvent>();//list of events that represent the colouring and decolouring of graph elements
 			List<P2PVertex> queryPeers = new ArrayList<P2PVertex>();//
@@ -80,6 +80,9 @@ public class LogEventListBuilder extends ProgressAdapter {
 				progress(lineCount);
 				
 				LogEvent gev = new LogEvent(str); //create the log event
+				
+				//TODO total the queries
+				//TODO check the diameter
 				
 				if (gev.isConstructing()){ //construct the fullGraph as we go
 					fullGraph.graphEvent(gev);
