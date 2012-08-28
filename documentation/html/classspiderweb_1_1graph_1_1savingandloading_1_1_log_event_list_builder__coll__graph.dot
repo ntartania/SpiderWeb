@@ -1,0 +1,17 @@
+digraph G
+{
+  edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
+  node [fontname="Helvetica",fontsize="10",shape=record];
+  rankdir=LR;
+  Node1 [label="spiderweb.graph.savingandloading.LogEventListBuilder",height=0.2,width=0.4,color="black", fillcolor="grey75", style="filled" fontcolor="black"];
+  Node2 -> Node1 [dir=back,color="darkorchid3",fontsize="10",style="dashed",label="hiddenGraph",fontname="Helvetica"];
+  Node2 [label="spiderweb.graph.P2PNetworkGraph",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$classspiderweb_1_1graph_1_1_p2_p_network_graph.html"];
+  Node3 -> Node2 [dir=back,color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node3 [label="edu::uci::ics::jung::graph::DirectedSparseGraph\< P2PVertex, P2PConnection \>",height=0.2,width=0.4,color="grey75", fillcolor="white", style="filled"];
+  Node4 -> Node2 [dir=back,color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node4 [label="edu::uci::ics::jung::graph::Graph\< P2PVertex, P2PConnection \>",height=0.2,width=0.4,color="grey75", fillcolor="white", style="filled"];
+  Node5 -> Node1 [dir=back,color="darkorchid3",fontsize="10",style="dashed",label="loadingListeners",fontname="Helvetica"];
+  Node5 [label="List\< LoadingListener \>",height=0.2,width=0.4,color="grey75", fillcolor="white", style="filled"];
+  Node6 -> Node1 [dir=back,color="darkorchid3",fontsize="10",style="dashed",label="logEvents",fontname="Helvetica"];
+  Node6 [label="LinkedList\< LogEvent \>",height=0.2,width=0.4,color="grey75", fillcolor="white", style="filled"];
+}

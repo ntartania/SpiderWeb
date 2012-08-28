@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:wmh="http://www.wmhelp.com/2003/eGenerator" elementFormDefault="qualified">
+  <xs:element name="network">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" maxOccurs="1" ref="graph"/>
+        <xs:element minOccurs="0" maxOccurs="1" ref="logevents"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="graph">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" maxOccurs="1" ref="nodemap"/>
+        <xs:element minOccurs="0" maxOccurs="1" ref="edgemap"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="nodemap">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="node" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="node">
+    <xs:complexType>
+      <xs:choice>
+        <xs:sequence>
+          <xs:element ref="key"/>
+        </xs:sequence>
+        <xs:sequence>
+          <xs:element ref="document"/>
+          <xs:element ref="peer"/>
+        </xs:sequence>
+      </xs:choice>
+      <xs:attribute name="type" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="key" type="xs:integer"/>
+  <xs:element name="document" type="xs:integer"/>
+  <xs:element name="peer" type="xs:integer"/>
+  <xs:element  name="edgemap">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="edge" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="edge">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="key"/>
+        <xs:element ref="v1"/>
+        <xs:element ref="v2"/>
+      </xs:sequence>
+      <xs:attribute name="type" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="v1" type="xs:integer"/>
+  <xs:element name="v2" type="xs:integer"/>
+  <xs:element name="logevents">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="event" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="event">
+    <xs:complexType>
+    <xs:sequence>
+      <xs:element ref="timedifference"/>
+        <xs:element ref="param1"/>
+        <xs:element minOccurs="0" maxOccurs="1" ref="param2"/>
+      </xs:sequence>
+      <xs:attribute name="type" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="timedifference" type="xs:integer"/>
+  <xs:element name="param1" type="xs:integer"/>
+  <xs:element name="param2" type="xs:integer"/>
+</xs:schema>
